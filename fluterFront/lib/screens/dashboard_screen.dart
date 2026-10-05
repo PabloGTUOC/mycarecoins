@@ -15,7 +15,7 @@ import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 import 'daily_screen.dart';
 
-/// Port of views/DashboardView.vue: Family Hub — member cards, paginated week
+/// Family Hub: member cards, paginated week
 /// strip with absences, task offers, KPI summary and the Recent Activity feed.
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onOpenStats;
@@ -251,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
-  /// Port of scheduledInstances: non-template activities with a start time.
+  /// Scheduled instances: non-template activities with a start time.
   List<Map<String, dynamic>> get _scheduled => _activities
       .where((a) => a['is_template'] != true && a['starts_at'] != null)
       .toList();
@@ -279,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (created) await _load();
   }
 
-  // ── Week strip (port of weekDays / processedWeekDays) ────────────
+  // ── Week strip ──────────────────────────────────────────────────
 
   List<DateTime> get _weekDays {
     final now = DateTime.now();
@@ -333,7 +333,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return acts;
   }
 
-  // ── Recent activity feed (port of recentActivitiesList) ─────────
+  // ── Recent activity feed ────────────────────────────────────────
 
   List<_FeedItem> get _recentActivity {
     final l = AppLocalizations.of(context);
@@ -586,7 +586,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   )
                 else
-                  // Port of the Vue `repeat(7, 1fr)` week grid: when the card
+                  // Seven-column week grid: when the card
                   // fits all seven days they stretch to share the full width;
                   // narrower than that falls back to a horizontal scroll.
                   LayoutBuilder(builder: (context, constraints) {

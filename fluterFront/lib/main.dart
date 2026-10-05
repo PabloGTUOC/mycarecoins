@@ -132,7 +132,7 @@ class _ToastListenerState extends State<_ToastListener> {
   }
 }
 
-/// Mirrors the Vue router guards: loading screen until auth is ready,
+/// The auth gate: loading screen until auth is ready,
 /// landing → login for guests, onboarding when the user has no family,
 /// else the shell.
 class _AuthGate extends StatefulWidget {

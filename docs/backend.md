@@ -500,7 +500,7 @@ Services contain all business logic. Routes are kept thin — they validate inpu
 | `createRecurrence(client, userId, instanceId, { frequency, untilDate })` | Generates and inserts repeated instances from a template up to `untilDate` |
 | `completeActivity(client, userId, instanceId)` | Sets status to `pending_validation` (awaits caregiver validation) |
 | `validateActivity(client, userId, activityId)` | Sets status to `completed`; credits `coin_value + bounty_amount` to the assignee via `coin_ledger` and updates `family_members.coin_balance` |
-| `revertActivity(client, userId, activityId)` | Reverts `pending_validation` back to `approved` |
+| `revertActivity(client, userId, activityId)` | Undoes a `completed` activity (status → `rejected`): debits the payout and **appends** `*_reverted` rows to `coin_ledger` — the original credit is never rewritten — and refunds any bounty to its offerer |
 | `offerBounty(client, userId, activityId, amount)` | Sets `bounty_amount` and `bounty_offered_by` |
 | `acceptBounty(client, userId, activityId)` | Reassigns the activity to the accepting user |
 | `deleteActivity(client, userId, activityId, isSeries)` | Deletes a single instance or all instances sharing the same template root |
@@ -738,12 +738,9 @@ Run with `npm test` (uses `node --test`). Tests run with `--test-concurrency=1` 
 
 ### E2E tests
 
-Playwright E2E tests in `frontend/e2e/` exercise the full stack end-to-end:
-- Firebase Auth Emulator (`localhost:9099`) for authentication
-- Backend running with `NODE_ENV=test` and `FIREBASE_AUTH_EMULATOR_HOST` set
-- A real PostgreSQL test database (separate from production)
-
-Test setup (`global.setup.js`) creates 3 test users, seeds the shared family/activities/rewards, and saves 3 auth state files (`auth.state.json`, `auth2.state.json`, `onboarding.state.json`). Individual tests load these states to skip the login flow. `auth.setup.js` is a shared helper module with page-navigation utilities used by spec files.
+There is no automated end-to-end layer (see `docs/automatic-testing-E2E.md`). For manual
+full-stack runs, `npm run dev:test` starts the backend against the Firebase Auth Emulator
+(`localhost:9099`) with `NODE_ENV=test` and `FIREBASE_AUTH_EMULATOR_HOST` set.
 
 ---
 

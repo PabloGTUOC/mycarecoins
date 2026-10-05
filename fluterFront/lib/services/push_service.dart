@@ -3,12 +3,11 @@ import 'package:flutter/foundation.dart';
 
 import '../state/app_state.dart';
 
-/// Port of composables/useNotifications.js: FCM permission handling, token
-/// registration against POST/DELETE /api/me/fcm-token and the foreground
-/// message listener (surfaced as a toast via AppState).
+/// FCM permission handling, token registration against POST/DELETE
+/// /api/me/fcm-token and the foreground message listener (surfaced as a
+/// toast via AppState).
 ///
-/// The VAPID key is the public web-push certificate (same value the Vue app
-/// ships in its bundle); override with --dart-define=FIREBASE_VAPID_KEY=…
+/// The VAPID key is the public web-push certificate; override with --dart-define=FIREBASE_VAPID_KEY=…
 const String _kVapidKey = String.fromEnvironment('FIREBASE_VAPID_KEY',
     defaultValue:
         'BIK0CfHGGpSUAOU4eGqAUeff_kIXjJuPL7_UMouGjy0i_jSnpZGyiCA8I874e2jxMhwDuhNh0rxPCXkX_gi9VSA');
@@ -30,7 +29,7 @@ class PushService {
     }
   }
 
-  /// Silent start-up sync (useNotifications.init): if permission is already
+  /// Silent start-up sync: if permission is already
   /// granted, refresh the token registration and attach the listener.
   static Future<void> init(AppState app) async {
     if (!app.firebaseAvailable) return;
@@ -43,7 +42,7 @@ class PushService {
     }
   }
 
-  /// Permission prompt + registration (useNotifications.enable).
+  /// Permission prompt + registration.
   /// Returns true when permission ended up granted.
   static Future<bool> enable(AppState app) async {
     if (!app.firebaseAvailable) {
@@ -67,7 +66,7 @@ class PushService {
     }
   }
 
-  /// Unregisters this device's token (useNotifications.disable).
+  /// Unregisters this device's token.
   static Future<void> disable(AppState app) async {
     final token = _currentToken;
     if (token == null) return;

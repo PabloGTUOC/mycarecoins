@@ -6,7 +6,7 @@ import '../services/api_client.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
-/// ── VCard (components/VCard.vue) ──────────────────────────────────
+/// ── VCard ─────────────────────────────────────────────────────────
 class VCard extends StatelessWidget {
   final String? title;
   final Widget child;
@@ -57,7 +57,7 @@ class VCard extends StatelessWidget {
   }
 }
 
-/// ── VButton (components/VButton.vue) ──────────────────────────────
+/// ── VButton ───────────────────────────────────────────────────────
 enum VButtonType { primary, secondary, outline, danger }
 
 class VButton extends StatelessWidget {
@@ -136,7 +136,7 @@ class VButton extends StatelessWidget {
   }
 }
 
-/// ── VInput (components/VInput.vue) ────────────────────────────────
+/// ── VInput ────────────────────────────────────────────────────────
 class VInput extends StatelessWidget {
   final TextEditingController controller;
   final String? label;
@@ -220,7 +220,7 @@ class VInput extends StatelessWidget {
   }
 }
 
-/// ── KpiCard (components/KpiCard.vue) ──────────────────────────────
+/// ── KpiCard ───────────────────────────────────────────────────────
 class KpiCard extends StatelessWidget {
   final String label;
   final String value;
@@ -496,8 +496,7 @@ class SegmentedTabs extends StatelessWidget {
 }
 
 /// ── Tappable (GestureDetector + pointer cursor) ────────────────────
-/// The Vue app gets `cursor: pointer` from CSS; Flutter's GestureDetector
-/// keeps the default arrow on web/desktop, hiding that an element is
+/// Flutter's GestureDetector keeps the default arrow on web/desktop, hiding that an element is
 /// clickable. Use this for tap targets that are not Material buttons.
 class Tappable extends StatelessWidget {
   final VoidCallback? onTap;
@@ -627,7 +626,7 @@ class LoadErrorState extends StatelessWidget {
   }
 }
 
-/// Page heading matching the Vue views' large titles.
+/// Large page heading used at the top of each screen.
 class PageHeading extends StatelessWidget {
   final String title;
   final String? subtitle;

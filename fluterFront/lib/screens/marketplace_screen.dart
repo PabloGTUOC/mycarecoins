@@ -10,7 +10,7 @@ import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 import '../utils/json.dart';
 
-/// Port of views/MarketplaceView.vue: Store / History / Create tabs,
+/// Marketplace: Store / History / Create tabs,
 /// reward cards with rotating banner colours, redeem flow.
 class MarketplaceScreen extends StatefulWidget {
   /// Whether this is the visible tab; becoming active triggers a refetch.

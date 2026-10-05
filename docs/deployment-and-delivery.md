@@ -34,9 +34,7 @@ shipped ahead of the server talks to an API that lacks its endpoints.
 
 ## 1. Where things stand
 
-`main` serves the Flutter frontend (`fluterFront/`) — the only frontend. The Vue app is
-**decommissioned**: archived on the `vue-frontend` branch so the work is not lost, not
-maintained, not deployable (see [§9](#9-rollback)).
+`main` serves the Flutter frontend (`fluterFront/`) — the only frontend.
 
 **Production is well behind `main`.** Probed on 2026-08-28: `/api/personal-time`,
 `/api/admin/*` and `/api/billing/webhook` all return **404**, meaning the deployed backend
@@ -49,8 +47,8 @@ Practical consequences until [§2](#2-server) is done:
 - Every personal-time feature 404s in the app.
 - The RevenueCat webhook points at `/api/billing/webhook`, which does not exist — **no
   purchase can upgrade a family**.
-- Six migrations are pending: `absence-floor`, `activity-subclasses`, `heartbeat`,
-  `personal-time`, `plans`, `platform-admin`.
+- Seven migrations are pending: `absence-floor`, `activity-subclasses`, `heartbeat`,
+  `ledger-reversals`, `personal-time`, `plans`, `platform-admin`.
 
 Repeat the probe any time you want to know what is actually deployed — an unmounted route
 falls through to the 404 handler, a mounted one answers 401:
@@ -82,7 +80,7 @@ them.
 
 ### Before the first deploy after a long gap
 
-**Back the database up, and rehearse on the copy.** This deploy runs six migrations against
+**Back the database up, and rehearse on the copy.** This deploy runs seven migrations against
 real data:
 
 ```bash
@@ -91,10 +89,11 @@ docker compose exec -T postgres pg_dump -U <user> <db> > backup-$(date +%F).sql
 
 The one to watch is **`migrate-activity-subclasses.sql`**: it renames `category` → `type` and
 adds a new `category`, rewriting existing activity rows. It is the only migration here that
-touches existing rows rather than adding to them.
+touches existing rows rather than adding to them. (`migrate-ledger-reversals.sql`, added after
+the rehearsal below, only *inserts* — the credits that old reverts overwrote.)
 
-**This upgrade has been rehearsed** (2026-08-28), not just reasoned about. The `vue-frontend`
-branch carries the schema production actually runs, so it was rebuilt on Postgres 16, seeded
+**This upgrade has been rehearsed** (2026-08-28), not just reasoned about. The schema production
+actually runs was rebuilt on Postgres 16 from the backend it was deployed with, seeded
 with representative data — twelve activities across both old categories, templates and
 instances, four statuses, plus ledger rows, balances, an absence, a reward and an actor — and
 then upgraded with the current `db:init`. Results:
@@ -414,12 +413,11 @@ has no APNs and no StoreKit products:
 
 ## 9. Rollback
 
-**Never to `vue-frontend`.** That branch carries its own backend, six migrations behind
-production. Checked out today it would run an old `db-init` and an old API against a database
-where `activities.category` and `.type` are `NOT NULL` — every activity insert would fail. It
-is a decommissioned archive, not a deployment target.
+**Never to a commit older than the database.** Migrations only move forward: a backend from
+before `migrate-activity-subclasses.sql` runs against a database where `activities.category`
+and `.type` are `NOT NULL`, and every activity insert fails.
 
-Roll back to an earlier `main` commit instead:
+Roll back to an earlier `main` commit that already knows the current schema:
 
 ```bash
 git checkout <last-known-good-sha> && docker compose up --build -d

@@ -12,8 +12,6 @@ import '../widgets/personal_time_dialog.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/DailyView.vue + composables/useTimeline.js.
-///
 /// Wide layout: Task Library side panel (drag source) + 6:00–24:00 hour-grid
 /// timeline with chips positioned by start time and sized by duration,
 /// overlap offsets, red now-line, drop-to-schedule (30-min snapping) and
@@ -27,7 +25,6 @@ class DailyScreen extends StatefulWidget {
   State<DailyScreen> createState() => _DailyScreenState();
 }
 
-// Mirrors useTimeline.js constants.
 const int kStartHour = 6;
 const int kTotalHours = 18;
 const double kGridHeight = 18 * 64.0;
@@ -195,8 +192,8 @@ class _DailyScreenState extends State<DailyScreen> {
   DateTime? _startsAt(Map<String, dynamic> a) =>
       DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
 
-  /// Port of useTimeline.scheduledToday: sorted, with overlapCount and
-  /// gapBeforeMinutes computed exactly like the Vue composable.
+  /// Today's scheduled activities, sorted, each annotated with overlapCount
+  /// and gapBeforeMinutes.
   List<Map<String, dynamic>> get _scheduledToday {
     final acts = _activities.where((a) {
       if (a['is_template'] == true) return false;
@@ -291,7 +288,7 @@ class _DailyScreenState extends State<DailyScreen> {
     _scrollToNow();
   }
 
-  // ── Actions (payloads mirror DailyView.vue) ─────────────────────
+  // ── Actions ─────────────────────────────────────────────────────
 
   Future<void> _validate(dynamic id) async {
     final app = context.read<AppState>();
@@ -632,7 +629,7 @@ class _DailyScreenState extends State<DailyScreen> {
     // disposed while it was open (matches the other post-dialog flows here).
     if (!mounted) return;
     final app = context.read<AppState>();
-    // Same guard as the Vue app: block scheduling inside your own absence.
+    // Block scheduling inside your own absence.
     final activityEnd = startsAt.add(const Duration(hours: 1));
     final overlaps = _dayAbsences.any((abs) {
       if (abs['user_id']?.toString() != app.userId?.toString()) return false;
@@ -1426,7 +1423,7 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 }
 
-/// Shared action decision tree (same rules as the Vue timeline cards).
+/// Shared action decision tree for timeline cards.
 class _ActivityAction extends StatelessWidget {
   final Map<String, dynamic> item;
   final bool compact;
@@ -1525,7 +1522,7 @@ String _activityEmoji(Map<String, dynamic> item) {
   };
 }
 
-/// Desktop Task Library panel (components/daily/TaskLibrary.vue):
+/// Desktop Task Library panel:
 /// search, category filters, grouped rows that are drag sources.
 class _TaskLibraryPanel extends StatefulWidget {
   final List<Map<String, dynamic>> templates;

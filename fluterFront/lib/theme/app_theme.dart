@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Design tokens ported 1:1 from frontend/src/style.css (:root).
+/// Design tokens — documented in docs/DESIGN.md.
 abstract class AppColors {
   static const bg = Color(0xFFF7F8FA);
   static const surface = Color(0xFFFFFFFF);
@@ -23,12 +23,12 @@ abstract class AppColors {
   static const inputBg = Color(0xFFF1F5F9);
   static const inputBorder = Color(0xFFCBD5E1);
 
-  // Wallet / dark panel palette (WalletPanel.vue)
+  // Wallet / dark panel palette
   static const ink = Color(0xFF0F172A);
   static const inkMuted = Color(0xFF94A3B8);
   static const gold = Color(0xFFFBBF24);
 
-  // Profile banner gradient (ProfileView.vue .family-banner)
+  // Profile family-banner gradient
   static const indigo = Color(0xFF6366F1);
   static const violet = Color(0xFF8B5CF6);
 
@@ -55,8 +55,7 @@ abstract class AppRadii {
   static const pill = 999.0;
 }
 
-/// The app is desktop-navigated above this width, mobile-navigated below
-/// (mirrors the Vue `@media (max-width: 768px)` breakpoint).
+/// The app is desktop-navigated above this width, mobile-navigated below.
 const kMobileBreakpoint = 768.0;
 
 /// Whether to use the wide (desktop/tablet) presentation. Width alone is not

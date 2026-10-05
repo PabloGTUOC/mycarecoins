@@ -2,8 +2,7 @@ The following steps describe how to run CareCoins in both development and
 production (Docker) modes.
 
 The frontend is the Flutter app in fluterFront/ — one codebase for web, iOS and
-Android. The retired Vue app is no longer on main; it lives complete on the
-vue-frontend branch and still works against the same backend and database.
+Android.
 
 
 System requirements
@@ -69,9 +68,7 @@ Running the automated test suite
 - Flutter analyzer:     cd fluterFront && flutter analyze
 - Flutter unit/widget:  cd fluterFront && flutter test
 
-The Playwright E2E suite was tied to the Vue frontend and is not on main; it
-remains on the vue-frontend branch. See docs/automatic-testing-E2E.md for how
-it worked.
+There is no automated end-to-end suite; see docs/automatic-testing-E2E.md.
 
 
 Creating a test account
@@ -101,6 +98,5 @@ Development mode:
 
 Docker mode:
   docker-compose.yml sets DATABASE_URL, PORT and NODE_ENV itself and reads
-  everything else from backend/.env. There is no .env at the repo root any
-  more: the compose file has no ${VAR} substitutions left, and the old VITE_*
-  variables died with the Vue build.
+  everything else from backend/.env. There is no .env at the repo root.
+  The compose file has no ${VAR} substitutions.

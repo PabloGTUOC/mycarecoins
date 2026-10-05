@@ -15,7 +15,7 @@ import 'marketplace_screen.dart';
 import 'profile_screen.dart';
 import 'stats_screen.dart';
 
-/// Port of App.vue: pill header (logo, desktop nav, coin counter, avatar menu)
+/// App shell: pill header (logo, desktop nav, coin counter, avatar menu)
 /// plus the mobile bottom tab bar with the same five tabs.
 class Shell extends StatefulWidget {
   const Shell({super.key});
@@ -35,7 +35,7 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    // Port of the Vue visibilitychange refetch: refresh /api/me on resume.
+    // Refresh /api/me when the app comes back to the foreground.
     _lifecycle = AppLifecycleListener(
       onResume: () {
         if (mounted) context.read<AppState>().fetchUserData();
@@ -251,7 +251,7 @@ class _PillHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadii.pill),
             child: Row(
               children: [
-                // Port of App.vue .logo-mark: primary square with the same
+                // Logo mark: primary square with the same
                 // coin mark the PWA/launcher icons use (icon-mark.svg).
                 Container(
                   width: wide ? 32 : 24,

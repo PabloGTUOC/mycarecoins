@@ -4,7 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/LandingView.vue: dark hero with the phone mockup and family
+/// Landing page: dark hero with the phone mockup and family
 /// figures, "How it works" steps, the tabbed "See it in action" demo, the
 /// fairness section with a sample ledger card, closing CTA and footer.
 /// All CTAs lead to the login screen.
@@ -455,8 +455,7 @@ class _EntranceState extends State<_Entrance> {
   }
 }
 
-/// Scroll-triggered reveal, the Flutter twin of the Vue `[data-reveal]`
-/// IntersectionObserver: content is fully laid out from the start (no
+/// Scroll-triggered reveal: content is fully laid out from the start (no
 /// blank sections if the listener never fires) and fades in the first
 /// time it enters the viewport. Reduced motion renders instantly.
 class _Reveal extends StatefulWidget {
@@ -531,7 +530,7 @@ class _RevealState extends State<_Reveal> {
 
 /// The phone frame from .phone-frame: a miniature of the Daily view with
 /// timeline cards, the NOW divider, a free-time gap and the bottom tabs.
-/// Purely illustrative; the tiny type mirrors the Vue mockup's scale.
+/// Purely illustrative; the tiny type keeps it at a phone's scale.
 class _PhoneMockup extends StatelessWidget {
   const _PhoneMockup();
 
@@ -796,8 +795,8 @@ class _PsNavItem extends StatelessWidget {
   }
 }
 
-/// The four family figures from .family-svg, drawn 1:1 from the Vue SVG
-/// coordinates (viewBox 200×72) with the semantic accent palette.
+/// The four family figures, drawn on a 200×72 coordinate space with the
+/// semantic accent palette.
 class _FamilyFigures extends StatelessWidget {
   const _FamilyFigures();
 
@@ -847,7 +846,7 @@ class _FamilyFiguresPainter extends CustomPainter {
 // ── How it works ─────────────────────────────────────────────────────
 
 /// The steps grid with the connecting hairline behind the number circles
-/// (the Vue `.steps::before`) on wide layouts; stacked on phones.
+/// on wide layouts; stacked on phones.
 class _StepsGrid extends StatelessWidget {
   final List<(String, String, Color, Color)> steps;
 
@@ -1024,7 +1023,7 @@ class _DemoSectionState extends State<_DemoSection> {
 }
 
 /// "Family Hub" demo tab: member cards, KPI minis and the activity feed,
-/// mirroring the Vue sim markup with the app's own component vocabulary.
+/// built from the app's own component vocabulary.
 class _DashboardSim extends StatelessWidget {
   const _DashboardSim({super.key});
 

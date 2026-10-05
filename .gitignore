@@ -12,17 +12,6 @@ firebase-credentials.json
 # OS generated files
 .DS_Store
 
-# Playwright — auth tokens and test artifacts (never commit)
-frontend/e2e/auth.state.json
-frontend/e2e/auth2.state.json
-frontend/e2e/onboarding.state.json
-frontend/test-results/
-frontend/playwright-report/
-
-# Retired Vue frontend: lives on the vue-frontend branch; local leftovers
-# (dist builds, .env.local) stay untracked on main.
-/frontend/
-
 # Deploy target (names your server; never committed)
 scripts/deploy.env
 

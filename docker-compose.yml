@@ -46,8 +46,7 @@ services:
     # No ports exposed — nginx in the frontend container proxies /api and /uploads
 
   # Flutter web build served by nginx, which also proxies /api and /uploads
-  # to the backend. (The retired Vue frontend lives on the vue-frontend
-  # branch.) Firebase web config is compiled into the app — no build args.
+  # to the backend. Firebase web config is compiled into the app — no build args.
   frontend:
     build:
       context: ./fluterFront

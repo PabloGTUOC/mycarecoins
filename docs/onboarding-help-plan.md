@@ -6,8 +6,7 @@
 > `widgets/activation_checklist.dart` sits on the dashboard. The measurement plumbing exists
 > too — `services/telemetry.dart` → `POST /api/events` → the `onboarding_events` table.
 > What remains is phase 4's *iterate* half: reading those events and acting on wherever
-> users actually abandon. The Flutter-only note below reflects the Vue retirement in
-> `7132e6a`.
+> users actually abandon.
 
 **Problem.** Users report they don't understand the app's mechanics. CareCoins has a
 7-step core loop (create task → approve → schedule → complete → validate → coins land →
@@ -61,9 +60,7 @@ no idea what to do first.
   + pill-styled tooltip using the design system) rather than a package — matches
   DESIGN.md, no dependency risk. (`showcaseview` is the fallback package option.)
 - **Copy**: keep tour and glossary strings in the ARB files with everything else, so all
-  four languages stay in step. (This bullet originally planned a `driver.js` twin for the
-  Vue app; that frontend was retired in `7132e6a`, so there is only one app to keep in sync
-  now.)
+  four languages stay in step.
 - **Measurement**: log `tour_completed`, `tour_skipped`, `checklist_step_done` events
   (same pattern as `login_history`). Define activation as "first validated task within
   7 days" to evaluate whether this worked (useful evaluation section for the TFG).

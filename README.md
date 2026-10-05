@@ -6,11 +6,6 @@ CareCoins is a family caregiving coordination app. It uses a coin reward system 
 
 Localized in **English, Spanish, French and German**. The app ships as native store builds and as an installable PWA on web.
 
-> **Note:** the original Vue 3 + Vite frontend was retired from `main` and is preserved
-> in full — including its Vitest and Playwright suites — on the
-> [`vue-frontend`](../../tree/vue-frontend) branch. The Flutter app is the only
-> frontend on `main`; see `fluterFront/README.md`.
-
 ---
 
 ## Table of contents
@@ -34,7 +29,7 @@ Single Dart codebase targeting iOS, Android and web. State is a single `ChangeNo
 
 ### Design system
 
-Tokens ported 1:1 from the Vue app's `style.css` into `lib/theme/app_theme.dart` (see `docs/DESIGN.md`).
+Tokens live in `lib/theme/app_theme.dart` (see `docs/DESIGN.md`).
 
 - **Typeface:** Plus Jakarta Sans (500 / 700 / 800) via `google_fonts`. Hierarchy through weight and size only.
 - **Colour palette:** semantic-only. Blue `#2563EB` = action, green `#16A34A` = done, amber `#D97706` = household, red `#DC2626` = danger. Each colour has one job.
@@ -286,7 +281,7 @@ pending → approved → pending_validation → completed
 
 ## Part 8: Automated tests
 
-### Backend unit tests — 114 tests
+### Backend unit tests — 208 tests
 
 Node's built-in runner, mock DB clients, no database required.
 
@@ -294,19 +289,19 @@ Node's built-in runner, mock DB clients, no database required.
 cd backend && npm test
 ```
 
-`activityService` · `familyService` · `starterTasks` · `adminFoundation` · `adminRegistry` · `entitlements` · `billing` · `retention`. Coverage includes the activity lifecycle, budget and deletion consensus, admin authorization (403 matrix), the registry **leak-prevention** test, entitlement merging and suspension, webhook idempotency and event mapping, and the retention sweep.
+`activityService` · `familyService` · `personalTime` · `distributionService` · `absenceWindow` · `starterTasks` · `adminFoundation` · `adminRegistry` · `entitlements` · `billing` · `retention`. Coverage includes the personal-time request lifecycle and escrow, the presence-weighted monthly distribution, the activity lifecycle, budget and deletion consensus, admin authorization (403 matrix), the registry **leak-prevention** test, entitlement merging and suspension, webhook idempotency and event mapping, and the retention sweep.
 
-### Flutter tests — 26 tests
+### Flutter tests — 59 tests
 
 ```bash
 cd fluterFront && flutter analyze && flutter test
 ```
 
-`widget_test.dart` (UI kit, help sheet, checklist) · `l10n_test.dart` and `locale_test.dart` (all four locales resolve; persisted-locale behaviour) · `error_localization_test.dart` · `starter_packs_test.dart` (area derivation, payload validity, localization, per-task exclusion).
+UI kit, help sheet, coach marks and checklist · all four locales and ICU plurals · error localization · starter packs · personal-time types and repeats · absence windows · avatar content types · legal links · session rejection. Per-file detail in `docs/automatic-testing-E2E.md`.
 
-### E2E — on the `vue-frontend` branch
+### E2E — none yet
 
-Playwright against the Firebase Auth Emulator, covering landing, dashboard, happy paths, two-user validation, onboarding, marketplace and notifications. Described in `docs/automatic-testing-E2E.md`. Not yet ported to Flutter.
+There is no automated end-to-end layer. The natural shape is Flutter's `integration_test/` against the Firebase Auth emulator; see `docs/automatic-testing-E2E.md`.
 
 ---
 
@@ -392,9 +387,10 @@ Mobile badges and home-screen behaviour need HTTPS — deploy or tunnel. On macO
 |---|---|
 | `docs/PRODUCT.md` | Users, purpose, brand, design principles, feature set |
 | `docs/DESIGN.md` | Design tokens and component rules |
+| `docs/mobile-ux-proposal.md` | Mobile UX review and ranked proposal, D1–D4 decided (not yet implemented) |
+| `docs/mobile-ux-phase1-brief.md` | Implementation brief for Phase 1 of that proposal, written for a coding agent |
 | `docs/backend.md` | Backend technical reference (§18 covers admin, billing and retention) |
 | `docs/flutter-frontend.md` | **Frontend technical reference** — structure, state, API client, l10n, push, purchases, build and run |
-| `docs/frontend.md` | **Decommissioned Vue SPA** technical reference — kept for the `vue-frontend` branch; the current frontend is described in Part 1 above |
 | `docs/database-schema.md` | Full column-level schema reference |
 | `docs/admin-family-management-plan.md` | Platform admin, registry and subscription design + implementation log |
 | `docs/RevenueCatSetup.md` | RevenueCat dashboard configuration record and store checklist |
@@ -403,11 +399,6 @@ Mobile badges and home-screen behaviour need HTTPS — deploy or tunnel. On macO
 | `docs/onboarding-help-plan.md` | Guided tour, help sheet, activation checklist (layers 1–3 shipped) |
 | `docs/personal-time-plan.md` | Personal time and coverage — the full design and per-phase implementation log |
 | `docs/personal-time-handoff.md` | Superseded handoff for that work; kept for the class model and known issues |
-| `docs/automatic-testing-E2E.md` | What the test layers are, and the E2E gap left by the Vue retirement |
-| `docs/mobile-usability-improvements.md` | **Vue-era** mobile review, kept for the findings |
-| `QA.md` | Tribunal Q&A prep — **written against the Vue architecture**, see its banner |
+| `docs/automatic-testing-E2E.md` | The test layers, per-file coverage, and the missing E2E layer |
 | `docs/deployment-and-delivery.md` | **The runbook**: server deploy, iOS and Android delivery, and the Firebase / RevenueCat / Apple / Play configuration they depend on |
 | `docs/running-instructions.txt` | Local run instructions |
-| `docs/automatic-testing-E2E.md` | E2E suite description (`vue-frontend` branch) |
-| `docs/mobile-usability-improvements.md` | Mobile audit findings |
-| `QA.md` | Thesis defence Q&A: architecture, concurrency, security, privacy boundary, subscriptions |

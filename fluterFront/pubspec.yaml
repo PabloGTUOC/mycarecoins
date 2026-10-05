@@ -1,5 +1,5 @@
 name: carecoins_flutter
-description: CareCoins Flutter frontend (web, iOS, Android) — port of the Vue frontend.
+description: CareCoins Flutter frontend (web, iOS, Android).
 publish_to: "none"
 version: 1.0.0+1
 
@@ -45,8 +45,8 @@ flutter:
   assets:
     - assets/icon/icon-512.png
 
-# Launcher icons generated from the same CareCoins mark the Vue PWA uses
-# (frontend/public/icon-512.png). Regenerate after changing the icon with:
+# Launcher icons generated from the CareCoins mark in assets/icon/.
+# Regenerate after changing the icon with:
 #   dart run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: assets/icon/icon-512.png

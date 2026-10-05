@@ -8,7 +8,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/OnboardingView.vue: create-family wizard (details,
+/// Onboarding: create-family wizard (details,
 /// additional caretakers, objects of care), pending invitations with an
 /// alias prompt, and join by invite link/token.
 class OnboardingScreen extends StatefulWidget {

@@ -70,8 +70,8 @@ the chosen tasks in the create-family payload:
   received titles). After creation they are ordinary user-editable
   content — consistent with the i18n-plan rule that user content is
   never machine-translated.
-- **Fallback:** when `starterTasks` is absent (old clients, e2e tests,
-  the retired Vue branch), keep calling `insertDefaultActivities`
+- **Fallback:** when `starterTasks` is absent (old clients, scripted
+  tests), keep calling `insertDefaultActivities`
   unchanged. No DB migration; existing families keep their English
   titles as normal user content.
 - Detail worth fixing in passing: seeded coin values currently use a
@@ -182,7 +182,7 @@ Three deltas, decided when porting the plan to the current codebase:
 - Existing families keep their English titles — they are ordinary user
   content now, and no migration touches them.
 - The legacy `insertDefaultActivities` path stays for clients that omit the
-  field (Playwright E2E, the retired Vue frontend).
+  field (old app builds, scripted API tests).
 - Switching app language later does **not** re-translate already-created
   tasks, by design (see §Out of scope).
 

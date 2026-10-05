@@ -7,7 +7,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/LoginView.vue: centered card, email+password, Google button.
+/// Login: centered card, email+password, Google button.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 

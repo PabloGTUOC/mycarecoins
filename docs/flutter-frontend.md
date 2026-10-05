@@ -4,11 +4,6 @@ The CareCoins frontend is a **single Flutter codebase** (`fluterFront/`) shippin
 iOS and Android**. It talks to the Node/Express backend over REST with Firebase ID tokens,
 and to nothing else.
 
-> The Vue 3 SPA that preceded it is **decommissioned** — removed from `main` in `7132e6a` and
-> archived on the `vue-frontend` branch purely so the work is not lost. That branch is not
-> maintained, not deployable, and must not be built on. `docs/frontend.md` describes it as a
-> design record only.
-
 ---
 
 ## Table of Contents
@@ -354,8 +349,7 @@ absence dialog's window rules, the personal-time sheet (types, repeats, and that
 seeds its window from the tapped slot), and the legal-link contract (`legal_links_test.dart`).
 
 There is **no end-to-end layer** — see `docs/automatic-testing-E2E.md`, which names that gap
-and keeps the retired Playwright harness as a model for what a Flutter equivalent
-(`integration_test/` + `flutter drive`) would have to do.
+and the shape a Flutter one (`integration_test/` + `flutter drive`) would take.
 
 ---
 

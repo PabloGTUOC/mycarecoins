@@ -9,23 +9,22 @@
 
 Audit date: **2026-07-07** (state as of commit `e4cf875 "Flutter ongoing"`).
 Scope: full read of `lib/` (~9,000 lines, 22 files), `test/`, `android/`, `ios/`, `web/`,
-`pubspec.yaml`, plus the running notes in `VUE_PARITY_GAPS.md` and `README.md`.
+`pubspec.yaml` and `README.md`.
 Focus: **what is still open and where the app must improve to be a real mobile app**
-(iOS / Android), as opposed to a Vue-parity web port.
+(iOS / Android), as opposed to a web app that happens to run on a phone.
 
 ---
 
 ## 1. Where the port stands today
 
-Feature parity with the Vue frontend is essentially **done**. All screens are ported:
+The feature set is essentially **complete**. All screens exist:
 landing, login (email + Google), onboarding wizard, shell with pill header + bottom
 tabs, Family Hub dashboard, Daily (hour-grid with drag & drop on wide, timeline list
 with swipe on narrow), Activities (catalogue / create / budget), Marketplace, all ten
 Stats panels with the compare-caregivers toggle, and the Personal Area (account
 settings, wallet + ledger with revert, Family Circle with QR invites, notification
 preferences). Avatar upload and FCM push are wired in. Batch 4 (push) is committed in
-`e4cf875`, so the "uncommitted" warning inside `VUE_PARITY_GAPS.md` is now stale —
-but the work is still **unverified**: `flutter analyze` and a build have not been run
+`e4cf875`, but the work is still **unverified**: `flutter analyze` and a build have not been run
 on it, and no push message has ever been sent end-to-end.
 
 What remains is not parity work. It is the gap between "runs in Chrome on a dev
@@ -97,7 +96,7 @@ dead links unless overridden at build time).
 sets `firebaseAvailable = false`, after which **login on iOS is impossible** —
 `AppState.login()` calls `FirebaseAuth.instance` on a non-initialised app and throws.
 `ios/Runner/GoogleService-Info.plist` exists, but the Dart options block is missing.
-Open items (already tracked in `VUE_PARITY_GAPS.md` §"still missing" #3):
+Open items:
 - `sudo gem install xcodeproj`, then `flutterfire configure --platforms=ios`.
 - Google Sign-In on iOS additionally needs the reversed client ID URL scheme in
   `Info.plist` (documented in README, not done).
@@ -121,9 +120,9 @@ The `e4cf875` commit (push work, ApiClient body-on-DELETE change, profile rewiri
 has never been through `flutter analyze` or `flutter build`. Flutter is not available
 in this audit environment, so it remains unverified. Before anything else:
 `flutter analyze && flutter test && flutter build web && flutter build apk --debug`.
-Also still open from `VUE_PARITY_GAPS.md`: a real end-to-end push test (token row in
+Also still open: a real end-to-end push test (token row in
 `fcm_tokens`, foreground toast, background notification) and end-to-end exercising of
-parity batches 2–3 against the running backend.
+the screens against the running backend.
 
 ### 2.7 App identity is still the Flutter template
 - Android launcher label is `carecoins_flutter` (`AndroidManifest.xml`), icons are
@@ -155,7 +154,7 @@ Low effort, but it is what a tribunal/user sees first on a home screen.
 > `cached_network_image` deferred — new dependency needs a `pub get`).
 >
 > **UX drive (2026-07-07):** the logged-out surface was exercised end-to-end in
-> a Playwright-driven Chromium at a 390×844 phone viewport (and 844×390
+> a script-driven Chromium at a 390×844 phone viewport (and 844×390
 > landscape) against the real web build with the real Firebase SDK: landing
 > scroll + CTAs, login, typing, Enter-to-submit, empty-field toast, real
 > invalid-credential toast (root ToastListener confirmed on logged-out
@@ -323,10 +322,10 @@ swipe zones; at minimum animate the day change so a successful swipe gives feedb
   mobile-friendly error message. Map common failures (timeout, socket, 401) to
   human text.
 
-### 4.4 Deep links and URL routing (carried over from VUE_PARITY_GAPS)
-Still open, unchanged: no `go_router`, no `/join?token=…` handling, no iOS Universal
-Links / Android App Links. QR codes generated in-app point at the Vue web origin.
-Low urgency while the Vue app is primary, but it is the single feature where "mobile
+### 4.4 Deep links and URL routing
+Still open: no `go_router`, no `/join?token=…` handling, no iOS Universal
+Links / Android App Links. QR codes generated in-app point at the web origin.
+It is the single feature where "mobile
 app" and "QR-based family invites" meet — a scanned QR should open the native app's
 join flow.
 
@@ -344,10 +343,6 @@ join flow.
 ### 4.6 Stale documentation
 - `README.md` "Not ported yet" section still lists avatar upload, push, landing
   page, compare-toggle and deletion requests — **all of which are now ported**.
-- `VUE_PARITY_GAPS.md` batch-4 paragraph says the push work is "UNVERIFIED and
-  uncommitted"; it is committed (`e4cf875`), still unverified. Update both so the
-  next session doesn't re-derive state (this file supersedes the "still missing"
-  list there).
 
 ### 4.7 Small correctness notes (grouped)
 - `dashboard_screen.dart:54` assumes `/api/activities` returns a map

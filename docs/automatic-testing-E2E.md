@@ -1,19 +1,11 @@
 # CareCoins — Automated Test Suite
 
-> **Two of the three layers described here no longer exist.** The Vitest and Playwright
-> suites belonged to the Vue 3 SPA, which was **decommissioned** in `7132e6a`; its code is
-> archived on the `vue-frontend` branch purely so the work is not lost — that branch is not
-> maintained and is not run in CI or anywhere else. On `main` the frontend is Flutter and
-> there is **no end-to-end layer at all**; that gap is what this document now records. The
-> Playwright sections are kept as a design model for a Flutter equivalent, not as a suite
-> anyone is expected to run.
-
-## Overview — what actually runs on `main`
+## Overview
 
 | Layer | Runner | Tests | Command |
 |---|---|---|---|
-| Backend unit | Node `--test` (built-in) | **200** | `cd backend && npm test` |
-| Flutter unit + widget | `flutter test` | **44** | `cd fluterFront && flutter test` |
+| Backend unit | Node `--test` (built-in) | **208** | `cd backend && npm test` |
+| Flutter unit + widget | `flutter test` | **59** | `cd fluterFront && flutter test` |
 | Static analysis | `flutter analyze` | — | `cd fluterFront && flutter analyze` |
 | End-to-end | — | **none** | — |
 
@@ -22,25 +14,10 @@ money-moving paths are additionally verified by hand against a throwaway Postgre
 container — see `docs/personal-time-plan.md` for the pattern, including a two-session run
 driving the real HTTP API with users minted from the Firebase Auth emulator.
 
-**The gap:** no automated E2E on `main`. The Playwright harness described below is a working
-model for what a Flutter equivalent (`integration_test/` + `flutter drive`) would need to do,
-which is why it is kept rather than deleted.
-
----
-
-## Overview — the retired Vue suite (`vue-frontend` branch)
-
-| Layer | Runner | Tests | Command |
-|---|---|---|---|
-| Backend unit tests | Node `--test` (built-in) | 44 | `cd backend && npm test` |
-| Frontend unit tests | Vitest | 25 | `cd frontend && npm test` |
-| E2E integration tests | Playwright + Firebase Auth Emulator | 47 definitions → 72 executions¹ | `cd frontend && npm run test:e2e` |
-| **Total** | | **116 unique / 141 executions** | |
-
-> ¹ The 47 unique E2E test definitions run as 72 Playwright executions because some spec files are assigned to multiple browser projects (e.g. `happy-paths.spec.js` runs on both Chromium and WebKit, `landing.spec.js` runs on two public projects). The "72" figure counts execution instances; "47" counts distinct test definitions.
-
-> The backend has moved on from the 44 tests counted here; everything below about
-> `frontend/` describes the retired app.
+**The gap:** there is no automated end-to-end layer. The natural shape for one is Flutter's
+`integration_test/` driven by `flutter drive`, against the Firebase Auth emulator and
+`npm run dev:test` — two seeded caregivers, so the flows that need a second person
+(validation, bounties, personal-time requests) can be exercised.
 
 ---
 
@@ -92,6 +69,8 @@ Tests the business logic in `backend/src/services/activityService.js`.
 |---|---|
 | deducts coins and marks activity as rejected | Coins are taken back and status set to rejected |
 | refunds bounty to original offerer on revert | Bounty amount is returned to the person who offered it |
+| appends a reversal instead of rewriting the credit | No `UPDATE coin_ledger`; a negative `activity_reverted` row is inserted |
+| a coverage shift is reversed under coverage reasons | `coverage_reverted` / `coverage_sweetener_reverted` / `coverage_sweetener_refunded` |
 | returns 403 when user is not the assignee | Only the task owner can revert |
 | returns 409 when activity is not completed | Only completed activities can be reverted |
 
@@ -159,310 +138,39 @@ Tests `backend/src/services/familyService.js` and `backend/src/services/memberSe
 
 ---
 
-## Layer 2 — Frontend Unit Tests
+## Layer 2 — Flutter Unit and Widget Tests
 
-**Runner:** Vitest 4.x with `vmThreads` pool
-**Location:** `frontend/src/composables/__tests__/`, `frontend/src/stores/__tests__/`
-**Environment:** jsdom (browser-like DOM in Node)
+**Runner:** `flutter test` · **Location:** `fluterFront/test/`
 
-### `useTimeline.test.js` — 18 tests
-
-Tests the pure logic extracted into `frontend/src/composables/useTimeline.js`.
-
-#### `getCardStyle` — 6 tests
-Verifies the color-system logic introduced in the design fixes (Phase 2).
-
-| Test | What it verifies |
+| File | What it covers |
 |---|---|
-| returns danger-soft for rejected | Rejected activities get the danger palette |
-| returns success for completed care | Completed care tasks get the green success color |
-| returns warning for completed household | Completed household tasks get amber |
-| returns surface for pending | Pending tasks get neutral white surface |
-| returns surface for approved | Approved-but-unstarted tasks get neutral surface |
-| returns surface for pending_validation | Awaiting validation also gets neutral surface |
+| `absence_dialog_test.dart` | Picked days become whole-day windows (≥ 24 h, DST-safe); the dialog explains the rule |
+| `activity_kind_test.dart` | `isSelfActivity`: only `category = 'self'` is personal time; legacy and unknown rows are family work |
+| `personal_time_test.dart` | Every personal-time type and repeat has a label; unknown types fall back; the create sheet's fields |
+| `starter_packs_test.dart` | Questionnaire areas per dependent type, the `starterTasks` payload, localized area labels |
+| `l10n_test.dart`, `locale_test.dart`, `arb_plurals_test.dart` | Every ARB file is complete, locales resolve, ICU plurals render |
+| `error_localization_test.dart` | Backend errors map to localized messages |
+| `avatar_upload_test.dart` | Content-type sniffing: JPEG/PNG/WebP accepted, HEIC and truncated input refused |
+| `legal_links_test.dart` | Privacy/terms URLs are absolute https, match `nginx.conf`, labelled in every language |
+| `session_rejected_test.dart` | 401/403 sign out; a flaky connection never does; a rejected session is not "no family" |
+| `widget_test.dart` | UI kit smoke test, help sheet, coach marks, activation checklist |
 
-#### `formatGap` — 4 tests
-Tests the human-readable time gap formatter shown between timeline activities.
-
-| Test | What it verifies |
-|---|---|
-| returns minutes only when < 60 | `45` → `"45min"` |
-| returns hours only when exact hour | `120` → `"2h"` |
-| returns hours + minutes | `90` → `"1h 30min"` |
-| handles 0 minutes | `0` → `"0min"` |
-
-#### `useTimeline` composable — 8 tests
-Tests the timeline positioning algorithm that places activity chips on the daily grid.
-
-| Test | What it verifies |
-|---|---|
-| scheduledToday filters to target date only | Activities from other days are excluded |
-| excludes templates from scheduledToday | Activity templates are not shown on the timeline |
-| attaches _style with correct top% | An activity at `START_HOUR + 3h` gets `top: (3/18)*100%` |
-| sorts activities by start time | Earlier activities appear first |
-| completedToday contains only completed activities | Status filter works correctly |
-| todayCoins sums coin_value of completed activities | 30 + 50 cc completed = 80 cc (pending 20 cc excluded) |
-| nowLineTop is null or a number | The "now" indicator is either hidden (null) or positioned (number) |
-| gapBeforeMinutes reflects gap between consecutive activities | An 8:00 activity followed by 11:00 gives a gap ≥ 100 minutes |
-
-### Pre-existing store tests — 7 tests
-
-`auth.test.js` (5): auth store initializes, sets/clears success and error messages, `authHeaders` returns the right structure.
-
-`family.test.js` (2): family store initializes with default state, `fetchUserData` populates state from the API response.
-
----
-
-## Layer 3 — E2E Integration Tests
-
-**Runner:** Playwright 1.60
-**Browsers:** Chromium (headless) + WebKit/Safari (headless)
-**Location:** `frontend/e2e/`
-
-### Infrastructure
-
-Three servers start automatically before the test run:
-
-```
-Firebase Auth Emulator  →  localhost:9099  (local Firebase Auth, no Google connection)
-Backend (test mode)     →  localhost:3000  (FIREBASE_AUTH_EMULATOR_HOST set)
-Frontend (test mode)    →  localhost:5173  (VITE_USE_EMULATOR=true)
-```
-
-### Projects (browser × auth state)
-
-| Project | Browser | Auth state | Spec files |
-|---|---|---|---|
-| `chromium` | Chromium | `auth.state.json` (user1) | happy-paths, marketplace, notifications |
-| `chromium-public` | Chromium | None | landing, dashboard (auth guards) |
-| `chromium-multi` | Chromium | `auth.state.json` | two-users |
-| `chromium-onboard` | Chromium | `onboarding.state.json` | onboarding |
-| `webkit` | WebKit/Safari | `auth.state.json` | happy-paths |
-| `webkit-public` | WebKit/Safari | None | landing |
-
-### Global setup (`e2e/global.setup.js`)
-
-Before any test runs, the setup:
-1. Clears all users from the Auth emulator
-2. Creates three test accounts: `e2e@carecoins.test` (user1), `e2e2@carecoins.test` (user2), `e2e-onboard@carecoins.test` (no family)
-3. Bootstraps all three in the backend DB via `/api/me`
-4. Creates **"E2E Test Family"** with user1 as caregiver
-5. Invites user2 by email; user2 joins and becomes an active caregiver
-6. Creates and approves templates: **Morning Walk** (care, 30cc), **Tidy Kitchen** (household, 20cc), **Evening Care** (care, 45cc)
-7. Schedules Morning Walk **3 days ago** → auto `pending_validation` → user2 validates it → **user1 earns 30cc**
-8. Schedules a second Morning Walk **yesterday** → `pending_validation`, left for the UI validate test
-9. Schedules Evening Care **tomorrow** → future activity for the bounty test
-10. Creates marketplace reward: **"Movie Night"**, cost 10cc (user1 has 30cc)
-11. Logs each user in via Playwright browser, saves three auth state files
-
----
-
-### `landing.spec.js` — 8 tests (Chromium + WebKit, public)
-
-#### Landing page
-| Test | What it verifies |
-|---|---|
-| renders without JavaScript errors | No uncaught JS exceptions on page load |
-| page title is CareCoins | `<title>` tag is correct |
-| has a navigation link to the login page | Route to `/login` exists |
-| PWA theme-color meta is brand blue | `<meta name="theme-color" content="#2563EB">` |
-| Plus Jakarta Sans font link is present | Google Fonts `<link>` for Plus Jakarta Sans is in `<head>` |
-
-#### Login page
-| Test | What it verifies |
-|---|---|
-| renders login page | `/login` loads without crashing |
-| has Google sign-in button | "Sign in with Google" button is present and visible |
-
-#### Join page
-| Test | What it verifies |
-|---|---|
-| renders without crashing on invalid token | `/join?token=invalid` handles bad token gracefully |
-
----
-
-### `dashboard.spec.js` — 5 tests (Chromium, public / no auth)
-
-#### Authentication guard
-| Test | What it verifies |
-|---|---|
-| redirects unauthenticated users away from /dashboard | Router guard sends visitors without a session to `/login` |
-| redirects unauthenticated users away from /daily | Protected daily view route is guarded |
-| redirects unauthenticated users away from /profile | Profile route requires login |
-
-#### Mobile viewport
-| Test | What it verifies |
-|---|---|
-| login page renders correctly on mobile | No horizontal scroll on 390px viewport |
-| landing page has no significant horizontal overflow on mobile | Content stays within the mobile viewport (tolerance: 30px) |
-
----
-
-### `happy-paths.spec.js` — 17 tests (Chromium + WebKit, user1 authenticated)
-
-All tests start with user1 logged in and the seeded family + approved templates in the database.
-
-#### Dashboard
-| Test | What it verifies |
-|---|---|
-| renders Family Hub heading | Main dashboard heading is visible after auth loads |
-| shows active family members section | Family member cards section is rendered |
-| week calendar is visible | The 7-day weekly overview is present |
-| KPI cards are present | The 4 KPI metric cards are rendered |
-| no JavaScript errors on load | Clean page load with no uncaught errors |
-
-#### Daily view
-| Test | What it verifies |
-|---|---|
-| opens for today from the URL | `/daily/YYYY-MM-DD` route loads the schedule view |
-| task library shows seeded templates (desktop) | Both "Morning Walk" and "Tidy Kitchen" appear in the desktop sidebar |
-| date navigation moves to next day | Clicking the forward arrow changes the URL to tomorrow |
-| back button returns to dashboard | The back FAB navigates to `/dashboard` |
-| task sheet opens on mobile add button click | The `+` button in the mobile bar opens the task picker sheet |
-
-#### Schedule task — end-to-end flow
-| Test | What it verifies |
-|---|---|
-| can schedule Morning Walk on mobile via task sheet | Full flow: open sheet → select "Morning Walk" → time picker → confirm → activity appears in mobile timeline |
-
-#### Profile page
-| Test | What it verifies |
-|---|---|
-| shows Personal Area heading | Profile page loads |
-| shows the test family banner | Family name "E2E Test Family" appears in the banner |
-| Account Settings section is visible | Profile form section is rendered |
-| wallet tab shows coin balance | Wallet panel with "TOTAL BALANCE" is visible |
-
-#### Navigation
-| Test | What it verifies |
-|---|---|
-| nav links reach all main sections | Clicking profile nav link navigates to `/profile` |
-| logout clears session and redirects to login | Clicking logout lands on `/login` |
-
----
-
-### `two-users.spec.js` — 3 tests (Chromium, user1 + user2 contexts)
-
-Each test opens two browser contexts simultaneously: user1 (`auth.state.json`) and user2 (`auth2.state.json`).
-
-| Test | What it verifies |
-|---|---|
-| validate activity: user2 validates user1 past activity | User2 navigates to yesterday's daily view, sees the "✓ Validate" button on Morning Walk (assigned to user1, status `pending_validation`), clicks it, and the chip changes to "✓ Done" |
-| validate activity: user1 coin balance increases after validation | After user2 validates, user1's wallet on the profile page shows a balance > 0 (earned 30cc from the 3-days-ago instance validated in setup) |
-| bounty flow: user1 offers bounty, user2 takes over | User1 opens tomorrow's daily view and clicks "Delegate (-cc)" on Evening Care → bounty modal → enters 10cc → confirms. User2 navigates to the same view, sees "Take Over (+10cc)", clicks it → accept bounty modal → confirms. Evening Care chip no longer shows "Take Over" for user2 |
-
----
-
-### `onboarding.spec.js` — 3 tests (Chromium, onboarding user — no family)
-
-| Test | What it verifies |
-|---|---|
-| authenticated user with no family lands on /onboarding | Navigating to `/dashboard` triggers the router guard and redirects to `/onboarding` |
-| onboarding page shows create and join options | "Create a New Family" and "Join via Invite Link" cards are present |
-| can create a new family and lands on dashboard | Click "Create Family" → fill name → click "Complete Setup" → app creates the family, calls `fetchUserData`, and navigates to `/dashboard` showing "Family Hub" |
-
----
-
-### `marketplace.spec.js` — 6 tests (Chromium, user1 authenticated)
-
-User1 has 30cc (earned from the 3-days-ago validated activity). A "Movie Night" reward (10cc) was seeded in setup.
-
-| Test | What it verifies |
-|---|---|
-| marketplace page loads correctly | `/marketplace` renders with "The Reward Store" heading |
-| seeded reward "Movie Night" is visible in the store | The reward card created in global setup appears in the store |
-| reward card shows coin cost | The "10" coin amount badge is visible on the card |
-| can redeem a reward end-to-end | Click "Buy Now" → "Confirm Redemption" modal appears → click "Spend coins" → success message shown |
-| History tab shows claimed rewards after redemption | After redemption, the History tab section is accessible and visible |
-| caregiver can create a new reward | Navigate to Create section → fill "Reward Title" and "Coin Cost" fields → click "Add Reward to Store" → success indicator appears |
-
----
-
-### `notifications.spec.js` — 5 tests (Chromium, user1 authenticated)
-
-Uses `page.addInitScript` to inject `Notification.permission = 'granted'` before Vue reads it at component init time, simulating a user who has already granted browser notification permission.
-
-| Test | What it verifies |
-|---|---|
-| notification permission is detected as granted | `Notification.permission` evaluates to `'granted'` in the page context |
-| notification preferences panel is visible when permission is granted | "✓ Notifications enabled" text and `.notif-pref-list` are rendered |
-| shows all 5 notification preference toggles | `.notif-pref-toggle` count is exactly 5 |
-| can toggle a notification preference off and on | Toggle starts checked → click → unchecked → click → back to checked |
-| disable button is visible when notifications are enabled | A "Disable" button is present when the prefs panel is shown |
+`flutter analyze` must also be clean.
 
 ---
 
 ## How to run
 
-### Prerequisites
-
-Playwright starts all three servers automatically when they are not already running.
-
-**Option A — let Playwright manage everything (recommended for CI)**
 ```bash
-cd frontend
-npm run test:e2e
+cd backend && npm test                              # backend unit
+cd fluterFront && flutter analyze && flutter test   # Flutter
 ```
 
-**Option B — start services manually, then run tests (faster for repeated runs)**
+Verifying a migration against a real database:
+
 ```bash
-# Terminal 1 — Firebase Auth Emulator
-firebase emulators:start --only auth --project tfg-carecoins
-
-# Terminal 2 — Backend in test mode
-cd backend && npm run dev:test
-
-# Terminal 3 — Frontend in test mode
-cd frontend && npm run dev:test
-
-# Terminal 4 — Run tests
-cd frontend && npm run test:e2e
+docker run --rm -d --name cc -e POSTGRES_PASSWORD=test -e POSTGRES_DB=cc -p 55432:5432 postgres:16
+cd backend && DATABASE_URL="postgres://postgres:test@localhost:55432/cc" npm run db:init
 ```
 
-### Running individual layers
-```bash
-# Backend unit tests
-cd backend && npm test
-
-# Frontend unit tests
-cd frontend && npm test
-
-# E2E only (requires services running)
-cd frontend && npm run test:e2e
-```
-
-### View Playwright HTML report
-```bash
-cd frontend && node node_modules/@playwright/test/cli.js show-report
-```
-
----
-
-## Test data setup summary
-
-| Resource | Value | Purpose |
-|---|---|---|
-| User 1 | `e2e@carecoins.test` | Primary authenticated user — runs happy-paths, marketplace, notifications |
-| User 2 | `e2e2@carecoins.test` | Second caregiver — validates activities, accepts bounties |
-| Onboarding user | `e2e-onboard@carecoins.test` | No family at setup — tests the first-time onboarding flow |
-| Family | "E2E Test Family" | Shared between user1 and user2 |
-| Templates | Morning Walk (care, 30cc), Tidy Kitchen (household, 20cc), Evening Care (care, 45cc) | Appear in task library; used for scheduling tests |
-| Past instance 1 | Morning Walk, 3 days ago, validated by user2 | Gives user1 30cc for marketplace test |
-| Past instance 2 | Morning Walk, yesterday, `pending_validation` | Used by the UI validate test (user2 clicks Validate) |
-| Future instance | Evening Care, tomorrow | Used by the bounty flow test |
-| Marketplace reward | "Movie Night", 10cc | Used by the redeem end-to-end test |
-
----
-
-## Important: files excluded from version control
-
-The following are in `.gitignore` and must never be committed:
-
-```
-frontend/e2e/auth.state.json        ← user1 Firebase auth token
-frontend/e2e/auth2.state.json       ← user2 Firebase auth token
-frontend/e2e/onboarding.state.json  ← onboarding user auth token
-frontend/test-results/
-frontend/playwright-report/
-backend/test-results-backend.txt
-```
+Run `db:init` twice — it must stay re-runnable.

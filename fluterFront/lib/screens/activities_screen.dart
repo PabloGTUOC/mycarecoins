@@ -11,7 +11,7 @@ import '../utils/json.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/ActivitiesView.vue: Catalogue / New Activity / Budget tabs.
+/// Activities: Catalogue / New Activity / Budget tabs.
 /// Coin suggestions come from the family budget (`baseRatePerHour`), the
 /// slider is bounded to 0.5×–1.5× of the suggestion, and pending templates
 /// carry an Approve action.
@@ -116,7 +116,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     }
   }
 
-  // ── Budget economics (port of baseScore / minCoins / maxCoins) ──
+  // ── Budget economics (base score, min/max coins) ────────────────
 
   int get _baseScore {
     final rate = toNum(_budget?['baseRatePerHour']);
@@ -598,7 +598,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   }
 }
 
-/// Semicircular budget gauge (port of the SVG arc in ActivitiesView.vue).
+/// Semicircular budget gauge.
 class _GaugePainter extends CustomPainter {
   final double fraction;
 

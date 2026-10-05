@@ -14,7 +14,7 @@ import 'ui.dart';
 const String kWebAppOrigin = String.fromEnvironment('WEB_APP_ORIGIN',
     defaultValue: 'http://localhost:5173');
 
-/// Port of components/profile/FamilyCircle.vue: the family roster
+/// Family Circle: the family roster
 /// (members + dependents), add/remove dependents, e-mail invitations and
 /// share-able invite links with QR code.
 class FamilyCircle extends StatefulWidget {
@@ -72,7 +72,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
     }
   }
 
-  /// Members first, then care actors — same as combinedCircleItems in Vue.
+  /// Members first, then care actors.
   List<Map<String, dynamic>> get _circle {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);

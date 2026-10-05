@@ -27,11 +27,11 @@ const kLanguageNativeNames = {
   'de': 'Deutsch',
 };
 
-/// Port of views/ProfileView.vue: family banner, deletion-request banner,
+/// Personal Area: family banner, deletion-request banner,
 /// account settings (name/email/alias, notification prefs, delete account),
 /// Family Circle with delete-family, and the wallet panel with humanised
 /// ledger, un-check revert and insights. Mobile shows Profile/Family/Wallet
-/// tabs like the Vue tab bar.
+/// tabs.
 class ProfileScreen extends StatefulWidget {
   /// Whether this is the visible tab; becoming active triggers a refetch.
   final bool active;
@@ -803,7 +803,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-/// Port of components/profile/WalletPanel.vue: dark balance widget with a
+/// Wallet panel: dark balance widget with a
 /// 3-row preview, expandable monthly ledger with humanised reasons and
 /// un-check revert, plus the Activity Insights card.
 class _WalletPanel extends StatelessWidget {
@@ -828,7 +828,7 @@ class _WalletPanel extends StatelessWidget {
     required this.onUncheck,
   });
 
-  /// Port of formatLedgerLabel.
+  /// Human-readable label for a ledger row.
   static String ledgerLabel(AppLocalizations l, Map<String, dynamic> item) {
     final title = item['activity_title']?.toString();
     switch (item['reason']?.toString()) {
@@ -867,7 +867,7 @@ class _WalletPanel extends StatelessWidget {
     }
   }
 
-  /// Port of formatLedgerDate (Today/Yesterday, HH:mm else short date).
+  /// Ledger row date: Today/Yesterday with HH:mm, else a short date.
   static String ledgerDate(AppLocalizations l, String loc, dynamic raw) {
     final d = DateTime.tryParse(raw?.toString() ?? '')?.toLocal();
     if (d == null) return '';

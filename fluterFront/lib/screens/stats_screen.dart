@@ -11,8 +11,7 @@ import '../widgets/charts.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 
-/// Port of views/StatsView.vue — all ten ECharts panels rendered as
-/// dependency-free charts: KPI row, income trend (with the
+/// Stats — ten panels rendered as dependency-free charts: KPI row, income trend (with the
 /// compare-caregivers toggle), category balance, task frequency,
 /// leaderboard, completion rates, bounty stats, coin flow, rewards by
 /// member, top rewards and status distribution.

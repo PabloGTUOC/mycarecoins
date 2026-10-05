@@ -40,7 +40,7 @@ class ApiException implements Exception {
       };
 }
 
-/// Thin REST client mirroring stores/auth.js `request()` in the Vue app:
+/// Thin REST client:
 /// JSON in/out, Bearer token, 10s timeout, error message from `data.error`.
 class ApiClient {
   /// Override at build time: flutter run --dart-define=API_BASE=http://192.168.1.10:3000
@@ -96,8 +96,8 @@ class ApiClient {
     return data;
   }
 
-  /// Multipart upload (avatar endpoints). Mirrors the Vue FormData calls:
-  /// auth header only, no JSON content type.
+  /// Multipart upload (avatar endpoints): auth header only, no JSON content
+  /// type.
   /// [contentType] must be given for anything the server type-checks: without
   /// it the http package labels the part `application/octet-stream`, and a
   /// multer `fileFilter` reading `file.mimetype` rejects the upload outright.

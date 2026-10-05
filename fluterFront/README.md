@@ -1,19 +1,16 @@
 # CareCoins — Flutter frontend (`fluterFront`)
 
-**The** CareCoins frontend, targeting **web, iOS and Android** from one codebase. It began
-as a port of the Vue 3 SPA; that app is **decommissioned** — removed from `main` in `7132e6a`
-and archived on the `vue-frontend` branch so the work is not lost, but not maintained and not
-deployable. The comparisons to it below are history, not a description of anything runnable. It talks to `../backend` (port 3000 by default)
-with Firebase-ID-token auth.
+**The** CareCoins frontend, targeting **web, iOS and Android** from one codebase. It talks
+to `../backend` (port 3000 by default) with Firebase-ID-token auth.
 
-## What is ported
+## What is in the app
 
 - **Design system** (`lib/theme/app_theme.dart`): the tokens documented in `docs/DESIGN.md`
   (colors, radii, Plus Jakarta Sans via `google_fonts`), plus `VCard`, `VButton`, `VInput`,
   `KpiCard` and the pill header / bottom tab bar (`lib/widgets/ui.dart`,
   `lib/screens/shell.dart`).
-- **State + API** (`lib/state/app_state.dart`, `lib/services/api_client.dart`): mirrors
-  `stores/auth.js` / `stores/family.js` — Firebase auth (email/password + Google), `/api/me`
+- **State + API** (`lib/state/app_state.dart`, `lib/services/api_client.dart`):
+  Firebase auth (email/password + Google), `/api/me`
   sync, login/logout events, success/error toasts with the same timings.
 - **Screens**: Landing page, Login (email/Google, autofill, forgot-password), Onboarding
   wizard (create family with caretakers + objects of care / join by token / invitations),
@@ -27,10 +24,9 @@ with Firebase-ID-token auth.
   deletion requests). Pull-to-refresh and error/retry states on all main screens; FCM
   push notifications wired end-to-end in code.
 
-Vue parity was reached before the retirement. `MOBILE_AUDIT.md` and `VUE_PARITY_GAPS.md`
-are **dated July 2026 audits kept as history** — they predate personal time, coverage,
-subscriptions and the four-language rollout, so check them against the code before acting on
-anything they list. Features shipped since are logged in `docs/personal-time-plan.md`,
+`MOBILE_AUDIT.md` is a **dated July 2026 audit kept as history** — it predates personal time, coverage,
+subscriptions and the four-language rollout, so check it against the code before acting on
+anything it lists. Features shipped since are logged in `docs/personal-time-plan.md`,
 `docs/admin-family-management-plan.md` and `docs/i18n-plan.md`.
 
 ## Running it

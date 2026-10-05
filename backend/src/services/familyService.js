@@ -106,8 +106,8 @@ export async function createFamily(client, user, { name, mainCaretakerName, alia
   }
 
   // New clients send a localized catalogue chosen in the setup wizard; an
-  // empty array means "start empty". Clients that omit the field (Playwright
-  // E2E, the retired Vue frontend) keep the legacy English defaults.
+  // empty array means "start empty". Clients that omit the field (old app
+  // builds, scripted API calls) keep the legacy English defaults.
   if (starterTasks !== undefined) {
     await insertStarterTasks(client, famId, user.id, starterTasks, monthlyCoinBudget);
   } else {

@@ -13,7 +13,6 @@ import '../services/telemetry.dart';
 import '../utils/json.dart';
 
 /// App-wide state: Firebase auth session + `/api/me` payload + toast messages.
-/// Mirrors stores/auth.js + stores/family.js from the Vue frontend.
 class AppState extends ChangeNotifier {
   final ApiClient api = ApiClient();
 

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
-/// Minimal chart widgets replacing the ECharts panels of StatsView.vue.
+/// Minimal chart widgets for the Stats screen.
 /// Kept dependency-free: a smooth area line chart and a stacked bar chart.
 
 class LineAreaChart extends StatelessWidget {

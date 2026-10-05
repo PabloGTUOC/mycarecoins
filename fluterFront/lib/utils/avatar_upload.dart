@@ -49,7 +49,6 @@ String? sniffImageMime(List<int> b) {
 
 /// Opens the gallery picker and uploads the chosen image as multipart
 /// `avatar` to [path] (e.g. `/api/me/avatar`). Returns true on success.
-/// Mirrors handleUserAvatarUpload / the actor upload in the Vue app.
 Future<bool> pickAndUploadAvatar(BuildContext context, String path,
     {String successMessage = 'Avatar updated successfully!'}) async {
   final picked = await ImagePicker().pickImage(
