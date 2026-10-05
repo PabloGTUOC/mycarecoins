@@ -880,11 +880,28 @@ class _WalletPanel extends StatelessWidget {
     return DateFormat('MMM d, yyyy', loc).format(d);
   }
 
-  static bool _isReverted(Map<String, dynamic> item) =>
-      item['reason'] == 'activity_reverted' ||
-      item['reason'] == 'bounty_reverted' ||
-      item['reason'] == 'coverage_reverted' ||
-      item['reason'] == 'coverage_sweetener_reverted';
+  static const _reversalReasons = {
+    'activity_reverted',
+    'bounty_reverted',
+    'coverage_reverted',
+    'coverage_sweetener_reverted',
+  };
+
+  /// Activities whose payout has been reverted. The ledger is append-only, so
+  /// the original credit stays beside its reversal row.
+  Set<dynamic> get _revertedActivityIds => {
+        for (final i in ledger)
+          if (_reversalReasons.contains(i['reason']) &&
+              i['activity_id'] != null)
+            i['activity_id'],
+      };
+
+  /// Struck through: a reversal row, or a credit that a reversal undid.
+  static bool _isReverted(
+          Map<String, dynamic> item, Set<dynamic> revertedIds) =>
+      _reversalReasons.contains(item['reason']) ||
+      (item['activity_id'] != null &&
+          revertedIds.contains(item['activity_id']));
 
   ({String label, String icon}) _coinTier(AppLocalizations l) {
     if (balance >= 1000) return (label: l.tierPlatinum, icon: '🏆');
@@ -898,8 +915,12 @@ class _WalletPanel extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final loc = l.localeName;
     final preview = ledger.take(3).toList();
-    final tasksThisMonth =
-        ledger.where((i) => i['reason'] == 'activity_completed').length;
+    final revertedIds = _revertedActivityIds;
+    final tasksThisMonth = ledger
+        .where((i) =>
+            i['reason'] == 'activity_completed' &&
+            !revertedIds.contains(i['activity_id']))
+        .length;
     final tier = _coinTier(l);
 
     return Column(
@@ -974,10 +995,10 @@ class _WalletPanel extends StatelessWidget {
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFFF1F5F9)
                                           .withValues(
-                                              alpha: _isReverted(row)
+                                              alpha: _isReverted(row, revertedIds)
                                                   ? 0.6
                                                   : 1),
-                                      decoration: _isReverted(row)
+                                      decoration: _isReverted(row, revertedIds)
                                           ? TextDecoration.lineThrough
                                           : null,
                                       decorationColor:
@@ -1080,10 +1101,10 @@ class _WalletPanel extends StatelessWidget {
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.textPrimary
                                             .withValues(
-                                                alpha: _isReverted(row)
+                                                alpha: _isReverted(row, revertedIds)
                                                     ? 0.6
                                                     : 1),
-                                        decoration: _isReverted(row)
+                                        decoration: _isReverted(row, revertedIds)
                                             ? TextDecoration.lineThrough
                                             : null)),
                                 Text(ledgerDate(l, loc, row['created_at']),
@@ -1110,7 +1131,8 @@ class _WalletPanel extends StatelessWidget {
                                   amount: toNum(row['amount']),
                                   suffix: ' cc',
                                   dark: false),
-                              if (row['reason'] == 'activity_completed')
+                              if (row['reason'] == 'activity_completed' &&
+                                  !revertedIds.contains(row['activity_id']))
                                 TextButton(
                                   onPressed: () => onUncheck(row),
                                   style: TextButton.styleFrom(

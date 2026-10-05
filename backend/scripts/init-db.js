@@ -56,6 +56,10 @@ async function main() {
   await pool.query(await fs.readFile(personalTimePath, 'utf8'));
   console.log('Personal-time requests ready.');
 
+  const ledgerReversalsPath = path.join(__dirname, 'migrate-ledger-reversals.sql');
+  await pool.query(await fs.readFile(ledgerReversalsPath, 'utf8'));
+  console.log('Reverted payouts have their credits back.');
+
   await pool.end();
 }
 

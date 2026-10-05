@@ -110,10 +110,9 @@ inside that window.
 
 ### Known issues, deliberately not fixed
 
-- **`revertActivity` corrupts the ledger.** It rewrites the original credit row into a debit
-  instead of appending a reversal, so `SUM(amount)` over `coin_ledger` ends up 2x the
-  reverted amount below the real balances. Demonstrated against Postgres 16. Affects every
-  activity type and predates this work. There is a background task queued for it.
+- ~~**`revertActivity` corrupts the ledger.**~~ **Fixed:** it now appends a reversal row
+  instead of rewriting the credit, and `scripts/migrate-ledger-reversals.sql` restores the
+  credits that older reverts overwrote, so `SUM(amount)` matches the balances again.
 - **`runAutoCompleteSweep` clears `bounty_amount` when it settles a shift**, so a later
   revert never returns the bonus — the person who reverted keeps the coins. Same task.
 - **Pending requests render as chips, not positioned ghost blocks.** Deliberate: a request is

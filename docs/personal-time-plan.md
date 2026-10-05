@@ -1,6 +1,7 @@
 # Activity Subclasses, Personal Time & Coverage — Plan
 
-> **Status: proposed, revision 3. No code written.**
+> **Status: all seven phases implemented** (see §9, an **As built** note per phase). The
+> design below is revision 3, kept as the reasoning behind what was built.
 > Companion docs: `docs/PRODUCT.md`, `docs/backend.md`, `docs/database-schema.md`.
 
 **The scenario:** "I want to go to the gym Friday 18:00–19:30. I double-tap that hour on
@@ -639,10 +640,10 @@ once and a second sweep paid nothing; declining refunded the escrow and left zer
 rows; and reverting a coverage shift wrote `coverage_reverted` rather than
 `activity_reverted`.
 
-**Found, not fixed:** `revertActivity` rewrites the original credit row into a debit instead
-of appending a reversal, so the ledger nets 2× the reverted amount below the real balances.
-It predates this work and affects every activity type, so it is tracked separately rather
-than folded in here.
+**Found here, fixed later:** `revertActivity` rewrote the original credit row into a debit
+instead of appending a reversal, so the ledger netted 2× the reverted amount below the real
+balances. It now appends, and `scripts/migrate-ledger-reversals.sql` restores the credits the
+old code swallowed.
 
 ---
 

@@ -124,7 +124,7 @@ statsRouter.get('/:familyId', async (req, res) => {
             const { rows: bountyStats } = await client.query(
                 `SELECT COALESCE(fm.alias, u.display_name, 'Unknown') as name,
                         SUM(CASE WHEN cl.reason IN ('bounty_escrow', 'bounty_paid') THEN ABS(cl.amount) ELSE 0 END)::int as offered,
-                        SUM(CASE WHEN cl.reason = 'bounty_earned'   THEN cl.amount ELSE 0 END)::int as earned,
+                        SUM(CASE WHEN cl.reason IN ('bounty_earned', 'bounty_reverted') THEN cl.amount ELSE 0 END)::int as earned,
                         SUM(CASE WHEN cl.reason = 'bounty_refunded' THEN cl.amount ELSE 0 END)::int as refunded
                  FROM coin_ledger cl
                  JOIN family_members fm ON fm.user_id = cl.user_id AND fm.family_id = cl.family_id
@@ -184,17 +184,22 @@ statsRouter.get('/:familyId', async (req, res) => {
             );
 
             const { rows: coinFlowByReason } = await client.query(
+                // A reversal (negative amount) is folded into the payout it undoes,
+                // so a reverted activity nets out instead of counting as earned.
                 `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM') as month,
                         CASE WHEN reason LIKE 'Redeemed%' THEN 'redeemed'
                              WHEN reason = 'bounty_paid' THEN 'bounty_escrow'
+                             WHEN reason = 'activity_reverted' THEN 'activity_completed'
+                             WHEN reason = 'bounty_reverted' THEN 'bounty_earned'
+                             WHEN reason = 'coverage_reverted' THEN 'coverage_earned'
+                             WHEN reason = 'coverage_sweetener_reverted' THEN 'coverage_sweetener_paid'
                              ELSE reason END as reason,
-                        SUM(ABS(amount))::int as total
+                        SUM(CASE WHEN reason IN ('activity_reverted', 'bounty_reverted',
+                                                 'coverage_reverted', 'coverage_sweetener_reverted')
+                                 THEN amount ELSE ABS(amount) END)::int as total
                  FROM coin_ledger
                  WHERE family_id = $1
-                 GROUP BY month,
-                          CASE WHEN reason LIKE 'Redeemed%' THEN 'redeemed'
-                               WHEN reason = 'bounty_paid' THEN 'bounty_escrow'
-                               ELSE reason END
+                 GROUP BY 1, 2
                  ORDER BY month ASC`,
                 [familyId]
             );

@@ -201,11 +201,30 @@ describe('revertActivity', () => {
     const client = mockClient([
       ok([act]),   // SELECT FOR UPDATE
       empty(),     // UPDATE family_members - coins
-      empty(),     // UPDATE coin_ledger activity_reverted
+      empty(),     // INSERT coin_ledger activity_reverted
       empty(),     // UPDATE activities SET status = 'rejected'
     ]);
     const result = await revertActivity(client, 99, 1);
     assert.equal(result.data.coinsDeducted, 60);
+  });
+
+  test('appends a reversal instead of rewriting the credit', async () => {
+    const act = { family_id: 10, assigned_to: 99, status: 'completed', type: 'care', coin_value: 60, bounty_amount: 0, bounty_offered_by: null };
+    const client = mockClient([ok([act]), empty(), empty(), empty()]);
+    await revertActivity(client, 99, 1);
+    assert.ok(client._calls.every(c => !/UPDATE coin_ledger/.test(c.sql)), 'ledger rows must never be rewritten');
+    const reversal = client._calls[2];
+    assert.match(reversal.sql, /INSERT INTO coin_ledger/);
+    assert.deepEqual(reversal.params, [10, 99, 1, -60, 'activity_reverted']);
+  });
+
+  test('a coverage shift is reversed under coverage reasons', async () => {
+    const act = { family_id: 10, assigned_to: 99, status: 'completed', type: 'coverage', coin_value: 40, bounty_amount: 5, bounty_offered_by: 77 };
+    const client = mockClient([ok([act]), empty(), empty(), empty(), empty(), empty(), empty()]);
+    await revertActivity(client, 99, 1);
+    assert.deepEqual(client._calls[2].params, [10, 99, 1, -40, 'coverage_reverted']);
+    assert.deepEqual(client._calls[3].params, [10, 99, 1, -5, 'coverage_sweetener_reverted']);
+    assert.deepEqual(client._calls[5].params, [10, 77, 1, 5, 'coverage_sweetener_refunded']);
   });
 
   test('refunds bounty to original offerer on revert', async () => {
@@ -213,8 +232,8 @@ describe('revertActivity', () => {
     const client = mockClient([
       ok([act]),
       empty(), // UPDATE family_members - totalAward
-      empty(), // UPDATE coin_ledger activity_reverted
-      empty(), // UPDATE coin_ledger bounty_reverted
+      empty(), // INSERT coin_ledger activity_reverted
+      empty(), // INSERT coin_ledger bounty_reverted
       empty(), // UPDATE family_members + bountyAmt for offerer
       empty(), // INSERT coin_ledger bounty_refunded
       empty(), // UPDATE activities SET status = 'rejected'

@@ -425,9 +425,10 @@ export async function revertActivity(client, userId, activityId) {
 
   const bountyAmt = act.bounty_amount || 0;
   const totalAward = (act.coin_value || 0) + bountyAmt;
-  // Reverse the rows the payout actually wrote: a coverage shift files its
-  // earnings under different reasons, and matching the wrong ones would leave
-  // the ledger showing a credit the balance no longer has.
+  // The ledger is append-only: the original credit stays and a reversal row
+  // is added beside it, so SUM(amount) keeps matching the balances. Rewriting
+  // the credit into a debit (as this once did) left the ledger 2x the amount
+  // short. A coverage shift files under its own reasons, hence payoutReasons.
   const reason = payoutReasons(act.type);
   if (totalAward > 0) {
     await client.query(
@@ -436,14 +437,14 @@ export async function revertActivity(client, userId, activityId) {
     );
     if (act.coin_value > 0) {
       await client.query(
-        `UPDATE coin_ledger SET amount = $1, reason = $4 WHERE activity_id = $2 AND user_id = $3 AND reason = $5`,
-        [-act.coin_value, activityId, userId, reason.valueReverted, reason.value]
+        `INSERT INTO coin_ledger (family_id, user_id, activity_id, amount, reason) VALUES ($1,$2,$3,$4,$5)`,
+        [act.family_id, userId, activityId, -act.coin_value, reason.valueReverted]
       );
     }
     if (bountyAmt > 0) {
       await client.query(
-        `UPDATE coin_ledger SET amount = $1, reason = $4 WHERE activity_id = $2 AND user_id = $3 AND reason = $5`,
-        [-bountyAmt, activityId, userId, reason.bonusReverted, reason.bonus]
+        `INSERT INTO coin_ledger (family_id, user_id, activity_id, amount, reason) VALUES ($1,$2,$3,$4,$5)`,
+        [act.family_id, userId, activityId, -bountyAmt, reason.bonusReverted]
       );
       await client.query(
         `UPDATE family_members SET coin_balance = coin_balance + $1 WHERE family_id = $2 AND user_id = $3`,
