@@ -703,6 +703,28 @@
   },
   "buy": "Buy",
   "@buy": { "description": "Reward card buy button" },
+  "redeemConfirmTitle": "Redeem reward",
+  "@redeemConfirmTitle": {
+    "description": "Title of the reward redemption confirmation sheet"
+  },
+  "redeemBalanceAfter": "You'll have {balance} cc left",
+  "@redeemBalanceAfter": {
+    "description": "Wallet balance remaining after redeeming a reward",
+    "placeholders": { "balance": { "type": "num" } }
+  },
+  "redeemNeedMore": "You need {missing} more cc",
+  "@redeemNeedMore": {
+    "description": "Notice shown when user has insufficient coins for a reward",
+    "placeholders": { "missing": { "type": "num" } }
+  },
+  "redeemAction": "Redeem",
+  "@redeemAction": {
+    "description": "Primary action button to confirm redeeming a reward"
+  },
+  "notNow": "Not now",
+  "@notNow": {
+    "description": "Secondary action button to dismiss the redeem confirmation sheet"
+  },
 
   "tourActTitle": "The task library",
   "@tourActTitle": { "description": "Activities coach-mark title on the tabs" },

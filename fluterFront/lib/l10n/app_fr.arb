@@ -287,6 +287,11 @@
   "nLeft": "{count, plural, one{{count} restante} other{{count} restantes}}",
   "expires": "⏳ Expire le {date}",
   "buy": "Acheter",
+  "redeemConfirmTitle": "Échanger la récompense",
+  "redeemBalanceAfter": "Il vous restera {balance} cc",
+  "redeemNeedMore": "Il vous manque {missing} cc",
+  "redeemAction": "Échanger",
+  "notNow": "Pas maintenant",
 
   "tourActTitle": "La bibliothèque de tâches",
   "tourActBody": "Le Catalogue contient vos modèles, Nouvelle activité en crée un, et Budget montre combien de pièces restent à attribuer ce mois-ci.",

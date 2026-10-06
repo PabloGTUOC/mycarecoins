@@ -287,6 +287,11 @@
   "nLeft": "{count, plural, one{{count} übrig} other{{count} übrig}}",
   "expires": "⏳ Läuft ab am {date}",
   "buy": "Kaufen",
+  "redeemConfirmTitle": "Belohnung einlösen",
+  "redeemBalanceAfter": "Du hast danach noch {balance} cc",
+  "redeemNeedMore": "Du brauchst noch {missing} cc",
+  "redeemAction": "Einlösen",
+  "notNow": "Nicht jetzt",
 
   "tourActTitle": "Die Aufgabenbibliothek",
   "tourActBody": "Der Katalog enthält deine Vorlagen, Neue Aufgabe erstellt eine, und Budget zeigt, wie viele Münzen diesen Monat noch zu vergeben sind.",

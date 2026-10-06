@@ -14,10 +14,10 @@ import '../utils/json.dart';
 
 /// App-wide state: Firebase auth session + `/api/me` payload + toast messages.
 class AppState extends ChangeNotifier {
-  final ApiClient api = ApiClient();
+  final ApiClient api;
 
-  AppState() {
-    Telemetry.init(api);
+  AppState({ApiClient? api}) : api = api ?? ApiClient() {
+    Telemetry.init(this.api);
   }
 
   fb.User? user;
@@ -45,6 +45,7 @@ class AppState extends ChangeNotifier {
       : null;
 
   int get familyId => toNum(family?['family_id']).toInt();
+  int get coinBalance => toNum(family?['coin_balance']).toInt();
   bool get hasFamilies => families.isNotEmpty;
 
   bool get isCaregiver {

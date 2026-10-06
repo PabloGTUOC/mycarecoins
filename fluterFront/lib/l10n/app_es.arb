@@ -287,6 +287,11 @@
   "nLeft": "{count, plural, one{Queda {count}} other{Quedan {count}}}",
   "expires": "⏳ Caduca el {date}",
   "buy": "Comprar",
+  "redeemConfirmTitle": "Canjear recompensa",
+  "redeemBalanceAfter": "Te quedarán {balance} cc",
+  "redeemNeedMore": "Necesitas {missing} cc más",
+  "redeemAction": "Canjear",
+  "notNow": "Ahora no",
 
   "tourActTitle": "La biblioteca de tareas",
   "tourActBody": "El Catálogo guarda tus plantillas, Nueva actividad crea una y Presupuesto muestra cuántas monedas quedan por asignar este mes.",

@@ -126,11 +126,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<void> _redeem(Map<String, dynamic> r) async {
-    final app = context.read<AppState>();
-    await app.runAction(() async {
-      await app.api.post('/api/marketplace/rewards/${r['id']}/redeem');
-      await Future.wait([_load(), app.fetchUserData()]);
-    }, AppLocalizations.of(context).toastRewardRedeemed);
+    await showRedeemConfirmSheet(
+      context,
+      reward: r,
+      onSuccess: _load,
+    );
   }
 
   Future<void> _create() async {
@@ -508,6 +508,243 @@ class _RewardCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Confirmation modal bottom sheet before redeeming a reward (ticket T2).
+Future<void> showRedeemConfirmSheet(
+  BuildContext context, {
+  required Map<String, dynamic> reward,
+  Future<void> Function()? onSuccess,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    constraints: isWideLayout(context)
+        ? const BoxConstraints(maxWidth: 520)
+        : null,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.lg)),
+    ),
+    builder: (ctx) => _RedeemConfirmSheet(
+      reward: reward,
+      onSuccess: onSuccess,
+    ),
+  );
+}
+
+class _RedeemConfirmSheet extends StatefulWidget {
+  final Map<String, dynamic> reward;
+  final Future<void> Function()? onSuccess;
+
+  const _RedeemConfirmSheet({
+    required this.reward,
+    this.onSuccess,
+  });
+
+  @override
+  State<_RedeemConfirmSheet> createState() => _RedeemConfirmSheetState();
+}
+
+class _RedeemConfirmSheetState extends State<_RedeemConfirmSheet> {
+  bool _submitting = false;
+  String? _error;
+
+  Future<void> _submit() async {
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final ok = await app.runAction(() async {
+      await app.api.post('/api/marketplace/rewards/${widget.reward['id']}/redeem');
+      await Future.wait([
+        if (widget.onSuccess != null) widget.onSuccess!(),
+        app.fetchUserData(),
+      ]);
+    }, l.toastRewardRedeemed);
+
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {
+        _submitting = false;
+        _error = app.error;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final l = AppLocalizations.of(context);
+    final title = (widget.reward['title'] ?? '').toString();
+    final description = (widget.reward['description'] ?? '').toString();
+    final cost = toNum(widget.reward['cost']).toInt();
+    final currentBalance = app.coinBalance;
+    final balanceAfter = currentBalance - cost;
+    final insufficient = balanceAfter < 0;
+    final missing = cost - currentBalance;
+
+    return PopScope(
+      canPop: !_submitting,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 12,
+            bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                ),
+              ),
+              Text(
+                l.redeemConfirmTitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (description.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l.costLabel,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        PillBadge(
+                          text: '$cost cc',
+                          color: AppColors.warningInk,
+                          background: AppColors.warningSoft,
+                          fontSize: 13,
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: AppColors.border),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            insufficient
+                                ? l.redeemNeedMore(missing)
+                                : l.redeemBalanceAfter(balanceAfter),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: insufficient
+                                  ? AppColors.dangerInk
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.dangerSoft,
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          size: 16, color: AppColors.dangerInk),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.dangerInk),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              VButton(
+                block: true,
+                disabled: _submitting || insufficient,
+                onPressed: (_submitting || insufficient) ? null : _submit,
+                child: Text(l.redeemAction),
+              ),
+              const SizedBox(height: 10),
+              VButton(
+                type: VButtonType.secondary,
+                block: true,
+                disabled: _submitting,
+                onPressed:
+                    _submitting ? null : () => Navigator.of(context).pop(),
+                child: Text(l.notNow),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
