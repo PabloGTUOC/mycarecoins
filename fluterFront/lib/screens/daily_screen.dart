@@ -283,9 +283,17 @@ class _DailyScreenState extends State<DailyScreen> {
       .where((a) => a['is_template'] == true && a['status'] == 'approved')
       .toList();
 
-  void _changeDay(int delta) {
-    setState(() => _day = _day.add(Duration(days: delta)));
+  void _selectDay(DateTime day) {
+    setState(() => _day = DateTime(day.year, day.month, day.day));
     _scrollToNow();
+  }
+
+  void _changeDay(int delta) {
+    _selectDay(DateTime(_day.year, _day.month, _day.day + delta));
+  }
+
+  void _changeWeek(int delta) {
+    _selectDay(DateTime(_day.year, _day.month, _day.day + delta * 7));
   }
 
   // ── Actions ─────────────────────────────────────────────────────
@@ -879,6 +887,12 @@ class _DailyScreenState extends State<DailyScreen> {
                 })
               : Column(
                   children: [
+                    if (!wide)
+                      WeekStrip(
+                        selectedDay: _day,
+                        onSelectDay: _selectDay,
+                        onWeekChange: _changeWeek,
+                      ),
                     // Day progress: "X / Y done · 🪙 Zcc"
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -1277,13 +1291,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
   Widget _buildNarrow(List<Map<String, dynamic>> items) {
     final l = AppLocalizations.of(context);
-    return GestureDetector(
-      onHorizontalDragEnd: (d) {
-        final v = d.primaryVelocity ?? 0;
-        if (v < -300) _changeDay(1);
-        if (v > 300) _changeDay(-1);
-      },
-      child: RefreshIndicator(
+    return RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -1377,8 +1385,7 @@ class _DailyScreenState extends State<DailyScreen> {
               ],
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildDismissibleCard(Map<String, dynamic> a) {
@@ -1959,3 +1966,157 @@ class _TimelineCard extends StatelessWidget {
     );
   }
 }
+
+class WeekStrip extends StatelessWidget {
+  final DateTime selectedDay;
+  final ValueChanged<DateTime> onSelectDay;
+  final ValueChanged<int> onWeekChange;
+  final DateTime? today;
+
+  const WeekStrip({
+    super.key,
+    required this.selectedDay,
+    required this.onSelectDay,
+    required this.onWeekChange,
+    this.today,
+  });
+
+  static bool isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  static List<DateTime> weekDaysFor(DateTime selectedDay) {
+    final monday = DateTime(
+      selectedDay.year,
+      selectedDay.month,
+      selectedDay.day - (selectedDay.weekday - 1),
+    );
+    return List.generate(
+      7,
+      (i) => DateTime(monday.year, monday.month, monday.day + i),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.maybeLocaleOf(context)?.languageCode ?? 'en';
+    final days = weekDaysFor(selectedDay);
+    final now = today ?? DateTime.now();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v < -300) {
+          onWeekChange(1);
+        } else if (v > 300) {
+          onWeekChange(-1);
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
+        child: Row(
+          children: [
+            for (final day in days)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: WeekDayChip(
+                    day: day,
+                    isSelected: isSameDay(day, selectedDay),
+                    isToday: isSameDay(day, now),
+                    locale: locale,
+                    onTap: () => onSelectDay(day),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WeekDayChip extends StatelessWidget {
+  final DateTime day;
+  final bool isSelected;
+  final bool isToday;
+  final String locale;
+  final VoidCallback onTap;
+
+  const WeekDayChip({
+    super.key,
+    required this.day,
+    required this.isSelected,
+    required this.isToday,
+    required this.locale,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final weekdayStr = DateFormat.E(locale).format(day);
+    final initial = weekdayStr.characters.isNotEmpty
+        ? weekdayStr.characters.first.toUpperCase()
+        : '';
+    final fullDateLabel = DateFormat.yMMMMEEEEd(locale).format(day);
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: fullDateLabel,
+      child: Material(
+        color: isSelected ? AppColors.primary : Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: ExcludeSemantics(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      initial,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${day.day}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isToday
+                            ? (isSelected ? Colors.white : AppColors.primary)
+                            : Colors.transparent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
