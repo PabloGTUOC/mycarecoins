@@ -338,7 +338,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                             const SizedBox(width: 6),
                             PillBadge(
                                 text: l.badgeApproved,
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: Colors.white,
                                 background: AppColors.success),
                           ],
@@ -534,7 +534,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
         children: [
           Text(l.remainingThisMonth,
               style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: 1,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary)),

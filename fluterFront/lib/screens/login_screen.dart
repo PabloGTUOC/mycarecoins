@@ -234,8 +234,8 @@ class _GoogleMark extends StatelessWidget {
   Widget build(BuildContext context) {
     // Simple multicolour "G" mark stand-in for the inline SVG.
     return Container(
-      width: 18,
-      height: 18,
+      width: 20,
+      height: 20,
       alignment: Alignment.center,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
@@ -251,7 +251,7 @@ class _GoogleMark extends StatelessWidget {
       ),
       child: const Text('G',
           style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white)),
+              fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
     );
   }
 }

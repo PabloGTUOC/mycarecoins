@@ -531,6 +531,7 @@ class _RevealState extends State<_Reveal> {
 /// The phone frame from .phone-frame: a miniature of the Daily view with
 /// timeline cards, the NOW divider, a free-time gap and the bottom tabs.
 /// Purely illustrative; the tiny type keeps it at a phone's scale.
+// Note: Type inside _PhoneMockup is illustrative and intentionally below the 12 pt floor.
 class _PhoneMockup extends StatelessWidget {
   const _PhoneMockup();
 
@@ -1059,7 +1060,7 @@ class _DashboardSim extends StatelessWidget {
       children: [
         Text(l.landSimActiveMembers,
             style: const TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
                 color: AppColors.textSecondary)),
@@ -1070,8 +1071,8 @@ class _DashboardSim extends StatelessWidget {
           children: [
             for (final (emoji, name, coins, accent, soft) in _members(l))
               Container(
-                width: 92,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                width: 96,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                 decoration: BoxDecoration(
                   color: soft,
                   borderRadius: BorderRadius.circular(AppRadii.md),
@@ -1085,7 +1086,7 @@ class _DashboardSim extends StatelessWidget {
                             fontSize: 12, fontWeight: FontWeight.w800)),
                     Text('● $coins cc',
                         style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: accent)),
                   ],
@@ -1151,12 +1152,12 @@ class _DashboardSim extends StatelessWidget {
                         children: [
                           Text(time,
                               style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: AppColors.textSecondary)),
                           const Spacer(),
                           Text(amt,
                               style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: amtColor)),
                         ],
@@ -1216,7 +1217,7 @@ class _SimKpi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 152,
+      width: 160,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.bg,
@@ -1228,7 +1229,7 @@ class _SimKpi extends StatelessWidget {
         children: [
           Text(label,
               style: const TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
                   color: AppColors.textSecondary)),
@@ -1247,7 +1248,7 @@ class _SimKpi extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(unit!,
                     style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textSecondary)),
               ],
@@ -1256,7 +1257,7 @@ class _SimKpi extends StatelessWidget {
           const SizedBox(height: 4),
           Text(subtitle,
               style: const TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary)),
+                  fontSize: 12, color: AppColors.textSecondary)),
           if (progress != null) ...[
             const SizedBox(height: 8),
             ClipRRect(
@@ -1324,7 +1325,7 @@ class _MarketplaceSim extends StatelessWidget {
                             fontSize: 13, fontWeight: FontWeight.w800)),
                     Text('  ${l.landSimFamilyPool}',
                         style: const TextStyle(
-                            fontSize: 11, color: AppColors.textSecondary)),
+                            fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
               ),
@@ -1394,7 +1395,7 @@ class _MarketplaceSim extends StatelessWidget {
                                 fontWeight: FontWeight.w700)),
                         Text(sub,
                             style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: AppColors.textSecondary)),
                       ],
                     ),
@@ -1403,12 +1404,12 @@ class _MarketplaceSim extends StatelessWidget {
                   badge == l.landSimRedeem
                       ? PillBadge(
                           text: badge,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Colors.white,
                           background: AppColors.primary)
                       : PillBadge(
                           text: badge,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: AppColors.successInk,
                           background: AppColors.successSoft),
                 ],
@@ -1503,7 +1504,7 @@ class _LedgerCard extends StatelessWidget {
                   text: l.landSimVerified,
                   color: AppColors.successInk,
                   background: AppColors.successSoft,
-                  fontSize: 11),
+                  fontSize: 12),
             ],
           ),
           const SizedBox(height: 14),
@@ -1519,10 +1520,10 @@ class _LedgerCard extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: 70,
+                    width: 76,
                     child: Text(date,
                         style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textSecondary)),
                   ),

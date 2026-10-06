@@ -165,7 +165,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(l.compareCaregivers,
                           style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1,
                               color: AppColors.textSecondary)),
@@ -661,7 +661,7 @@ class _SectionDivider extends StatelessWidget {
         children: [
           Text(label.toUpperCase(),
               style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.5,
                   color: AppColors.textSecondary)),

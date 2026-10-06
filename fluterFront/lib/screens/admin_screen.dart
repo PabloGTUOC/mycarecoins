@@ -248,7 +248,7 @@ class _FamiliesTabState extends State<_FamiliesTab> {
                       text: fam['planCode'].toString(),
                       color: AppColors.primaryInk,
                       background: AppColors.primarySoft,
-                      fontSize: 11),
+                      fontSize: 12),
               ],
             ),
           ],
@@ -562,7 +562,7 @@ class _AdminFamilyDetailScreenState extends State<AdminFamilyDetailScreen> {
                         text: g['planCode'].toString(),
                         color: AppColors.primaryInk,
                         background: AppColors.primarySoft,
-                        fontSize: 11),
+                        fontSize: 12),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -832,7 +832,7 @@ class _PlansTabState extends State<_PlansTab> {
                               text: l.adminDefaultBadge,
                               color: AppColors.primaryInk,
                               background: AppColors.primarySoft,
-                              fontSize: 11),
+                              fontSize: 12),
                         ),
                       if (p['active'] != true)
                         Padding(
@@ -841,7 +841,7 @@ class _PlansTabState extends State<_PlansTab> {
                               text: l.adminInactiveBadge,
                               color: AppColors.dangerInk,
                               background: AppColors.dangerSoft,
-                              fontSize: 11),
+                              fontSize: 12),
                         ),
                     ],
                   ),

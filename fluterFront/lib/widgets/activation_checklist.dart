@@ -60,7 +60,7 @@ class ActivationChecklist extends StatelessWidget {
                   text: '$done/${steps.length}',
                   color: AppColors.primaryInk,
                   background: AppColors.primarySoft,
-                  fontSize: 11),
+                  fontSize: 12),
               IconButton(
                 onPressed: onDismiss,
                 tooltip: l.dismissChecklist,

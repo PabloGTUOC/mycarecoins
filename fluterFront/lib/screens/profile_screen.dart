@@ -409,7 +409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Text(l.familyIdLabel,
                             style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5,
                                 color: Color(0xD9FFFFFF))),
@@ -550,14 +550,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         bottom: -2,
                         right: -2,
                         child: Container(
-                          width: 20,
-                          height: 20,
+                          width: 22,
+                          height: 22,
                           alignment: Alignment.center,
                           decoration: const BoxDecoration(
                               color: AppColors.indigo,
                               shape: BoxShape.circle),
                           child: const Text('📷',
-                              style: TextStyle(fontSize: 10)),
+                              style: TextStyle(fontSize: 12)),
                         ),
                       ),
                     ],
@@ -585,7 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 .toString()
                                 .replaceAll('_', ' ')
                                 .toUpperCase(),
-                            fontSize: 11,
+                            fontSize: 12,
                             color: AppColors.indigo,
                             background: AppColors.primarySoft),
                       ),
@@ -938,7 +938,7 @@ class _WalletPanel extends StatelessWidget {
             children: [
               Text(l.totalBalance,
                   style: const TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1,
                       color: AppColors.inkMuted)),
@@ -1117,7 +1117,7 @@ class _WalletPanel extends StatelessWidget {
                                     child: PillBadge(
                                         text:
                                             '${row['duration_minutes']} min',
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         color: AppColors.violet,
                                         background: AppColors.primarySoft),
                                   ),
@@ -1142,7 +1142,7 @@ class _WalletPanel extends StatelessWidget {
                                   ),
                                   child: Text(l.uncheckBtn,
                                       style: const TextStyle(
-                                          fontSize: 11.5,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           color: AppColors.danger)),
                                 ),

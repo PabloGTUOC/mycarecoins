@@ -270,8 +270,8 @@ class KpiCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(label.toUpperCase(),
-                    style: TextStyle(
-                        fontSize: compact ? 10 : 11,
+                    style: const TextStyle(
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
                         color: AppColors.textSecondary)),
@@ -285,7 +285,7 @@ class KpiCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadii.pill)),
                   child: Text(delta!,
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: deltaColor)),
                 ),
@@ -316,8 +316,8 @@ class KpiCard extends StatelessWidget {
           if (subtitle != null) ...[
             const SizedBox(height: 6),
             Text(subtitle!,
-                style: TextStyle(
-                    fontSize: compact ? 11 : 12,
+                style: const TextStyle(
+                    fontSize: 12,
                     color: AppColors.textSecondary)),
           ],
           if (progress != null) ...[
@@ -688,7 +688,7 @@ class AssigneeBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(
           horizontal: compact ? 7 : 10, vertical: compact ? 2 : 4),
-      constraints: BoxConstraints(maxWidth: compact ? 72 : 130),
+      constraints: BoxConstraints(maxWidth: compact ? 110 : 160),
       decoration: BoxDecoration(
         color: mine ? AppColors.primarySoft : AppColors.bg,
         border:
@@ -700,7 +700,7 @@ class AssigneeBadge extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontSize: compact ? 10 : 11.5,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
           color: mine ? AppColors.primaryInk : AppColors.textSecondary,
         ),

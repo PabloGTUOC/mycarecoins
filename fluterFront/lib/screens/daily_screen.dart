@@ -1074,7 +1074,7 @@ class _DailyScreenState extends State<DailyScreen> {
                               child: Text(
                                 _hourLabel(kStartHour + h),
                                 style: const TextStyle(
-                                    fontSize: 10.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.textSecondary),
                               ),
@@ -1169,7 +1169,7 @@ class _DailyScreenState extends State<DailyScreen> {
     final durH = (durMin < 60 ? 60 : durMin) / 60;
     final visibleH = durH < (24 - clamped) ? durH : (24 - clamped);
     final height =
-        (visibleH / kTotalHours * kGridHeight).clamp(46.0, kGridHeight);
+        (visibleH / kTotalHours * kGridHeight).clamp(52.0, kGridHeight);
     final overlap = (a['_overlapCount'] as int?) ?? 0;
     final cappedOverlap = overlap > 4 ? 4 : overlap;
     final left = 70.0 + cappedOverlap * 45.0;
@@ -1257,7 +1257,7 @@ class _DailyScreenState extends State<DailyScreen> {
                 ),
                 child: Text(DateFormat('HH:mm').format(ts),
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: filled ? Colors.white : AppColors.textSecondary)),
               ),
@@ -1382,14 +1382,17 @@ class _DailyScreenState extends State<DailyScreen> {
                         children: [
                           const Expanded(
                               child: Divider(color: AppColors.border)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                                '${formatGap(l, (a['_gapBeforeMinutes'] as int?) ?? 0)} · ${l.personalTimeGapHint}',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary)),
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Text(
+                                  '${formatGap(l, (a['_gapBeforeMinutes'] as int?) ?? 0)} · ${l.personalTimeGapHint}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primary)),
+                            ),
                           ),
                           const Expanded(
                               child: Divider(color: AppColors.border)),
@@ -1480,7 +1483,7 @@ class _ActivityAction extends StatelessWidget {
         ),
         child: Text(text,
             style: TextStyle(
-                fontSize: compact ? 10.5 : 12,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: color)),
       );
@@ -1704,7 +1707,7 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
                         const SizedBox(width: 7),
                         Text(cat == 'care' ? l.careWellness : l.filterHousehold,
                             style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.8,
                                 color: AppColors.textSecondary)),
@@ -1764,7 +1767,7 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
                 Text(
                     '${cat == 'care' ? AppLocalizations.of(context).filterCare : AppLocalizations.of(context).categoryCleaning} · 🪙 ${t['coin_value'] ?? 0}cc',
                     style: const TextStyle(
-                        fontSize: 11.5, color: AppColors.textSecondary)),
+                        fontSize: 12, color: AppColors.textSecondary)),
               ],
             ),
           ),
@@ -2173,7 +2176,7 @@ class WeekDayChip extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 2),
               child: ExcludeSemantics(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2198,7 +2201,7 @@ class WeekDayChip extends StatelessWidget {
                             isSelected ? Colors.white : AppColors.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Container(
                       width: 4,
                       height: 4,

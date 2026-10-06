@@ -347,7 +347,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
               const SizedBox(height: 20),
               Text(l.pendingInvitations,
                   style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
                       color: AppColors.textSecondary)),
@@ -371,7 +371,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
                           text: l.badgePending,
                           color: AppColors.warningInk,
                           background: AppColors.warningSoft,
-                          fontSize: 11),
+                          fontSize: 12),
                     ],
                   ),
                 ),
@@ -491,12 +491,12 @@ class _CircleCard extends StatelessWidget {
                   bottom: -4,
                   left: -4,
                   child: Container(
-                    width: 18,
-                    height: 18,
+                    width: 22,
+                    height: 22,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                         color: badge.$2, shape: BoxShape.circle),
-                    child: const Text('📷', style: TextStyle(fontSize: 9)),
+                    child: const Text('📷', style: TextStyle(fontSize: 12)),
                   ),
                 ),
               if (onRemove != null)
@@ -536,7 +536,7 @@ class _CircleCard extends StatelessWidget {
               text: badge.$1,
               color: badge.$2,
               background: badge.$2.withValues(alpha: 0.12),
-              fontSize: 9),
+              fontSize: 12),
         ],
       ),
     );

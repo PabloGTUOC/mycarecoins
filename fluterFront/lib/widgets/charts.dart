@@ -36,7 +36,7 @@ class _LinePainter extends CustomPainter {
   final Color color;
   _LinePainter(this.labels, this.values, this.color);
 
-  static const _pad = EdgeInsets.fromLTRB(36, 12, 12, 26);
+  static const _pad = EdgeInsets.fromLTRB(40, 12, 12, 28);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -53,7 +53,7 @@ class _LinePainter extends CustomPainter {
     for (var i = 0; i <= 3; i++) {
       final y = plot.bottom - plot.height * i / 3;
       canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), grid);
-      _text(canvas, (top * i / 3).round().toString(), Offset(2, y - 6), 10,
+      _text(canvas, (top * i / 3).round().toString(), Offset(2, y - 7), 12,
           AppColors.textSecondary);
     }
 
@@ -99,9 +99,9 @@ class _LinePainter extends CustomPainter {
     }
 
     // x labels (skip to avoid crowding)
-    final step = (labels.length / 6).ceil().clamp(1, 100);
+    final step = (labels.length / 5).ceil().clamp(1, 100);
     for (var i = 0; i < labels.length; i += step) {
-      _text(canvas, labels[i], Offset(pt(i).dx - 16, plot.bottom + 6), 10,
+      _text(canvas, labels[i], Offset(pt(i).dx - 16, plot.bottom + 6), 12,
           AppColors.textSecondary);
     }
   }
@@ -164,7 +164,7 @@ class MultiLineChart extends StatelessWidget {
                   const SizedBox(width: 5),
                   Text(s.label,
                       style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textSecondary)),
                 ],
@@ -187,7 +187,7 @@ class _MultiLinePainter extends CustomPainter {
   final List<LineSeries> series;
   _MultiLinePainter(this.labels, this.series);
 
-  static const _pad = EdgeInsets.fromLTRB(36, 12, 12, 26);
+  static const _pad = EdgeInsets.fromLTRB(40, 12, 12, 28);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -208,7 +208,7 @@ class _MultiLinePainter extends CustomPainter {
     for (var i = 0; i <= 3; i++) {
       final y = plot.bottom - plot.height * i / 3;
       canvas.drawLine(Offset(plot.left, y), Offset(plot.right, y), grid);
-      _text(canvas, (top * i / 3).round().toString(), Offset(2, y - 6), 10,
+      _text(canvas, (top * i / 3).round().toString(), Offset(2, y - 7), 12,
           AppColors.textSecondary);
     }
 
@@ -240,12 +240,12 @@ class _MultiLinePainter extends CustomPainter {
       }
     }
 
-    final step = (labels.length / 6).ceil().clamp(1, 100);
+    final step = (labels.length / 5).ceil().clamp(1, 100);
     for (var i = 0; i < labels.length; i += step) {
       final x = labels.length == 1
           ? plot.center.dx
           : plot.left + plot.width * i / (labels.length - 1);
-      _text(canvas, labels[i], Offset(x - 16, plot.bottom + 6), 10,
+      _text(canvas, labels[i], Offset(x - 16, plot.bottom + 6), 12,
           AppColors.textSecondary);
     }
   }
@@ -299,7 +299,7 @@ class DonutChart extends StatelessWidget {
                           fontSize: 26, fontWeight: FontWeight.w800)),
                   Text(AppLocalizations.of(context).totalLower,
                       style: const TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary)),
+                          fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -323,7 +323,7 @@ class DonutChart extends StatelessWidget {
                   const SizedBox(width: 5),
                   Text('${s.label} (${s.value.round()})',
                       style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textSecondary)),
                 ],
@@ -410,7 +410,7 @@ class StackedBarChart extends StatelessWidget {
                   const SizedBox(width: 5),
                   Text(s.label,
                       style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textSecondary)),
                 ],
@@ -433,7 +433,7 @@ class _StackedBarPainter extends CustomPainter {
   final List<StackedBarSeries> series;
   _StackedBarPainter(this.labels, this.series);
 
-  static const _pad = EdgeInsets.fromLTRB(36, 8, 12, 26);
+  static const _pad = EdgeInsets.fromLTRB(40, 8, 12, 28);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -466,11 +466,11 @@ class _StackedBarPainter extends CustomPainter {
       ..strokeWidth = 1;
     canvas.drawLine(
         Offset(plot.left, yFor(0)), Offset(plot.right, yFor(0)), grid);
-    _text(canvas, '0', Offset(20, yFor(0) - 6), 10, AppColors.textSecondary);
-    _text(canvas, top.round().toString(), Offset(2, plot.top - 4), 10,
+    _text(canvas, '0', Offset(20, yFor(0) - 7), 12, AppColors.textSecondary);
+    _text(canvas, top.round().toString(), Offset(2, plot.top - 5), 12,
         AppColors.textSecondary);
     if (bottom < 0) {
-      _text(canvas, bottom.round().toString(), Offset(2, plot.bottom - 8), 10,
+      _text(canvas, bottom.round().toString(), Offset(2, plot.bottom - 9), 12,
           AppColors.textSecondary);
     }
 
@@ -497,9 +497,9 @@ class _StackedBarPainter extends CustomPainter {
           Paint()..color = s.color,
         );
       }
-      final step = (labels.length / 6).ceil().clamp(1, 100);
+      final step = (labels.length / 5).ceil().clamp(1, 100);
       if (i % step == 0) {
-        _text(canvas, labels[i], Offset(cx - 18, plot.bottom + 6), 10,
+        _text(canvas, labels[i], Offset(cx - 18, plot.bottom + 6), 12,
             AppColors.textSecondary);
       }
     }

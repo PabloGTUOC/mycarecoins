@@ -176,42 +176,49 @@ class _ShellState extends State<Shell> {
               ),
               child: SafeArea(
                 top: false,
-                child: SizedBox(
-                  height: 60,
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < tabs.length; i++)
-                        Expanded(
-                          child: Semantics(
-                            button: true,
-                            selected: i == _index,
-                            label: tabs[i].label,
-                            child: InkWell(
-                              onTap: () => _go(i),
-                              child: ExcludeSemantics(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(tabs[i].icon,
-                                        size: 22,
-                                        color: i == _index
-                                            ? AppColors.primary
-                                            : AppColors.textSecondary),
-                                    const SizedBox(height: 2),
-                                    Text(tabs[i].label,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: i == _index
-                                                ? AppColors.primary
-                                                : AppColors.textSecondary)),
-                                  ],
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 60),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      // Stretch so each tab's tap area fills the bar's
+                      // height, not just its icon and label.
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var i = 0; i < tabs.length; i++)
+                          Expanded(
+                            child: Semantics(
+                              button: true,
+                              selected: i == _index,
+                              label: tabs[i].label,
+                              child: InkWell(
+                                onTap: () => _go(i),
+                                child: ExcludeSemantics(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(tabs[i].icon,
+                                          size: 22,
+                                          color: i == _index
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary),
+                                      const SizedBox(height: 2),
+                                      Text(tabs[i].label,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: i == _index
+                                                  ? AppColors.primary
+                                                  : AppColors.textSecondary)),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

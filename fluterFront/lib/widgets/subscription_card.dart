@@ -136,7 +136,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
                   text: _ent?['planCode']?.toString() ?? 'pro',
                   color: AppColors.successInk,
                   background: AppColors.successSoft,
-                  fontSize: 11),
+                  fontSize: 12),
           ],
         ),
         const SizedBox(height: 8),

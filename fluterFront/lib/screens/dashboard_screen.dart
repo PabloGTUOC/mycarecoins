@@ -1092,7 +1092,7 @@ class _DayHeader extends StatelessWidget {
                 ? todayLabel!
                 : DateFormat('EEE', l.localeName).format(day),
             style: TextStyle(
-                fontSize: showToday ? 9 : 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
                 color: isToday ? AppColors.primary : AppColors.textSecondary)),
@@ -1127,7 +1127,7 @@ class _AbsenceChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                   color: AppColors.dangerInk)),
@@ -1135,7 +1135,7 @@ class _AbsenceChip extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
                   color: AppColors.dangerInk)),
@@ -1216,7 +1216,7 @@ class _DayRow extends StatelessWidget {
                           PillBadge(
                               text:
                                   '✈️ ${(abs['user_alias'] ?? abs['user_name'] ?? '').toString().toUpperCase()}',
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.danger,
                               background: Colors.white),
                         for (final a in acts.take(_maxChips))
@@ -1225,7 +1225,7 @@ class _DayRow extends StatelessWidget {
                           PillBadge(
                               text: AppLocalizations.of(context)
                                   .moreCount(acts.length - _maxChips),
-                              fontSize: 11,
+                              fontSize: 12,
                               color: AppColors.textSecondary,
                               background: AppColors.surface),
                       ],
@@ -1289,7 +1289,7 @@ class _ActChip extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w600, color: fg),
+                      fontSize: 12, fontWeight: FontWeight.w600, color: fg),
                 ),
               ),
               // Hidden once completed: the bounty is already earned, and
@@ -1297,7 +1297,7 @@ class _ActChip extends StatelessWidget {
               if (toNum(a['bounty_amount']) > 0 && status != 'completed')
                 Text('+${a['bounty_amount']}cc',
                     style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppColors.warning)),
             ],
@@ -1308,7 +1308,7 @@ class _ActChip extends StatelessWidget {
               if (ts != null)
                 Text(DateFormat('HH:mm').format(ts),
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: status == 'completed'
                             ? Colors.white
@@ -1323,7 +1323,7 @@ class _ActChip extends StatelessWidget {
     // Inside a Wrap the width constraint is unbounded; cap it so the inner
     // Expanded works and long titles ellipsize instead of overflowing.
     return ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 168), child: chip);
+        constraints: const BoxConstraints(maxWidth: 190), child: chip);
   }
 }
 
