@@ -42,6 +42,10 @@ Run `db:init` twice.
 - **Activities are `category` + `type`, both `NOT NULL`.** `care` → `care | household | coverage`;
   `self` → `sport | social | rest | appointment | other`, always worth 0 coins. `coverage` is
   written only by the personal-time accept flow, and it is the one type allowed to overlap.
+- **Personal time is its owner's, and coverage lives and dies with it.** Only the person
+  taking personal time can cancel it, whatever anyone's role; cancelling it deletes the
+  linked coverage shift (`counterpart_activity_id`) and refunds its sweetener. A coverage
+  shift is never deleted or reverted on its own.
 - **Payout reasons come from `db/ledgerReasons.js`** (`payoutReasons(type)`). Coverage files under
   its own reasons, so never hard-code `activity_completed` / `bounty_earned`.
 - **Personal-time declines are never counted or shown anywhere.** That is a product decision

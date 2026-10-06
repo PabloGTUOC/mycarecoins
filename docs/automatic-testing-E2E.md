@@ -4,7 +4,7 @@
 
 | Layer | Runner | Tests | Command |
 |---|---|---|---|
-| Backend unit | Node `--test` (built-in) | **208** | `cd backend && npm test` |
+| Backend unit | Node `--test` (built-in) | **212** | `cd backend && npm test` |
 | Flutter unit + widget | `flutter test` | **59** | `cd fluterFront && flutter test` |
 | Static analysis | `flutter analyze` | — | `cd fluterFront && flutter analyze` |
 | End-to-end | — | **none** | — |
@@ -70,7 +70,7 @@ Tests the business logic in `backend/src/services/activityService.js`.
 | deducts coins and marks activity as rejected | Coins are taken back and status set to rejected |
 | refunds bounty to original offerer on revert | Bounty amount is returned to the person who offered it |
 | appends a reversal instead of rewriting the credit | No `UPDATE coin_ledger`; a negative `activity_reverted` row is inserted |
-| a coverage shift is reversed under coverage reasons | `coverage_reverted` / `coverage_sweetener_reverted` / `coverage_sweetener_refunded` |
+| a paid coverage shift cannot be reverted | Coverage only ends with its personal time |
 | returns 403 when user is not the assignee | Only the task owner can revert |
 | returns 409 when activity is not completed | Only completed activities can be reverted |
 

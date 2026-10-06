@@ -344,7 +344,8 @@ export async function acceptBounty(client, userId, activityId) {
 export async function deleteActivity(client, userId, activityId, isSeries) {
   const { rows } = await client.query(
     `SELECT family_id, assigned_to, created_by, status, starts_at,
-            bounty_amount, bounty_offered_by, title, type, is_template
+            bounty_amount, bounty_offered_by, title, category, type, is_template,
+            counterpart_activity_id
      FROM activities WHERE id = $1
      AND family_id IN (SELECT family_id FROM family_members WHERE user_id = $2 AND status = 'active')
      FOR UPDATE`,
@@ -360,6 +361,23 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
     }
     await client.query(`DELETE FROM activities WHERE id = $1`, [activityId]);
     return { data: { success: true } };
+  }
+
+  // Personal time belongs to the person taking it, and its coverage shift
+  // exists only because of it: nobody else may cancel the one, and nobody may
+  // remove the other on its own. Cancelling personal time takes its coverage
+  // with it. Caregiver rights do not override either rule.
+  if (act.type === 'coverage') {
+    return { error: { code: 409, message: 'Coverage ends when its personal time is cancelled.' } };
+  }
+  if (act.category === 'self') {
+    if (act.assigned_to !== userId) {
+      return { error: { code: 403, message: 'Only the person taking this time can cancel it.' } };
+    }
+    if (!['approved', 'pending_validation', 'pending'].includes(act.status)) {
+      return { error: { code: 409, message: 'Can only un-schedule upcoming activities.' } };
+    }
+    return cancelPersonalTime(client, act, activityId);
   }
 
   const caregiverCheck = await assertMemberRole(client, userId, act.family_id, 'caregiver');
@@ -410,6 +428,42 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
   return { data: { success: true } };
 }
 
+/**
+ * Deletes a personal-time activity and, when someone accepted to cover it, the
+ * coverage shift too, returning the shift's sweetener to the requester: the
+ * favour it paid for will not happen. A coverage shift that has already been
+ * paid stays, and so does the personal time it covered.
+ */
+async function cancelPersonalTime(client, act, activityId) {
+  if (act.counterpart_activity_id) {
+    const { rows } = await client.query(
+      `SELECT id, status, bounty_amount, bounty_offered_by FROM activities
+       WHERE id = $1 FOR UPDATE`,
+      [act.counterpart_activity_id]
+    );
+    const coverage = rows[0];
+    if (coverage) {
+      if (!['approved', 'pending_validation', 'pending'].includes(coverage.status)) {
+        return { error: { code: 409, message: 'Its coverage has already been paid.' } };
+      }
+      if (coverage.bounty_amount > 0 && coverage.bounty_offered_by) {
+        await client.query(
+          `UPDATE family_members SET coin_balance = coin_balance + $1 WHERE family_id = $2 AND user_id = $3`,
+          [coverage.bounty_amount, act.family_id, coverage.bounty_offered_by]
+        );
+        await client.query(
+          `INSERT INTO coin_ledger (family_id, user_id, activity_id, amount, reason) VALUES ($1,$2,$3,$4,$5)`,
+          [act.family_id, coverage.bounty_offered_by, coverage.id, coverage.bounty_amount,
+           payoutReasons('coverage').bonusRefunded]
+        );
+      }
+      await client.query(`DELETE FROM activities WHERE id = $1`, [coverage.id]);
+    }
+  }
+  await client.query(`DELETE FROM activities WHERE id = $1`, [activityId]);
+  return { data: { success: true } };
+}
+
 export async function revertActivity(client, userId, activityId) {
   const { rows } = await client.query(
     `SELECT family_id, assigned_to, status, type, coin_value, bounty_amount, bounty_offered_by
@@ -421,6 +475,9 @@ export async function revertActivity(client, userId, activityId) {
   if (!rows.length) return { error: { code: 404, message: 'Activity not found.' } };
   const act = rows[0];
   if (act.assigned_to !== userId) return { error: { code: 403, message: "Cannot revert someone else's completion." } };
+  if (act.type === 'coverage') {
+    return { error: { code: 409, message: 'Coverage ends when its personal time is cancelled.' } };
+  }
   if (act.status !== 'completed') return { error: { code: 409, message: 'Activity is not completed.' } };
 
   const bountyAmt = act.bounty_amount || 0;

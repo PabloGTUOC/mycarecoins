@@ -6,6 +6,7 @@ import {
   offerBounty,
   acceptBounty,
   revertActivity,
+  deleteActivity,
   listActivities,
   scheduleActivity,
 } from '../src/services/activityService.js';
@@ -218,14 +219,6 @@ describe('revertActivity', () => {
     assert.deepEqual(reversal.params, [10, 99, 1, -60, 'activity_reverted']);
   });
 
-  test('a coverage shift is reversed under coverage reasons', async () => {
-    const act = { family_id: 10, assigned_to: 99, status: 'completed', type: 'coverage', coin_value: 40, bounty_amount: 5, bounty_offered_by: 77 };
-    const client = mockClient([ok([act]), empty(), empty(), empty(), empty(), empty(), empty()]);
-    await revertActivity(client, 99, 1);
-    assert.deepEqual(client._calls[2].params, [10, 99, 1, -40, 'coverage_reverted']);
-    assert.deepEqual(client._calls[3].params, [10, 99, 1, -5, 'coverage_sweetener_reverted']);
-    assert.deepEqual(client._calls[5].params, [10, 77, 1, 5, 'coverage_sweetener_refunded']);
-  });
 
   test('refunds bounty to original offerer on revert', async () => {
     const act = { family_id: 10, assigned_to: 99, status: 'completed', coin_value: 30, bounty_amount: 20, bounty_offered_by: 77 };
@@ -319,5 +312,55 @@ describe('scheduleActivity', () => {
     const overlapCall = client._calls[2];
     assert.match(overlapCall.sql, /assigned_to = \$1/);
     assert.equal(overlapCall.params[0], 99);
+  });
+});
+
+// ─── deleteActivity: personal time and coverage ─────────────────────────────
+
+describe('deleteActivity personal time and coverage', () => {
+  const selfAct = {
+    family_id: 10, assigned_to: 99, created_by: 99, status: 'approved', category: 'self',
+    type: 'sport', is_template: false, bounty_amount: 0, bounty_offered_by: null,
+    counterpart_activity_id: 501,
+  };
+
+  test("another caregiver cannot delete someone else's personal time", async () => {
+    const client = mockClient([ok([selfAct])]);
+    const result = await deleteActivity(client, 77, 500, false);
+    assert.equal(result.error.code, 403);
+    assert.equal(client._calls.length, 1, 'nothing written');
+  });
+
+  test('cancelling personal time removes its coverage and refunds the sweetener', async () => {
+    const coverage = { id: 501, status: 'approved', bounty_amount: 5, bounty_offered_by: 99 };
+    const client = mockClient([ok([selfAct]), ok([coverage]), empty(), empty(), empty(), empty()]);
+    const result = await deleteActivity(client, 99, 500, false);
+    assert.ok(result.data.success);
+    assert.deepEqual(client._calls[3].params, [10, 99, 501, 5, 'coverage_sweetener_refunded']);
+    assert.match(client._calls[4].sql, /DELETE FROM activities/);
+    assert.deepEqual(client._calls[4].params, [501]);
+    assert.deepEqual(client._calls[5].params, [500]);
+  });
+
+  test('personal time whose coverage was already paid cannot be cancelled', async () => {
+    const coverage = { id: 501, status: 'completed', bounty_amount: 0, bounty_offered_by: 99 };
+    const client = mockClient([ok([selfAct]), ok([coverage])]);
+    const result = await deleteActivity(client, 99, 500, false);
+    assert.equal(result.error.code, 409);
+  });
+
+  test('a coverage shift cannot be deleted on its own, even by its coverer', async () => {
+    const cov = { ...selfAct, category: 'care', type: 'coverage', assigned_to: 77 };
+    const client = mockClient([ok([cov])]);
+    const result = await deleteActivity(client, 77, 501, false);
+    assert.equal(result.error.code, 409);
+    assert.equal(client._calls.length, 1, 'nothing written');
+  });
+
+  test('a paid coverage shift cannot be reverted', async () => {
+    const cov = { family_id: 10, assigned_to: 77, status: 'completed', type: 'coverage', coin_value: 30, bounty_amount: 0, bounty_offered_by: null };
+    const client = mockClient([ok([cov])]);
+    const result = await revertActivity(client, 77, 501);
+    assert.equal(result.error.code, 409);
   });
 });
