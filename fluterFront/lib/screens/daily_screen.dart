@@ -1193,69 +1193,85 @@ class _DailyScreenState extends State<DailyScreen> {
                 ? (AppColors.bg, AppColors.textSecondary, AppColors.inputBorder)
                 : (AppColors.surface, AppColors.textPrimary, AppColors.border);
 
-    final chip = Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border.all(color: border),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(
-                  alpha: overlap > 0 ? 0.2 + 0.1 * cappedOverlap : 0.12),
-              blurRadius: 15,
-              offset: overlap > 0 ? const Offset(-5, 5) : const Offset(0, 4)),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child:
-                Text(_activityEmoji(a), style: const TextStyle(fontSize: 15)),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text.rich(
-              TextSpan(children: [
-                if (status == 'rejected') const TextSpan(text: '⚠️ '),
-                TextSpan(text: (a['title'] ?? '').toString()),
-                if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
-              ]),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 13.5, fontWeight: FontWeight.w800, color: fg),
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    final semanticsLabel = _activitySemanticsLabel(l: l, item: a, app: app);
+
+    final chip = Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: Container(
+        height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: border),
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(
+                    alpha: overlap > 0 ? 0.2 + 0.1 * cappedOverlap : 0.12),
+                blurRadius: 15,
+                offset: overlap > 0 ? const Offset(-5, 5) : const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child:
+                    Text(_activityEmoji(a), style: const TextStyle(fontSize: 15)),
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          AssigneeBadge(item: a, compact: true),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-            decoration: BoxDecoration(
-              color:
-                  filled ? Colors.black.withValues(alpha: 0.15) : AppColors.bg,
-              border: filled ? null : Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadii.pill),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ExcludeSemantics(
+                child: Text.rich(
+                  TextSpan(children: [
+                    if (status == 'rejected') const TextSpan(text: '⚠️ '),
+                    TextSpan(text: (a['title'] ?? '').toString()),
+                    if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 13.5, fontWeight: FontWeight.w800, color: fg),
+                ),
+              ),
             ),
-            child: Text(DateFormat('HH:mm').format(ts),
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: filled ? Colors.white : AppColors.textSecondary)),
-          ),
-          const SizedBox(width: 6),
-          _ActivityAction(
-            item: a,
-            compact: true,
-            onValidate: () => _validate(a['id']),
-            onDelegate: () => _openBountyDialog(a),
-            onTakeOver: () => _acceptBounty(a),
-          ),
-        ],
+            const SizedBox(width: 6),
+            ExcludeSemantics(
+              child: AssigneeBadge(item: a, compact: true),
+            ),
+            const SizedBox(width: 6),
+            ExcludeSemantics(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color:
+                      filled ? Colors.black.withValues(alpha: 0.15) : AppColors.bg,
+                  border: filled ? null : Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                ),
+                child: Text(DateFormat('HH:mm').format(ts),
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: filled ? Colors.white : AppColors.textSecondary)),
+              ),
+            ),
+            const SizedBox(width: 6),
+            _ActivityAction(
+              item: a,
+              compact: true,
+              onValidate: () => _validate(a['id']),
+              onDelegate: () => _openBountyDialog(a),
+              onTakeOver: () => _acceptBounty(a),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -1471,14 +1487,18 @@ class _ActivityAction extends StatelessWidget {
       if (onTap == null) return w;
       // Pad the tap area toward the 44dp guideline without growing the
       // visual pill; the compact grid chips have no vertical room to spare.
-      return Tappable(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: compact
-            ? w
-            : Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
-                child: w),
+      return Semantics(
+        button: true,
+        label: text,
+        child: Tappable(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: compact
+              ? ExcludeSemantics(child: w)
+              : Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+                  child: ExcludeSemantics(child: w)),
+        ),
       );
     }
 
@@ -1527,6 +1547,70 @@ String _activityEmoji(Map<String, dynamic> item) {
     'care' => '❤️',
     _ => '🍽️',
   };
+}
+
+String _activityTypeName(AppLocalizations l, Map<String, dynamic> item) {
+  if (isSelfActivity(item)) {
+    return personalTimeTypeLabel(l, item['type']?.toString() ?? '');
+  }
+  return switch (item['type']) {
+    'coverage' => l.a11yTypeCoverage,
+    'care' => l.a11yTypeCare,
+    _ => l.a11yTypeHousehold,
+  };
+}
+
+String _activityStatusLabel(AppLocalizations l, String? status) => switch (status) {
+      'completed' => l.statusCompleted,
+      'approved' => l.statusApproved,
+      'pending_validation' => l.statusPendingValidation,
+      'rejected' => l.statusRejected,
+      _ => l.statusPending,
+    };
+
+String _activitySemanticsLabel({
+  required AppLocalizations l,
+  required Map<String, dynamic> item,
+  required AppState app,
+}) {
+  final parts = <String>[];
+  final title = (item['title'] ?? '').toString().trim();
+  if (title.isNotEmpty) parts.add(title);
+
+  final typeName = _activityTypeName(l, item);
+  if (typeName.isNotEmpty) parts.add(typeName);
+
+  final ts = DateTime.tryParse(item['starts_at']?.toString() ?? '')?.toLocal();
+  final durMin = toNum(item['duration_minutes']).toInt();
+  final end = item['ends_at'] != null
+      ? DateTime.tryParse(item['ends_at'].toString())?.toLocal()
+      : ts?.add(Duration(minutes: durMin));
+
+  if (ts != null && end != null) {
+    parts.add(l.a11yTimeRange(
+      DateFormat('HH:mm').format(ts),
+      DateFormat('HH:mm').format(end),
+    ));
+  } else if (ts != null) {
+    parts.add(DateFormat('HH:mm').format(ts));
+  }
+
+  final mine = item['assigned_to']?.toString() == app.userId?.toString();
+  final name = (item['assigned_alias'] ?? item['assigned_to_name'] ?? '')
+      .toString()
+      .trim();
+  final assignee = mine ? l.assigneeYou : name;
+  if (assignee.isNotEmpty) parts.add(assignee);
+
+  if (!isSelfActivity(item)) {
+    final coins = toNum(item['coin_value']).toInt();
+    parts.add(l.a11yCoins(coins));
+  }
+
+  final status = item['status']?.toString();
+  parts.add(_activityStatusLabel(l, status));
+
+  return parts.join(', ');
 }
 
 /// Desktop Task Library panel:
@@ -1872,6 +1956,8 @@ class _TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final l = AppLocalizations.of(context);
     final status = item['status']?.toString() ?? 'pending';
     final isCare = item['type'] == 'care';
     final isSelf = isSelfActivity(item);
@@ -1882,87 +1968,101 @@ class _TimelineCard extends StatelessWidget {
     final completed = status == 'completed';
     final filled = completed && !isSelf;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 52,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 18),
-            child: Text(ts != null ? DateFormat('HH:mm').format(ts) : '—',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary)),
-          ),
-        ),
-        Expanded(
-          child: Tappable(
-            onTap: completed
-                ? onCompletedInfo
-                : (isRecurrent ? onRecurrence : null),
-            onLongPress: completed ? onCompletedInfo : onRecurrence,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: filled
-                    ? (isCare ? AppColors.successStrong : AppColors.warningStrong)
-                    : AppColors.surface,
-                border: Border.all(
-                    color: filled
-                        ? Colors.transparent
-                        : (isSelf ? AppColors.inputBorder : AppColors.border)),
-                borderRadius: BorderRadius.circular(AppRadii.md),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(_activityEmoji(item),
-                          style: const TextStyle(fontSize: 20)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(children: [
-                            if (status == 'rejected')
-                              const TextSpan(text: '⚠️ '),
-                            TextSpan(text: (item['title'] ?? '').toString()),
-                            if (isRecurrent) const TextSpan(text: '  🔁'),
-                          ]),
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: filled
-                                  ? Colors.white
-                                  : AppColors.textPrimary),
-                        ),
-                      ),
-                      if (bounty > 0 && !completed)
-                        PillBadge(text: '+${bounty}cc'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(child: AssigneeBadge(item: item)),
-                      const SizedBox(width: 8),
-                      _ActivityAction(
-                        item: item,
-                        onValidate: onValidate,
-                        onDelegate: onDelegate,
-                        onTakeOver: onTakeOver,
-                      ),
-                    ],
-                  ),
-                ],
+    final semanticsLabel = _activitySemanticsLabel(l: l, item: item, app: app);
+
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ExcludeSemantics(
+            child: SizedBox(
+              width: 52,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 18),
+                child: Text(ts != null ? DateFormat('HH:mm').format(ts) : '—',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textSecondary)),
               ),
             ),
           ),
-        ),
-      ],
+          Expanded(
+            child: Tappable(
+              onTap: completed
+                  ? onCompletedInfo
+                  : (isRecurrent ? onRecurrence : null),
+              onLongPress: completed ? onCompletedInfo : onRecurrence,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: filled
+                      ? (isCare ? AppColors.successStrong : AppColors.warningStrong)
+                      : AppColors.surface,
+                  border: Border.all(
+                      color: filled
+                          ? Colors.transparent
+                          : (isSelf ? AppColors.inputBorder : AppColors.border)),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ExcludeSemantics(
+                      child: Row(
+                        children: [
+                          Text(_activityEmoji(item),
+                              style: const TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(children: [
+                                if (status == 'rejected')
+                                  const TextSpan(text: '⚠️ '),
+                                TextSpan(text: (item['title'] ?? '').toString()),
+                                if (isRecurrent) const TextSpan(text: '  🔁'),
+                              ]),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: filled
+                                      ? Colors.white
+                                      : AppColors.textPrimary),
+                            ),
+                          ),
+                          if (bounty > 0 && !completed)
+                            PillBadge(text: '+${bounty}cc'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: ExcludeSemantics(
+                            child: AssigneeBadge(item: item),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _ActivityAction(
+                          item: item,
+                          onValidate: onValidate,
+                          onDelegate: onDelegate,
+                          onTakeOver: onTakeOver,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

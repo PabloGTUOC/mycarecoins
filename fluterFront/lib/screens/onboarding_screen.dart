@@ -494,6 +494,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           placeholder: l.emailAddressHint,
                           keyboardType: TextInputType.emailAddress)),
                   IconButton(
+                    tooltip: l.remove,
                     onPressed: () => setState(() {
                       _caretakers.removeAt(i).dispose();
                     }),
@@ -537,6 +538,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               controller: o.name,
                               placeholder: l.careObjectNameHint)),
                       IconButton(
+                        tooltip: l.remove,
                         onPressed: () => setState(() {
                           _careObjects.removeAt(i).dispose();
                         }),

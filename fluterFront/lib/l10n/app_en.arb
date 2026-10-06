@@ -1836,5 +1836,30 @@
   "recurringLabel": "Repeats",
   "@recurringLabel": { "description": "Marks a starter task that recurs (shown next to its duration)" },
   "errInvalidCaregiverEmail": "Please check the caregiver email addresses.",
-  "@errInvalidCaregiverEmail": { "description": "Validation error when an invited caregiver's email is malformed" }
+  "@errInvalidCaregiverEmail": { "description": "Validation error when an invited caregiver's email is malformed" },
+  "a11yTypeCare": "Care",
+  "@a11yTypeCare": { "description": "Accessibility label for care activity type" },
+  "a11yTypeHousehold": "Household",
+  "@a11yTypeHousehold": { "description": "Accessibility label for household activity type" },
+  "a11yTypeCoverage": "Coverage",
+  "@a11yTypeCoverage": { "description": "Accessibility label for coverage activity type" },
+  "a11yCoins": "{count, plural, =1{1 coin} other{{count} coins}}",
+  "@a11yCoins": {
+    "description": "Accessibility label for activity coin value",
+    "placeholders": { "count": { "type": "num" } }
+  },
+  "a11yTimeRange": "{start} to {end}",
+  "@a11yTimeRange": {
+    "description": "Accessibility label for time range",
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "assigneeYou": "You",
+  "@assigneeYou": { "description": "Assignee badge and screen-reader label when the activity is assigned to the current user" },
+  "decrease": "Decrease",
+  "@decrease": { "description": "Stepper button tooltip: decrease value" },
+  "increase": "Increase",
+  "@increase": { "description": "Stepper button tooltip: increase value" }
 }

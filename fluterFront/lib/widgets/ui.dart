@@ -696,7 +696,7 @@ class AssigneeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(
-        mine ? 'You' : name,
+        mine ? AppLocalizations.of(context).assigneeYou : name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(

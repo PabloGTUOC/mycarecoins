@@ -841,5 +841,13 @@
   "starterPreviewTitle": "{count, plural, =0{Ninguna tarea seleccionada} =1{Se añadirá 1 tarea} other{Se añadirán {count} tareas}}",
   "starterPreviewEmpty": "Elige al menos un área arriba para ver tareas sugeridas.",
   "recurringLabel": "Se repite",
-  "errInvalidCaregiverEmail": "Revisa las direcciones de correo de los cuidadores."
+  "errInvalidCaregiverEmail": "Revisa las direcciones de correo de los cuidadores.",
+  "a11yTypeCare": "Cuidado",
+  "a11yTypeHousehold": "Hogar",
+  "a11yTypeCoverage": "Cobertura",
+  "a11yCoins": "{count, plural, =1{1 moneda} other{{count} monedas}}",
+  "a11yTimeRange": "{start} a {end}",
+  "assigneeYou": "Tú",
+  "decrease": "Disminuir",
+  "increase": "Aumentar"
 }

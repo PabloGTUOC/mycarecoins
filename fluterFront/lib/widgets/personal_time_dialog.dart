@@ -442,6 +442,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                 children: [
                   _StepButton(
                       icon: Icons.remove_rounded,
+                      tooltip: l.decrease,
                       onTap: _sweetener > 0
                           ? () => setState(() => _sweetener--)
                           : null),
@@ -454,6 +455,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                   ),
                   _StepButton(
                       icon: Icons.add_rounded,
+                      tooltip: l.increase,
                       onTap: (_sweetener + 1) * _occurrences <= _balance
                           ? () => setState(() => _sweetener++)
                           : null),
@@ -580,17 +582,24 @@ class _Label extends StatelessWidget {
 
 class _StepButton extends StatelessWidget {
   final IconData icon;
+  final String? tooltip;
   final VoidCallback? onTap;
-  const _StepButton({required this.icon, this.onTap});
+  const _StepButton({required this.icon, this.tooltip, this.onTap});
 
   @override
-  Widget build(BuildContext context) => IconButton(
-        onPressed: onTap,
-        icon: Icon(icon),
-        style: IconButton.styleFrom(
-          backgroundColor: AppColors.bg,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.md)),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final tip = tooltip ??
+        (icon == Icons.remove_rounded ? l.decrease : l.increase);
+    return IconButton(
+      onPressed: onTap,
+      tooltip: tip,
+      icon: Icon(icon),
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.bg,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.md)),
+      ),
+    );
+  }
 }

@@ -841,5 +841,13 @@
   "starterPreviewTitle": "{count, plural, =0{Aucune tâche sélectionnée} =1{1 tâche sera ajoutée} other{{count} tâches seront ajoutées}}",
   "starterPreviewEmpty": "Choisissez au moins un domaine ci-dessus pour voir des tâches suggérées.",
   "recurringLabel": "Récurrente",
-  "errInvalidCaregiverEmail": "Vérifiez les adresses e-mail des aidants."
+  "errInvalidCaregiverEmail": "Vérifiez les adresses e-mail des aidants.",
+  "a11yTypeCare": "Soin",
+  "a11yTypeHousehold": "Ménage",
+  "a11yTypeCoverage": "Relais",
+  "a11yCoins": "{count, plural, =1{1 pièce} other{{count} pièces}}",
+  "a11yTimeRange": "{start} à {end}",
+  "assigneeYou": "Vous",
+  "decrease": "Diminuer",
+  "increase": "Augmenter"
 }

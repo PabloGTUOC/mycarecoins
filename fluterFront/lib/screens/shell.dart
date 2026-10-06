@@ -182,25 +182,32 @@ class _ShellState extends State<Shell> {
                     children: [
                       for (var i = 0; i < tabs.length; i++)
                         Expanded(
-                          child: InkWell(
-                            onTap: () => _go(i),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(tabs[i].icon,
-                                    size: 22,
-                                    color: i == _index
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary),
-                                const SizedBox(height: 2),
-                                Text(tabs[i].label,
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
+                          child: Semantics(
+                            button: true,
+                            selected: i == _index,
+                            label: tabs[i].label,
+                            child: InkWell(
+                              onTap: () => _go(i),
+                              child: ExcludeSemantics(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(tabs[i].icon,
+                                        size: 22,
                                         color: i == _index
                                             ? AppColors.primary
-                                            : AppColors.textSecondary)),
-                              ],
+                                            : AppColors.textSecondary),
+                                    const SizedBox(height: 2),
+                                    Text(tabs[i].label,
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: i == _index
+                                                ? AppColors.primary
+                                                : AppColors.textSecondary)),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
