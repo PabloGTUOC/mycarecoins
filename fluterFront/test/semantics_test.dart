@@ -251,4 +251,37 @@ void main() {
       semantics.dispose();
     });
   });
+
+  // Regression: a stretch-filled Row in the bottomNavigationBar slot once
+  // grew the bar to fill the screen and hid every tab's content.
+  testWidgets('bottom bar stays 60 tall at the bottom, each tab fully tappable',
+      (tester) async {
+    // 600 wide is still the phone layout (< 768); narrower trips a header
+    // overflow that only the monospace test font produces.
+    tester.view.physicalSize = const Size(600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final app = AppState(api: FakeSemanticsApiClient())
+      ..families = [
+        {'family_id': 1, 'coin_balance': 150, 'role': 'caregiver'}
+      ]
+      ..profile = {'id': 1, 'display_name': 'Parent'};
+
+    await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(
+      value: app,
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Shell(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final tab = tester.getRect(find
+        .ancestor(of: find.text('Stats'), matching: find.byType(InkWell))
+        .last);
+    expect(tab.height, 60);
+    expect(tab.bottom, greaterThan(1000 - 100));
+  });
 }
