@@ -1,6 +1,7 @@
 # Mobile UX Proposal — Flutter app
 
-> **Status: approved, 2026-10-05. No code written yet.** A review of the phone experience in
+> **Status: Phase 1 implemented (2026-10-06, branch `mobile-ux-phase1`); Phase 2 briefed in
+> `docs/mobile-ux-phase2-brief.md`, reshaped by a design critique on the simulator (22/40).** A review of the phone experience in
 > `fluterFront/` with a ranked list of changes. Each change names the evidence, the rule it
 > rests on, and what it would take to build. Decisions D1–D4 (§6) are settled.
 >
