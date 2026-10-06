@@ -1861,5 +1861,7 @@
   "decrease": "Decrease",
   "@decrease": { "description": "Stepper button tooltip: decrease value" },
   "increase": "Increase",
-  "@increase": { "description": "Stepper button tooltip: increase value" }
+  "@increase": { "description": "Stepper button tooltip: increase value" },
+  "cancelPersonalTimeWithCoverage": "Cancelling this also cancels the other person's coverage shift, and any sweetener comes back to you.",
+  "@cancelPersonalTimeWithCoverage": { "description": "Confirmation when cancelling personal time that has an accepted coverage shift" }
 }

@@ -849,5 +849,6 @@
   "a11yTimeRange": "{start} à {end}",
   "assigneeYou": "Vous",
   "decrease": "Diminuer",
-  "increase": "Augmenter"
+  "increase": "Augmenter",
+  "cancelPersonalTimeWithCoverage": "Annuler ceci annule également le créneau de remplacement de l'autre personne, et tout bonus éventuel te revient."
 }

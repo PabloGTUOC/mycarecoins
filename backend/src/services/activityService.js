@@ -13,6 +13,7 @@ export async function listActivities(client, userId, familyId) {
             a.starts_at, a.ends_at, a.duration_minutes,
             a.coin_value, a.status, a.created_by, a.assigned_to, a.is_template, a.is_recurrent,
             a.approved_by, a.approved_at, a.bounty_amount, a.bounty_offered_by,
+            a.counterpart_activity_id,
             fm.alias AS assigned_alias,
             COALESCE(fm.alias, u.display_name) AS assigned_to_name
      FROM activities a

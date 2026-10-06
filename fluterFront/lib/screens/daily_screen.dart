@@ -74,6 +74,18 @@ Widget touchAwareDraggable({
   );
 }
 
+/// Personal time (category 'self') can only be cancelled by the person taking it
+/// (assigned_to == current user), whatever their role. A coverage shift (type
+/// 'coverage') can never be removed on its own by anyone; it ends only when its
+/// personal time is cancelled.
+bool canRemoveActivity(Map<String, dynamic> a, AppState app) {
+  if (a['type'] == 'coverage') return false;
+  if (isSelfActivity(a)) {
+    return a['assigned_to']?.toString() == app.userId?.toString();
+  }
+  return true;
+}
+
 class _DailyScreenState extends State<DailyScreen> {
   List<Map<String, dynamic>> _activities = [];
   List<Map<String, dynamic>> _absences = [];
@@ -320,7 +332,53 @@ class _DailyScreenState extends State<DailyScreen> {
     }, series ? l.toastSeriesRemoved : l.toastActivityRemoved);
   }
 
+  bool _canRemoveActivity(Map<String, dynamic> a, {AppState? appState}) {
+    final app = appState ?? context.read<AppState>();
+    return canRemoveActivity(a, app);
+  }
+
+  /// Accepted personal time points at its coverage shift.
+  bool _hasCounterpart(Map<String, dynamic> a) =>
+      a['counterpart_activity_id'] != null;
+
   Future<void> _removeFlow(Map<String, dynamic> a) async {
+    final app = context.read<AppState>();
+    if (!_canRemoveActivity(a, appState: app)) return;
+
+    if (isSelfActivity(a)) {
+      if (_hasCounterpart(a)) {
+        final l = AppLocalizations.of(context);
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadii.lg)),
+            title: Text(
+                (a['title'] ?? '').toString().isNotEmpty
+                    ? (a['title'] ?? '').toString()
+                    : l.personalTimeEntry,
+                style: const TextStyle(fontWeight: FontWeight.w800)),
+            content: Text(
+              l.cancelPersonalTimeWithCoverage,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(l.cancel)),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l.remove,
+                      style: const TextStyle(color: AppColors.danger))),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+      }
+      await _unschedule(a['id'], series: false);
+      return;
+    }
+
     if (a['is_recurrent'] == true) {
       final l = AppLocalizations.of(context);
       final choice = await showDialog<String>(
@@ -939,7 +997,10 @@ class _DailyScreenState extends State<DailyScreen> {
           SizedBox(
             width: 300,
             child: DragTarget<Map<String, dynamic>>(
-              onWillAcceptWithDetails: (d) => d.data['type'] == 'scheduled',
+              onWillAcceptWithDetails: (d) =>
+                  d.data['type'] == 'scheduled' &&
+                  _canRemoveActivity(
+                      d.data['activity'] as Map<String, dynamic>),
               onAcceptWithDetails: (d) =>
                   _removeFlow(d.data['activity'] as Map<String, dynamic>),
               builder: (context, candidates, _) => Container(
@@ -1282,13 +1343,14 @@ class _DailyScreenState extends State<DailyScreen> {
       child: chip,
     );
 
+    final isDraggable = !completed && _canRemoveActivity(a, appState: app);
+
     return Positioned(
       top: top,
       left: left,
       right: 10,
-      child: completed
-          ? interactive
-          : touchAwareDraggable(
+      child: isDraggable
+          ? touchAwareDraggable(
               data: {'type': 'scheduled', 'activity': a},
               onDragStarted: () => setState(() => _draggingScheduled = true),
               onDragEnd: (_) => setState(() => _draggingScheduled = false),
@@ -1299,7 +1361,8 @@ class _DailyScreenState extends State<DailyScreen> {
               ),
               childWhenDragging: Opacity(opacity: 0.3, child: chip),
               child: interactive,
-            ),
+            )
+          : interactive,
     );
   }
 
@@ -1418,6 +1481,8 @@ class _DailyScreenState extends State<DailyScreen> {
       onCompletedInfo: _showCompletedLockedDialog,
     );
     if (status == 'completed') return card;
+    final app = context.watch<AppState>();
+    if (!_canRemoveActivity(a, appState: app)) return card;
     return Dismissible(
       key: ValueKey('act-${a['id']}'),
       direction: DismissDirection.endToStart,

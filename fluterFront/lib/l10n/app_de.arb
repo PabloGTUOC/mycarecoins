@@ -849,5 +849,6 @@
   "a11yTimeRange": "{start} bis {end}",
   "assigneeYou": "Du",
   "decrease": "Verringern",
-  "increase": "Erhöhen"
+  "increase": "Erhöhen",
+  "cancelPersonalTimeWithCoverage": "Wenn du dies absagst, wird auch die Vertretung der anderen Person storniert und du bekommst dein Extra zurück."
 }

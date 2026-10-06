@@ -849,5 +849,6 @@
   "a11yTimeRange": "{start} a {end}",
   "assigneeYou": "Tú",
   "decrease": "Disminuir",
-  "increase": "Aumentar"
+  "increase": "Aumentar",
+  "cancelPersonalTimeWithCoverage": "Al cancelar esto también se cancela el turno de cobertura de la otra persona y se te devuelve cualquier incentivo."
 }
