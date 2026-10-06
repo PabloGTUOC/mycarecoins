@@ -331,7 +331,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     l.fallbackAFamily)
                                 .toString()),
                         style: const TextStyle(
-                            color: AppColors.warning,
+                            color: AppColors.warningInk,
                             fontWeight: FontWeight.w700),
                       ),
                     ),

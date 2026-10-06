@@ -314,7 +314,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     const SizedBox(height: 3),
                     PillBadge(
                         text: '-${cRow['cost'] ?? 0} cc',
-                        color: AppColors.danger,
+                        color: AppColors.dangerInk,
                         background: AppColors.dangerSoft,
                         fontSize: 11),
                   ],
@@ -458,7 +458,7 @@ class _RewardCard extends StatelessWidget {
                         PillBadge(
                             text: soldOut ? l.soldOut : l.nLeft(maxUses - uses),
                             color:
-                                soldOut ? AppColors.danger : AppColors.warning,
+                                soldOut ? AppColors.dangerInk : AppColors.warningInk,
                             background: soldOut
                                 ? AppColors.dangerSoft
                                 : AppColors.warningSoft,
@@ -470,7 +470,7 @@ class _RewardCard extends StatelessWidget {
                                             r['valid_until'].toString())
                                         ?.toLocal() ??
                                     DateTime.now())),
-                            color: AppColors.danger,
+                            color: AppColors.dangerInk,
                             background: AppColors.dangerSoft,
                             fontSize: 11),
                     ],

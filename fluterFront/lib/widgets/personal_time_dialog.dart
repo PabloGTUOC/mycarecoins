@@ -291,7 +291,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: _type == t
-                            ? AppColors.primary
+                            ? AppColors.primaryInk
                             : AppColors.textSecondary),
                     selectedColor: AppColors.primarySoft,
                     backgroundColor: AppColors.bg,
@@ -356,7 +356,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: _recurrence == r
-                            ? AppColors.primary
+                            ? AppColors.primaryInk
                             : AppColors.textSecondary),
                     selectedColor: AppColors.primarySoft,
                     backgroundColor: AppColors.bg,
@@ -426,7 +426,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                                     (c == null
                                         ? null
                                         : toNum(c['user_id']).toInt())
-                                ? AppColors.primary
+                                ? AppColors.primaryInk
                                 : AppColors.textSecondary),
                         selectedColor: AppColors.primarySoft,
                         backgroundColor: AppColors.bg,
@@ -522,7 +522,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(Icons.error_outline,
-                        size: 16, color: AppColors.danger),
+                        size: 16, color: AppColors.dangerInk),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(_error!,
@@ -530,7 +530,7 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                               fontSize: 12.5,
                               height: 1.35,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.danger)),
+                              color: AppColors.dangerInk)),
                     ),
                   ],
                 ),

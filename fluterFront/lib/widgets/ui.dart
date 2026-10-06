@@ -102,7 +102,7 @@ class VButton extends StatelessWidget {
         ),
       VButtonType.danger => (
           AppColors.dangerSoft,
-          AppColors.danger,
+          AppColors.dangerInk,
           const BorderSide(color: AppColors.dangerSoft),
           const <BoxShadow>[],
         ),
@@ -240,7 +240,7 @@ class KpiCard extends StatelessWidget {
     this.subtitle,
     this.delta,
     this.accent = AppColors.primary,
-    this.deltaColor = AppColors.success,
+    this.deltaColor = AppColors.successInk,
     this.deltaBg = AppColors.successSoft,
     this.progress,
   });
@@ -410,7 +410,7 @@ class PillBadge extends StatelessWidget {
   const PillBadge({
     super.key,
     required this.text,
-    this.color = AppColors.warning,
+    this.color = AppColors.warningInk,
     this.background = AppColors.warningSoft,
     this.fontSize = 12,
   });
@@ -702,7 +702,7 @@ class AssigneeBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: compact ? 10 : 11.5,
           fontWeight: FontWeight.w800,
-          color: mine ? AppColors.primary : AppColors.textSecondary,
+          color: mine ? AppColors.primaryInk : AppColors.textSecondary,
         ),
       ),
     );

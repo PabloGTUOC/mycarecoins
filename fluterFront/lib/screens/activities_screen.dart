@@ -265,7 +265,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 labelStyle: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: _filter == i
-                        ? AppColors.primary
+                        ? AppColors.primaryInk
                         : AppColors.textSecondary),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -416,7 +416,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: _type == value
-                            ? AppColors.primary
+                            ? AppColors.primaryInk
                             : AppColors.textSecondary),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadii.pill),

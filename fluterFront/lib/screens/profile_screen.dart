@@ -442,7 +442,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Text(l.deletionBannerTitle,
                       style: const TextStyle(
                           fontWeight: FontWeight.w800,
-                          color: AppColors.danger)),
+                          color: AppColors.dangerInk)),
                   const SizedBox(height: 8),
                   Text(
                       l.deletionBannerBody(
@@ -461,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: a['status'] == 'approved'
                                 ? AppColors.success
                                 : a['status'] == 'rejected'
-                                    ? AppColors.danger
+                                    ? AppColors.dangerInk
                                     : AppColors.warning)),
                   const SizedBox(height: 12),
                   Row(

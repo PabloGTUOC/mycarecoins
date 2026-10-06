@@ -58,7 +58,7 @@ class ActivationChecklist extends StatelessWidget {
               ),
               PillBadge(
                   text: '$done/${steps.length}',
-                  color: AppColors.primary,
+                  color: AppColors.primaryInk,
                   background: AppColors.primarySoft,
                   fontSize: 11),
               IconButton(

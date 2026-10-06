@@ -139,6 +139,7 @@ A restrained palette where each hue has one job. Primary blue drives every inten
 - **Input Border** (`#CBD5E1`): Input stroke at rest; shifts to primary blue on focus.
 
 **The One Job Rule.** Every color has one semantic role and stays in it. Blue is not used for decoration. Green is not used for branding. Amber is not used for warnings unrelated to household tasks. If a new color feels necessary, it is probably a state variation of an existing token, not a new hue.
+*soft fill → ink text, never the base colour.*
 
 ---
 

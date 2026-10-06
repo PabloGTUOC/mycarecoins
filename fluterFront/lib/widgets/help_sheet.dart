@@ -49,10 +49,10 @@ class _HelpContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final steps = [
-      (l.landStep1Title, l.landStep1Body, AppColors.primary, AppColors.primarySoft),
-      (l.landStep2Title, l.landStep2Body, AppColors.success, AppColors.successSoft),
-      (l.landStep3Title, l.landStep3Body, AppColors.warning, AppColors.warningSoft),
-      (l.landStep4Title, l.landStep4Body, AppColors.danger, AppColors.dangerSoft),
+      (l.landStep1Title, l.landStep1Body, AppColors.primaryInk, AppColors.primarySoft),
+      (l.landStep2Title, l.landStep2Body, AppColors.successInk, AppColors.successSoft),
+      (l.landStep3Title, l.landStep3Body, AppColors.warningInk, AppColors.warningSoft),
+      (l.landStep4Title, l.landStep4Body, AppColors.dangerInk, AppColors.dangerSoft),
     ];
     final glossary = [
       (l.glossCoinTerm, l.glossCoinDef),

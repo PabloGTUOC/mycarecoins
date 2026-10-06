@@ -64,9 +64,9 @@ String _fmtDate(BuildContext context, dynamic iso) {
 }
 
 (Color, Color) _statusColors(String status) => switch (status) {
-      'active' => (AppColors.success, AppColors.successSoft),
-      'dormant' => (AppColors.warning, AppColors.warningSoft),
-      _ => (AppColors.danger, AppColors.dangerSoft),
+      'active' => (AppColors.successInk, AppColors.successSoft),
+      'dormant' => (AppColors.warningInk, AppColors.warningSoft),
+      _ => (AppColors.dangerInk, AppColors.dangerSoft),
     };
 
 String _statusLabel(AppLocalizations l, String status) => switch (status) {
@@ -246,7 +246,7 @@ class _FamiliesTabState extends State<_FamiliesTab> {
                 if (fam['planCode'] != null)
                   PillBadge(
                       text: fam['planCode'].toString(),
-                      color: AppColors.primary,
+                      color: AppColors.primaryInk,
                       background: AppColors.primarySoft,
                       fontSize: 11),
               ],
@@ -560,7 +560,7 @@ class _AdminFamilyDetailScreenState extends State<AdminFamilyDetailScreen> {
                   children: [
                     PillBadge(
                         text: g['planCode'].toString(),
-                        color: AppColors.primary,
+                        color: AppColors.primaryInk,
                         background: AppColors.primarySoft,
                         fontSize: 11),
                     const SizedBox(width: 8),
@@ -830,7 +830,7 @@ class _PlansTabState extends State<_PlansTab> {
                           padding: const EdgeInsets.only(left: 6),
                           child: PillBadge(
                               text: l.adminDefaultBadge,
-                              color: AppColors.primary,
+                              color: AppColors.primaryInk,
                               background: AppColors.primarySoft,
                               fontSize: 11),
                         ),
@@ -839,7 +839,7 @@ class _PlansTabState extends State<_PlansTab> {
                           padding: const EdgeInsets.only(left: 6),
                           child: PillBadge(
                               text: l.adminInactiveBadge,
-                              color: AppColors.danger,
+                              color: AppColors.dangerInk,
                               background: AppColors.dangerSoft,
                               fontSize: 11),
                         ),

@@ -944,12 +944,12 @@ class _DailyScreenState extends State<DailyScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Icon(Icons.delete_outline_rounded,
-                                size: 34, color: AppColors.danger),
+                                size: 34, color: AppColors.dangerInk),
                             const SizedBox(height: 8),
                             Text(AppLocalizations.of(context).dropToUnschedule,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w800,
-                                    color: AppColors.danger)),
+                                    color: AppColors.dangerInk)),
                           ],
                         ),
                       )
@@ -1168,10 +1168,10 @@ class _DailyScreenState extends State<DailyScreen> {
     final filled = completed && !isSelf;
 
     final (bg, fg, border) = status == 'rejected'
-        ? (AppColors.dangerSoft, AppColors.danger, AppColors.dangerSoft)
+        ? (AppColors.dangerSoft, AppColors.dangerInk, AppColors.dangerSoft)
         : filled
             ? (
-                isCare ? AppColors.success : AppColors.warning,
+                isCare ? AppColors.successStrong : AppColors.warningStrong,
                 Colors.white,
                 Colors.transparent
               )
@@ -1410,11 +1410,11 @@ class _DailyScreenState extends State<DailyScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.delete_rounded, color: AppColors.danger),
+            const Icon(Icons.delete_rounded, color: AppColors.dangerInk),
             const SizedBox(width: 6),
             Text(AppLocalizations.of(context).remove,
                 style: const TextStyle(
-                    color: AppColors.danger, fontWeight: FontWeight.w800)),
+                    color: AppColors.dangerInk, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -1482,27 +1482,27 @@ class _ActivityAction extends StatelessWidget {
     final l = AppLocalizations.of(context);
     if (status == 'pending_validation') {
       return (!mine && app.isCaregiver)
-          ? pill(l.pillValidate, AppColors.primary, AppColors.primarySoft,
+          ? pill(l.pillValidate, AppColors.primaryInk, AppColors.primarySoft,
               onValidate)
-          : pill(l.pillAwaiting, AppColors.warning, AppColors.warningSoft);
+          : pill(l.pillAwaiting, AppColors.warningInk, AppColors.warningSoft);
     }
     if (status == 'completed') {
       return pill(l.pillDone, Colors.white, Colors.black26);
     }
     if (status == 'rejected') {
-      return pill(l.pillRejected, AppColors.danger, AppColors.dangerSoft);
+      return pill(l.pillRejected, AppColors.dangerInk, AppColors.dangerSoft);
     }
     // pending / approved
     if (mine && bounty == 0 && app.isCaregiver) {
       return pill(
-          l.pillDelegate, AppColors.warning, AppColors.warningSoft, onDelegate);
+          l.pillDelegate, AppColors.warningInk, AppColors.warningSoft, onDelegate);
     }
     if (mine && bounty > 0) {
       return pill(
-          l.pillOffering('$bounty'), AppColors.warning, AppColors.warningSoft);
+          l.pillOffering('$bounty'), AppColors.warningInk, AppColors.warningSoft);
     }
     if (!mine && bounty > 0 && app.isCaregiver) {
-      return pill(l.pillTakeOver('$bounty'), AppColors.success,
+      return pill(l.pillTakeOver('$bounty'), AppColors.successInk,
           AppColors.successSoft, onTakeOver);
     }
     // Assignee is shown by _AssigneeBadge on every chip/card; no action here.
@@ -1900,7 +1900,7 @@ class _TimelineCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: filled
-                    ? (isCare ? AppColors.success : AppColors.warning)
+                    ? (isCare ? AppColors.successStrong : AppColors.warningStrong)
                     : AppColors.surface,
                 border: Border.all(
                     color: filled

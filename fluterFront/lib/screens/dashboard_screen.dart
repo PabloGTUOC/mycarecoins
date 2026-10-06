@@ -342,7 +342,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (a['status'] == 'completed')
           _FeedItem(
             icon: '✓',
-            color: AppColors.primary,
+            color: AppColors.primaryInk,
             background: AppColors.primarySoft,
             actor: (a['assigned_to_name'] ?? l.fallbackSomeone).toString(),
             verb: l.feedVerbCompleted,
@@ -354,7 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       for (final r in _claimed)
         _FeedItem(
           icon: '🛍️',
-          color: AppColors.danger,
+          color: AppColors.dangerInk,
           background: AppColors.dangerSoft,
           actor: (r['buyer_name'] ?? l.fallbackSomeone).toString(),
           verb: l.feedVerbGot,
@@ -1130,7 +1130,7 @@ class _AbsenceChip extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
-                  color: AppColors.danger)),
+                  color: AppColors.dangerInk)),
           Text((abs['title'] ?? '').toString(),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -1138,7 +1138,7 @@ class _AbsenceChip extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   height: 1.2,
-                  color: AppColors.danger)),
+                  color: AppColors.dangerInk)),
         ],
       ),
     );
@@ -1259,9 +1259,9 @@ class _ActChip extends StatelessWidget {
     Border? border;
     if (status == 'rejected') {
       bg = AppColors.dangerSoft;
-      fg = AppColors.danger;
+      fg = AppColors.dangerInk;
     } else if (status == 'completed') {
-      bg = isCare ? AppColors.success : AppColors.warning;
+      bg = isCare ? AppColors.successStrong : AppColors.warningStrong;
       fg = Colors.white;
     } else {
       bg = AppColors.surface;

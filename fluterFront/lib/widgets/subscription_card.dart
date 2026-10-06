@@ -134,7 +134,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
             if (subscribed)
               PillBadge(
                   text: _ent?['planCode']?.toString() ?? 'pro',
-                  color: AppColors.success,
+                  color: AppColors.successInk,
                   background: AppColors.successSoft,
                   fontSize: 11),
           ],

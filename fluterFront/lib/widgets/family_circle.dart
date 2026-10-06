@@ -369,7 +369,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
                       ),
                       PillBadge(
                           text: l.badgePending,
-                          color: AppColors.warning,
+                          color: AppColors.warningInk,
                           background: AppColors.warningSoft,
                           fontSize: 11),
                     ],
@@ -518,7 +518,7 @@ class _CircleCard extends StatelessWidget {
                             color: AppColors.dangerSoft,
                             shape: BoxShape.circle),
                         child: const Icon(Icons.close_rounded,
-                            size: 14, color: AppColors.danger),
+                            size: 14, color: AppColors.dangerInk),
                       ),
                     ),
                   ),

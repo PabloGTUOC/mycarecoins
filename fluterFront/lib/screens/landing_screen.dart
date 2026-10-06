@@ -17,25 +17,25 @@ class LandingScreen extends StatelessWidget {
         (
           l.landStep1Title,
           l.landStep1Body,
-          AppColors.primary,
+          AppColors.primaryInk,
           AppColors.primarySoft,
         ),
         (
           l.landStep2Title,
           l.landStep2Body,
-          AppColors.success,
+          AppColors.successInk,
           AppColors.successSoft,
         ),
         (
           l.landStep3Title,
           l.landStep3Body,
-          AppColors.warning,
+          AppColors.warningInk,
           AppColors.warningSoft,
         ),
         (
           l.landStep4Title,
           l.landStep4Body,
-          AppColors.danger,
+          AppColors.dangerInk,
           AppColors.dangerSoft,
         ),
       ];
@@ -609,7 +609,7 @@ class _PhoneMockup extends StatelessWidget {
                               style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.warning)),
+                                  color: AppColors.warningInk)),
                         ),
                       ],
                     ),
@@ -1028,24 +1028,24 @@ class _DashboardSim extends StatelessWidget {
   const _DashboardSim({super.key});
 
   List<(String, String, String, Color, Color)> _members(AppLocalizations l) => [
-        ('👩🏽', l.landSimMama, '120', AppColors.primary, AppColors.primarySoft),
-        ('👨🏽', l.landSimPapa, '340', AppColors.success, AppColors.successSoft),
-        ('👶🏽', 'Leo', '80', AppColors.warning, AppColors.warningSoft),
-        ('👧🏽', 'Sofia', '160', AppColors.danger, AppColors.dangerSoft),
+        ('👩🏽', l.landSimMama, '120', AppColors.primaryInk, AppColors.primarySoft),
+        ('👨🏽', l.landSimPapa, '340', AppColors.successInk, AppColors.successSoft),
+        ('👶🏽', 'Leo', '80', AppColors.warningInk, AppColors.warningSoft),
+        ('👧🏽', 'Sofia', '160', AppColors.dangerInk, AppColors.dangerSoft),
       ];
 
   List<(String, Color, Color, String, String, String, String, Color)> _feed(
           AppLocalizations l) =>
       [
-        ('✓', AppColors.primary, AppColors.primarySoft,
+        ('✓', AppColors.primaryInk, AppColors.primarySoft,
             l.landSimFeedCompleted(l.landSimMama),
             l.landSimSubjectCleanRoom, l.landSimTime2Min, '+20 cc',
             AppColors.success),
-        ('✓', AppColors.primary, AppColors.primarySoft,
+        ('✓', AppColors.primaryInk, AppColors.primarySoft,
             l.landSimFeedCompleted(l.landSimPapa),
             l.landSimSubjectFeedPet, l.landSimTime1Hour, '+10 cc',
             AppColors.success),
-        ('🛍️', AppColors.danger, AppColors.dangerSoft,
+        ('🛍️', AppColors.dangerInk, AppColors.dangerSoft,
             l.landSimFeedRedeemed(l.landSimMama),
             l.landSimSubjectCoffee, l.landSimTime3Hours, '-30 cc',
             AppColors.danger),
@@ -1409,7 +1409,7 @@ class _MarketplaceSim extends StatelessWidget {
                       : PillBadge(
                           text: badge,
                           fontSize: 11,
-                          color: AppColors.success,
+                          color: AppColors.successInk,
                           background: AppColors.successSoft),
                 ],
               ),
@@ -1501,7 +1501,7 @@ class _LedgerCard extends StatelessWidget {
               ),
               PillBadge(
                   text: l.landSimVerified,
-                  color: AppColors.success,
+                  color: AppColors.successInk,
                   background: AppColors.successSoft,
                   fontSize: 11),
             ],

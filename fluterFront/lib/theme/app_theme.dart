@@ -12,12 +12,18 @@ abstract class AppColors {
 
   static const primary = Color(0xFF2563EB);
   static const primarySoft = Color(0xFFE8EFFE);
+  static const primaryInk = Color(0xFF1D4ED8);
   static const success = Color(0xFF16A34A);
   static const successSoft = Color(0xFFE7F6EC);
+  static const successInk = Color(0xFF166534);
+  static const successStrong = Color(0xFF15803D);
   static const warning = Color(0xFFD97706);
   static const warningSoft = Color(0xFFFEF1E1);
+  static const warningInk = Color(0xFF92400E);
+  static const warningStrong = Color(0xFFB45309);
   static const danger = Color(0xFFDC2626);
   static const dangerSoft = Color(0xFFFCE8E8);
+  static const dangerInk = Color(0xFFB91C1C);
 
   static const accentSecondary = Color(0xFF60A5FA);
   static const inputBg = Color(0xFFF1F5F9);

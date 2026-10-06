@@ -327,13 +327,13 @@ class _PillHeader extends StatelessWidget {
                     Text(balance,
                         style: const TextStyle(
                             fontWeight: FontWeight.w800,
-                            color: AppColors.warning)),
+                            color: AppColors.warningInk)),
                     const SizedBox(width: 3),
                     const Text('cc',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.warning)),
+                            color: AppColors.warningInk)),
                   ],
                 ),
               ),
@@ -393,14 +393,14 @@ class _NavLink extends StatelessWidget {
             children: [
               Icon(icon,
                   size: 18,
-                  color: active ? AppColors.primary : AppColors.textSecondary),
+                  color: active ? AppColors.primaryInk : AppColors.textSecondary),
               const SizedBox(width: 6),
               Text(label,
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: active
-                          ? AppColors.primary
+                          ? AppColors.primaryInk
                           : AppColors.textSecondary)),
             ],
           ),
