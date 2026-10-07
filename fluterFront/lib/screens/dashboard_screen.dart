@@ -339,6 +339,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return acts;
   }
 
+  List<Widget> _buildAgenda(
+      List<DateTime> days, String loc, AppLocalizations l) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final widgets = <Widget>[];
+    List<DateTime> emptyRun = [];
+
+    void flushEmptyRun() {
+      if (emptyRun.isEmpty) return;
+      final start = emptyRun.first;
+      final end = emptyRun.last;
+      final startStr = DateFormat('EEE d', loc).format(start);
+      final String label;
+      if (emptyRun.length == 1) {
+        label = l.freeDaySingle(startStr);
+      } else {
+        final endStr = DateFormat('EEE d', loc).format(end);
+        label = l.freeDaysRange(startStr, endStr);
+      }
+      widgets.add(
+        _FreeDaysRow(
+          label: label,
+          onTap: () => _openDaily(start),
+        ),
+      );
+      emptyRun = [];
+    }
+
+    for (final day in days) {
+      final dayDate = DateTime(day.year, day.month, day.day);
+      final isToday = dayDate == today;
+      final acts = _actsOn(day);
+      final absences = _absencesOn(day);
+      final hasContent = acts.isNotEmpty || absences.isNotEmpty;
+
+      if (isToday || hasContent) {
+        flushEmptyRun();
+        widgets.add(
+          _DayRow(
+            day: day,
+            acts: acts,
+            absences: absences,
+            onTap: () => _openDaily(day),
+          ),
+        );
+      } else {
+        emptyRun.add(day);
+      }
+    }
+    flushEmptyRun();
+    return widgets;
+  }
+
   // ── Recent activity feed ────────────────────────────────────────
 
   List<_FeedItem> get _recentActivity {
@@ -354,7 +407,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             verb: l.feedVerbCompleted,
             subject: (a['title'] ?? '').toString(),
             time: DateTime.tryParse(a['starts_at']?.toString() ?? ''),
-            coinText: '+${toNum(a['coin_value'])} cc',
+            coinText: isSelfActivity(a) ? null : '+${toNum(a['coin_value'])} cc',
             coinColor: AppColors.success,
           ),
       for (final r in _claimed)
@@ -403,6 +456,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final coinsEarnedToday = _scheduled.fold<num>(0, (sum, a) {
+      if (a['status'] != 'completed') return sum;
+      if ((a['category'] ?? 'care') != 'care') return sum;
+      final ts = DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
+      if (ts == null || DateTime(ts.year, ts.month, ts.day) != today) return sum;
+      return sum + toNum(a['coin_value']) + toNum(a['bounty_amount']);
+    });
     final completedToday = _scheduled.where((a) {
       if (a['status'] != 'completed') return false;
       final ts = DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
@@ -436,6 +496,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             l.fallbackCaregiver)
         .toString();
 
+    final firstSentence = coinsEarnedToday > 0
+        ? l.dashEarned(_greeting(l), greetName, coinsEarnedToday)
+        : l.dashNothingEarned(_greeting(l), greetName);
+    final subtitle = '$firstSentence ${l.dashPendingTasks(pendingTasks)}';
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -444,8 +509,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           PageHeading(
               title: l.dashTitle,
-              subtitle: '${l.dashEarned(_greeting(l), greetName, totalCoins)} '
-                  '${l.dashPendingTasks(pendingTasks)}'),
+              subtitle: subtitle,
+              onSubtitleTap: () => _openDaily(DateTime.now())),
+          if (pendingTasks > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(44, 36),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => _openDaily(DateTime.now()),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  label: Text(l.goToToday,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
 
           // ── Activation checklist (onboarding-help-plan Phase 3) ──
           // Caregiver-only: creating tasks, validating and stocking the
@@ -581,15 +665,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // hidden off-canvas and every row is a full-width tap target.
                 if (!wide)
                   Column(
-                    children: [
-                      for (final day in _rollingDays)
-                        _DayRow(
-                          day: day,
-                          acts: _actsOn(day),
-                          absences: _absencesOn(day),
-                          onTap: () => _openDaily(day),
-                        ),
-                    ],
+                    children: _buildAgenda(_rollingDays, loc, l),
                   )
                 else
                   // Seven-column week grid: when the card
@@ -736,14 +812,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             subtitle: l.kpiMembersCount(_members.length)))),
                 SizedBox(
                     width: w,
-                    // The most-used destination gets a direct entry point:
-                    // tapping "Tasks Today" opens today's Daily view.
                     child: InkWell(
-                        onTap: () => _openDaily(DateTime.now()),
+                        onTap: widget.onOpenStats,
                         child: KpiCard(
                             label: l.kpiTasksToday,
                             value: '$completedToday/$todayActs',
-                            accent: AppColors.success,
                             subtitle: pendingTasks > 0
                                 ? l.kpiAwaitingValidation(pendingTasks)
                                 : l.kpiOnTrack,
@@ -757,7 +830,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: KpiCard(
                             label: l.kpiOpenBounties,
                             value: '${offers.length}',
-                            accent: AppColors.warning,
                             subtitle: offers.isEmpty
                                 ? l.kpiNoBounties
                                 : l.kpiUpForGrabs(bountyTotal)))),
@@ -768,7 +840,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: KpiCard(
                             label: l.recentActivity,
                             value: '${recent.length}',
-                            accent: AppColors.textPrimary,
                             subtitle: recent.isEmpty
                                 ? l.kpiNoRecent
                                 : l.kpiCompletedRecently))),
@@ -780,12 +851,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              child: TextButton(
                 onPressed: widget.onOpenStats,
-                icon: const Icon(Icons.bar_chart_rounded, size: 18),
-                label: Text(l.seeStats,
+                child: Text(l.seeAllStats,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w700)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary)),
               ),
             ),
           ],
@@ -861,12 +933,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
                                           color: AppColors.textSecondary)),
-                                  const SizedBox(width: 8),
-                                  Text(item.coinText,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: item.coinColor)),
+                                  if (item.coinText != null && item.coinText!.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Text(item.coinText!,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: item.coinColor)),
+                                  ],
                                 ],
                               ),
                             ],
@@ -898,7 +972,7 @@ class _FeedItem {
   final String verb;
   final String subject;
   final DateTime? time;
-  final String coinText;
+  final String? coinText;
   final Color coinColor;
 
   _FeedItem({
@@ -909,7 +983,7 @@ class _FeedItem {
     required this.verb,
     required this.subject,
     required this.time,
-    required this.coinText,
+    this.coinText,
     required this.coinColor,
   });
 
@@ -1252,6 +1326,49 @@ class _DayRow extends StatelessWidget {
                     ),
             ),
             const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FreeDaysRow extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _FreeDaysRow({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tappable(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        constraints: const BoxConstraints(minHeight: 44),
+        decoration: BoxDecoration(
+          color: AppColors.bg,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.wb_sunny_outlined,
+                size: 18, color: AppColors.textSecondary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right_rounded,
                 size: 18, color: AppColors.textSecondary),
           ],

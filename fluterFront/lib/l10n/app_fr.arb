@@ -17,6 +17,10 @@
   "needsCoverRequest": "{name} vous demande de couvrir « {title} »",
   "needsApproveMember": "Approuver le membre : {name}",
   "needsTakeOverOffer": "Reprendre « {title} » (+{coins} cc)",
+  "goToToday": "Aller à Aujourd'hui",
+  "seeAllStats": "Voir toutes les statistiques",
+  "freeDaysRange": "Libre : {start} au {end}",
+  "freeDaySingle": "Libre : {date}",
 
   "navMarketplace": "Boutique",
   "navPersonal": "Personnel",
@@ -45,6 +49,7 @@
   "greetingEvening": "Bonsoir",
   "dashTitle": "Espace Famille",
   "dashEarned": "{greeting}, {name} ! Votre famille a gagné {coins} cc aujourd'hui.",
+  "dashNothingEarned": "{greeting}, {name} ! Rien n'a encore été versé aujourd'hui.",
   "dashPendingTasks": "{count, plural, one{{count} tâche attend votre attention.} other{{count} tâches attendent votre attention.}}",
 
   "tourMembersTitle": "La famille en un coup d'œil",

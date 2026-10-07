@@ -17,6 +17,10 @@
   "needsCoverRequest": "{name} bittet dich um Vertretung für \"{title}\"",
   "needsApproveMember": "Mitglied bestätigen: {name}",
   "needsTakeOverOffer": "\"{title}\" übernehmen (+{coins} cc)",
+  "goToToday": "Zu Heute gehen",
+  "seeAllStats": "Alle Statistiken ansehen",
+  "freeDaysRange": "Frei: {start} bis {end}",
+  "freeDaySingle": "Frei: {date}",
 
   "navMarketplace": "Marktplatz",
   "navPersonal": "Persönlich",
@@ -45,6 +49,7 @@
   "greetingEvening": "Guten Abend",
   "dashTitle": "Familienzentrale",
   "dashEarned": "{greeting}, {name}! Deine Familie hat heute {coins} cc verdient.",
+  "dashNothingEarned": "{greeting}, {name}! Heute wurde noch nichts ausgezahlt.",
   "dashPendingTasks": "{count, plural, one{{count} Aufgabe wartet auf Aufmerksamkeit.} other{{count} Aufgaben warten auf Aufmerksamkeit.}}",
 
   "tourMembersTitle": "Die Familie auf einen Blick",

@@ -35,7 +35,7 @@ void main() {
     );
 
     expect(find.text('Sign In'), findsOneWidget);
-    expect(find.text('FAMILY COINS'), findsOneWidget);
+    expect(find.text('Family coins'), findsOneWidget);
     expect(find.text('+5cc'), findsOneWidget);
   });
 

@@ -227,7 +227,7 @@ class KpiCard extends StatelessWidget {
   final String? unit;
   final String? subtitle;
   final String? delta;
-  final Color accent;
+  final Color? accent;
   final Color deltaColor;
   final Color deltaBg;
   final double? progress; // 0–100
@@ -239,7 +239,7 @@ class KpiCard extends StatelessWidget {
     this.unit,
     this.subtitle,
     this.delta,
-    this.accent = AppColors.primary,
+    this.accent,
     this.deltaColor = AppColors.successInk,
     this.deltaBg = AppColors.successSoft,
     this.progress,
@@ -269,11 +269,10 @@ class KpiCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(label.toUpperCase(),
+                child: Text(label,
                     style: const TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.normal,
                         color: AppColors.textSecondary)),
               ),
               if (delta != null)
@@ -302,7 +301,7 @@ class KpiCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
                       height: 1,
-                      color: accent)),
+                      color: accent ?? AppColors.textPrimary)),
               if (unit != null) ...[
                 const SizedBox(width: 6),
                 Text(unit!,
@@ -328,7 +327,7 @@ class KpiCard extends StatelessWidget {
                 value: (progress!.clamp(0, 100)) / 100,
                 minHeight: compact ? 2 : 3,
                 backgroundColor: AppColors.bg,
-                valueColor: AlwaysStoppedAnimation(accent),
+                valueColor: AlwaysStoppedAnimation(accent ?? AppColors.primary),
               ),
             ),
           ],
@@ -630,12 +629,23 @@ class LoadErrorState extends StatelessWidget {
 class PageHeading extends StatelessWidget {
   final String title;
   final String? subtitle;
+  final VoidCallback? onSubtitleTap;
 
-  const PageHeading({super.key, required this.title, this.subtitle});
+  const PageHeading({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.onSubtitleTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final mobile = !isWideLayout(context);
+    final subText = subtitle != null
+        ? Text(subtitle!,
+            style: const TextStyle(
+                fontSize: 16, color: AppColors.textSecondary, height: 1.6))
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -645,11 +655,15 @@ class PageHeading extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 letterSpacing: -1,
                 color: AppColors.textPrimary)),
-        if (subtitle != null) ...[
+        if (subText != null) ...[
           const SizedBox(height: 6),
-          Text(subtitle!,
-              style: const TextStyle(
-                  fontSize: 16, color: AppColors.textSecondary, height: 1.6)),
+          if (onSubtitleTap != null)
+            Tappable(
+              onTap: onSubtitleTap,
+              child: subText,
+            )
+          else
+            subText,
         ],
         const SizedBox(height: 28),
       ],

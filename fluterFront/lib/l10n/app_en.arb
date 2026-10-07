@@ -83,6 +83,29 @@
       "coins": { "type": "num" }
     }
   },
+  "goToToday": "Go to Today",
+  "@goToToday": {
+    "description": "Link to switch from Family hub to Today tab"
+  },
+  "seeAllStats": "See all stats",
+  "@seeAllStats": {
+    "description": "Link below KPI cards opening the stats screen"
+  },
+  "freeDaysRange": "Free: {start} to {end}",
+  "@freeDaysRange": {
+    "description": "Collapsed agenda row for a run of empty days",
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "freeDaySingle": "Free: {date}",
+  "@freeDaySingle": {
+    "description": "Collapsed agenda row for a single empty day",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
 
   "navMarketplace": "Marketplace",
   "@navMarketplace": {
@@ -167,6 +190,14 @@
       "greeting": {},
       "name": {},
       "coins": {}
+    }
+  },
+  "dashNothingEarned": "{greeting}, {name}! Nothing paid out yet today.",
+  "@dashNothingEarned": {
+    "description": "Dashboard subtitle when 0 coins were earned today",
+    "placeholders": {
+      "greeting": {},
+      "name": {}
     }
   },
   "dashPendingTasks": "{count, plural, one{{count} task is waiting for attention.} other{{count} tasks are waiting for attention.}}",

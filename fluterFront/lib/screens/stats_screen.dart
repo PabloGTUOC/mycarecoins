@@ -231,20 +231,17 @@ class _StatsScreenState extends State<StatsScreen> {
                 width: w,
                 child: KpiCard(
                     label: l.kpiTasksCompleted,
-                    accent: AppColors.success,
                     value: fmt.format(toNum(kpis['total_lifetime_tasks'])))),
             SizedBox(
                 width: w,
                 child: KpiCard(
                     label: l.kpiBountiesOffered,
-                    accent: AppColors.danger,
                     value:
                         fmt.format(toNum(kpis['total_bounties_offered'])))),
             SizedBox(
                 width: w,
                 child: KpiCard(
                     label: l.kpiRewardsClaimed,
-                    accent: AppColors.warning,
                     value: fmt.format(toNum(kpis['total_rewards_claimed'])))),
           ],
         );
