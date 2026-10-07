@@ -9,7 +9,7 @@
 > tokens from `lib/theme/app_theme.dart`, `flutter analyze` and `flutter test` clean.
 > **No `backend/` changes**: where a ticket needs one, it says so and the lead does it.
 
-Decisions this brief rests on: tabs **Today · Family · Tasks · Rewards · Me** (D1);
+Decisions this brief rests on (Today redesign confirmed 2026-10-07): tabs **Today · Family · Tasks · Rewards · Me** (D1);
 *Needs you* shows **a dot, never a count** (D2); the checklist "complete" step ticks on
 the **first payout** (D3); dark mode waits (D4); KPI cards **stay, quieter** (critique).
 
@@ -45,16 +45,29 @@ the **first payout** (D3); dark mode waits (D4); KPI cards **stay, quieter** (cr
   on a value that signals state. Applies wherever `KpiCard` is used, Stats included.
 - Recent activity: hide "+0 cc" for personal time.
 
-## P2-3 · Less chrome, fewer nested tabs (critique #2, #3)
+## P2-3 · Material 3 foundation, brand kept (critique #2, #3; replaces "less chrome")
 
-- Phone header: drop the logo/wordmark; keep help and the balance; reduce its height.
-- Page titles: one line at a smaller size; remove the subtitle paragraphs on phones
-  (keep them on wide layouts).
-- Rewards: Store and History become one scrolling list (store first, then a "History"
-  section); Create becomes a button that opens the existing form in a sheet. No
-  segmented control.
-- Tasks: keep Catalogue and Budget as segments; New Activity moves to a button on
-  Catalogue that opens the form in a sheet.
+Decided 2026-10-07: standard Material 3 components across the whole app, keeping the
+CareCoins blue, Plus Jakarta Sans and the coin language. `useMaterial3` and
+`ColorScheme.fromSeed` are already on; the gap is that almost every control is custom.
+
+- Theme: complete `ThemeData` component themes (navigation bar, app bar, segmented
+  button, filled/tonal/outlined/text buttons, chips, cards, bottom sheets with
+  `showDragHandle`, time picker, snack bar) generated from the existing tokens. Success /
+  warning ink and strong colours from T3 move into a `ThemeExtension` so widgets read
+  them from the theme.
+- Bottom bar: Material `NavigationBar` with `NavigationDestination`s; the D2 dot is the
+  built-in `Badge` (small, no label). Keep labels always visible.
+- Header: replace the pill header and the large page title + subtitle with a standard
+  small top app bar per tab (title, help action, the balance as a compact action chip).
+  Drop the logo on phones. Subtitles go, except on wide layouts if they earn it.
+- `SegmentedTabs` → `SegmentedButton` (single selection). Rewards: Store and History in
+  one list, Create as a button opening the form in a sheet. Tasks: Catalogue and Budget
+  segments, New Activity as a button opening the form in a sheet.
+- `VButton` keeps its API but renders `FilledButton` / `FilledButton.tonal` /
+  `OutlinedButton` / `TextButton`; danger uses the error colour scheme.
+- Cards: Material filled/outlined cards (tonal surfaces, no drop shadows).
+- Time entry everywhere uses `showTimePicker` (no hour/minute dropdowns).
 
 ## P2-4 · Words and leaks (critique #4)
 
@@ -84,6 +97,64 @@ the **first payout** (D3); dark mode waits (D4); KPI cards **stay, quieter** (cr
 - Empty day: hide the "0 / 0 done" bar when the day has no items; keep one call to
   action (the FAB), and make the empty-state text non-interactive.
 - Budget: replace the semicircle gauge with a single labelled progress bar.
+
+## P2-7 · Today: the hour grid on phones (Today brief, confirmed 2026-10-07)
+
+The phone layout becomes the hour grid the wide layout already has (6:00 to 24:00),
+not the card list.
+
+- Activities are blocks sized by duration: title, assignee, coins; colour by category
+  with the ink/strong tokens. Overlapping blocks (coverage) sit side by side.
+- The red NOW line, opened in view; past hours slightly muted.
+- Needs you folds above the grid into one line ("Validate Bath time, and 1 more" with
+  an expand chevron); no count (D2).
+- Absences render as a shaded band with "Ati away"; pending personal-time requests as
+  dashed outline blocks at their time (replacing the chips).
+- Keep the T1 week strip and the T4 semantics (each block one sentence).
+
+## P2-8 · Today: the task tray and drag-to-schedule
+
+- A `DraggableScrollableSheet` peeks above the navigation bar: a handle, "Tasks · drag
+  onto the day", one row of task chips (most-scheduled first). Swipe up for the full
+  library with search, category filter, and Time for me first.
+- Long-press a chip (light haptic) to lift it; the tray collapses; a ghost block follows
+  the finger, snapped to 15 minutes, labelled with its time range ("18:15 to 18:45");
+  the grid auto-scrolls near the edges.
+- Release schedules immediately, no dialog; a snack bar says "Bath time at 18:15" with
+  Undo (Undo deletes the new instance).
+- If the drop would conflict (person busy, person away, past time), the ghost turns
+  error-coloured with the reason and the drop is refused.
+- Non-drag path: tapping a chip opens `showTimePicker` and schedules at the chosen time.
+
+## P2-9 · Today: quick add and the activity sheet
+
+- Tap an empty hour: a small sheet "Add at 18:15" with the task list and Time for me;
+  one tap schedules.
+- Tap a block: a details sheet with the actions the user may take (Validate, Offer
+  bounty, Take over, Repeat, Move, Remove), replacing the long-press and double-tap
+  shortcuts as the primary path (keep them as shortcuts).
+- Move: long-press a block and drag it to a new time, or Move in the sheet (time
+  picker). Same permissions as removal: never coverage, never someone else's personal
+  time, and not personal time whose coverage was accepted.
+- **Backend (lead):** a reschedule endpoint, `PATCH /api/activities/:id/time`
+  `{ startsAt }`, keeping duration, applying the removal permissions and the existing
+  overlap rules (coverage exempt), upcoming statuses only.
+
+## P2-10 · Today: states and alternatives
+
+- Loading: a skeleton grid, not a spinner. Empty day: the grid with "Nothing planned.
+  Drag a task here, or tap an hour." Past days: read-only (no drops, no tray drags).
+  Error/offline: an inline message with Retry.
+- Every drag has a tap path (P2-8, P2-9); screen readers get "double-tap to choose a
+  time" hints on tray chips and blocks.
+- The first-run tour points at the tray handle and an empty hour.
+- Tests: snapping, conflict refusal, undo, quick add, the sheet's actions per role, the
+  non-drag paths.
+
+## Order
+
+P2-1 (done) → P2-2 → P2-3 Material 3 foundation → P2-7 → P2-8 → P2-9 (with the lead's
+endpoint) → P2-10 → P2-4 → P2-5 → P2-6 → second critique.
 
 ## Hand back per ticket
 
