@@ -292,13 +292,19 @@ export async function validateActivity(client, userId, activityId) {
 
 export async function offerBounty(client, userId, activityId, bountyAmount) {
   const { rows: actRows } = await client.query(
-    `SELECT family_id, assigned_to, starts_at FROM activities WHERE id = $1
+    `SELECT family_id, assigned_to, starts_at, category, type FROM activities WHERE id = $1
      AND family_id IN (SELECT family_id FROM family_members WHERE user_id = $2 AND status = 'active')
      FOR UPDATE`,
     [activityId, userId]
   );
   if (!actRows.length) return { error: { code: 404, message: 'Activity not found.' } };
   const act = actRows[0];
+  // A coverage shift is someone's agreement to cover a specific person's time,
+  // and its bounty fields already carry that person's sweetener; personal time
+  // is nobody's shift to hand over. Neither can be put up for a bounty.
+  if (act.type === 'coverage' || act.category === 'self') {
+    return { error: { code: 409, message: 'Coverage and personal time cannot be handed over.' } };
+  }
   if (act.assigned_to !== userId) {
     return { error: { code: 403, message: 'Only the assigned caregiver can offer a bounty on this shift.' } };
   }
@@ -326,13 +332,19 @@ export async function offerBounty(client, userId, activityId, bountyAmount) {
 
 export async function acceptBounty(client, userId, activityId) {
   const { rows: actRows } = await client.query(
-    `SELECT family_id, assigned_to, bounty_amount, bounty_offered_by, status FROM activities WHERE id = $1
+    `SELECT family_id, assigned_to, bounty_amount, bounty_offered_by, status, category, type
+     FROM activities WHERE id = $1
      AND family_id IN (SELECT family_id FROM family_members WHERE user_id = $2 AND status = 'active')
      FOR UPDATE`,
     [activityId, userId]
   );
   if (!actRows.length) return { error: { code: 404, message: 'Activity not found.' } };
   const act = actRows[0];
+  // A coverage shift's bounty is the requester's sweetener, not an offer:
+  // "accepting" it would let them cover their own personal time.
+  if (act.type === 'coverage' || act.category === 'self') {
+    return { error: { code: 409, message: 'Coverage and personal time cannot be handed over.' } };
+  }
   if (act.status === 'completed' || act.status === 'pending_validation') {
     return { error: { code: 409, message: 'Cannot accept bounty for a completed or pending validation activity.' } };
   }

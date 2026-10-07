@@ -427,3 +427,25 @@ describe('rescheduleActivity', () => {
     assert.equal(result.error.code, 403);
   });
 });
+
+describe('bounties never apply to coverage or personal time', () => {
+  test('offering a bounty on a coverage shift is refused', async () => {
+    const client = mockClient([ok([{ family_id: 10, assigned_to: 77, starts_at: null, category: 'care', type: 'coverage' }])]);
+    const result = await offerBounty(client, 77, 1, 5);
+    assert.equal(result.error.code, 409);
+    assert.equal(client._calls.length, 1, 'no coins move');
+  });
+
+  test("the requester cannot 'take over' coverage through its sweetener", async () => {
+    const client = mockClient([ok([{ family_id: 10, assigned_to: 77, bounty_amount: 5, bounty_offered_by: 99, status: 'approved', category: 'care', type: 'coverage' }])]);
+    const result = await acceptBounty(client, 99, 1);
+    assert.equal(result.error.code, 409);
+    assert.equal(client._calls.length, 1, 'assignee unchanged');
+  });
+
+  test('personal time cannot be put up for a bounty', async () => {
+    const client = mockClient([ok([{ family_id: 10, assigned_to: 99, starts_at: null, category: 'self', type: 'sport' }])]);
+    const result = await offerBounty(client, 99, 1, 5);
+    assert.equal(result.error.code, 409);
+  });
+});
