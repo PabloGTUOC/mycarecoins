@@ -24,6 +24,7 @@ class DailyScreen extends StatefulWidget {
   final bool active;
   final ValueChanged<bool>? onNeedsYouChanged;
   final VoidCallback? onOpenWallet;
+  final DateTime? now;
 
   const DailyScreen({
     super.key,
@@ -32,6 +33,7 @@ class DailyScreen extends StatefulWidget {
     this.active = false,
     this.onNeedsYouChanged,
     this.onOpenWallet,
+    this.now,
   });
 
   @override
@@ -104,13 +106,12 @@ class _DailyScreenState extends State<DailyScreen> {
   List<Map<String, dynamic>> _absences = [];
   List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _pendingMembers = [];
-  double? _doubleTapDy;
+  bool _needsYouExpanded = false;
   bool _loading = true;
   bool _error = false;
   late DateTime _day;
   bool _draggingScheduled = false;
   final _gridScroll = ScrollController();
-  final _gridKey = GlobalKey();
 
   final _tourDateKey = GlobalKey();
   final _tourAddKey = GlobalKey();
@@ -121,7 +122,7 @@ class _DailyScreenState extends State<DailyScreen> {
     super.initState();
     _day = widget.date != null
         ? DateTime.parse(widget.date!)
-        : DateTime.now();
+        : (widget.now ?? DateTime.now());
     _load();
   }
 
@@ -172,7 +173,7 @@ class _DailyScreenState extends State<DailyScreen> {
     });
   }
 
-  bool get _isToday => _sameDay(DateTime.now(), _day);
+  bool get _isToday => _sameDay(widget.now ?? DateTime.now(), _day);
 
   Future<void> _load() async {
     final app = context.read<AppState>();
@@ -235,15 +236,31 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 
   void _scrollToNow() {
-    if (!_isToday) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_gridScroll.hasClients) return;
-      final top = _nowLineTop;
-      if (top == null) return;
-      final target = (top / 100 * kGridHeight) -
-          _gridScroll.position.viewportDimension / 2;
-      _gridScroll
-          .jumpTo(target.clamp(0.0, _gridScroll.position.maxScrollExtent));
+      if (_isToday && _nowLineTop != null) {
+        final target = (_nowLineTop! / 100 * kGridHeight) -
+            _gridScroll.position.viewportDimension / 3;
+        _gridScroll
+            .jumpTo(target.clamp(0.0, _gridScroll.position.maxScrollExtent));
+      } else {
+        // Other days open at their first activity, an hour above it, so a
+        // day whose plans are all in the evening does not open on an empty
+        // morning. An empty day opens at kStartHour.
+        final starts = _scheduledToday
+            .map((a) => DateTime.tryParse(a['starts_at']?.toString() ?? '')
+                ?.toLocal())
+            .whereType<DateTime>()
+            .toList()
+          ..sort();
+        var target = 0.0;
+        if (starts.isNotEmpty) {
+          final hour = starts.first.hour + starts.first.minute / 60 - 1;
+          target = (hour - kStartHour) / kTotalHours * kGridHeight;
+        }
+        _gridScroll
+            .jumpTo(target.clamp(0.0, _gridScroll.position.maxScrollExtent));
+      }
     });
   }
 
@@ -253,8 +270,8 @@ class _DailyScreenState extends State<DailyScreen> {
   DateTime? _startsAt(Map<String, dynamic> a) =>
       DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
 
-  /// Today's scheduled activities, sorted, each annotated with overlapCount
-  /// and gapBeforeMinutes.
+  /// Today's scheduled activities, sorted, each annotated with colIndex,
+  /// colCount, and gapBeforeMinutes.
   List<Map<String, dynamic>> get _scheduledToday {
     final acts = _activities.where((a) {
       if (a['is_template'] == true) return false;
@@ -271,22 +288,68 @@ class _DailyScreenState extends State<DailyScreen> {
     });
 
     final positioned = <Map<String, dynamic>>[];
+    var cluster = <Map<String, dynamic>>[];
+    DateTime? clusterMaxEnd;
+
+    void processCluster(List<Map<String, dynamic>> cl) {
+      if (cl.isEmpty) return;
+      final colEndTimes = <DateTime>[];
+      for (final a in cl) {
+        final start = _startsAt(a)!;
+        final durMin = toNum(a['duration_minutes']).toDouble();
+        final safeDur = durMin <= 0 ? 30.0 : durMin;
+        final end = start.add(Duration(minutes: safeDur.round()));
+
+        int col = -1;
+        for (var c = 0; c < colEndTimes.length; c++) {
+          if (!start.isBefore(colEndTimes[c])) {
+            col = c;
+            colEndTimes[c] = end;
+            break;
+          }
+        }
+        if (col == -1) {
+          col = colEndTimes.length;
+          colEndTimes.add(end);
+        }
+        a['_colIndex'] = col;
+      }
+      final numCols = colEndTimes.length;
+      for (final a in cl) {
+        a['_colCount'] = numCols;
+        a['_overlapCount'] = a['_colIndex'];
+        positioned.add(a);
+      }
+    }
+
     for (var i = 0; i < acts.length; i++) {
       final a = Map<String, dynamic>.from(acts[i]);
-      final startA = _startsAt(a)!.millisecondsSinceEpoch;
-      var overlapCount = 0;
-      for (var j = 0; j < i; j++) {
-        final b = positioned[j];
-        final startB = _startsAt(b)!.millisecondsSinceEpoch;
-        final durA = toNum(a['duration_minutes']).toInt();
-        final durB = toNum(b['duration_minutes']).toInt();
-        final endA = startA + (durA < 60 ? 60 : durA) * 60000;
-        final endB = startB + (durB < 60 ? 60 : durB) * 60000;
-        if ((startA > startB ? startA : startB) < (endA < endB ? endA : endB)) {
-          overlapCount++;
+      final start = _startsAt(a)!;
+      final durMin = toNum(a['duration_minutes']).toDouble();
+      final safeDur = durMin <= 0 ? 30.0 : durMin;
+      final end = start.add(Duration(minutes: safeDur.round()));
+
+      if (cluster.isEmpty) {
+        cluster.add(a);
+        clusterMaxEnd = end;
+      } else {
+        if (start.isBefore(clusterMaxEnd!)) {
+          cluster.add(a);
+          if (end.isAfter(clusterMaxEnd)) {
+            clusterMaxEnd = end;
+          }
+        } else {
+          processCluster(cluster);
+          cluster = [a];
+          clusterMaxEnd = end;
         }
       }
+    }
+    processCluster(cluster);
 
+    for (var i = 0; i < positioned.length; i++) {
+      final a = positioned[i];
+      final startA = _startsAt(a)!.millisecondsSinceEpoch;
       final int prevEnd;
       if (i == 0) {
         prevEnd = DateTime(_day.year, _day.month, _day.day, kStartHour)
@@ -297,9 +360,7 @@ class _DailyScreenState extends State<DailyScreen> {
             toNum(prev['duration_minutes']).toInt() * 60000;
       }
       final gap = ((startA - prevEnd) / 60000).round();
-      a['_overlapCount'] = overlapCount;
       a['_gapBeforeMinutes'] = gap > 0 ? gap : 0;
-      positioned.add(a);
     }
     return positioned;
   }
@@ -311,7 +372,7 @@ class _DailyScreenState extends State<DailyScreen> {
       _completedToday.fold<num>(0, (sum, a) => sum + toNum(a['coin_value']));
 
   double? get _nowLineTop {
-    final now = DateTime.now();
+    final now = widget.now ?? DateTime.now();
     final hour = now.hour + now.minute / 60;
     if (hour < kStartHour || hour > kStartHour + kTotalHours) return null;
     return ((hour - kStartHour) / kTotalHours) * 100;
@@ -345,7 +406,10 @@ class _DailyScreenState extends State<DailyScreen> {
       .toList();
 
   void _selectDay(DateTime day) {
-    setState(() => _day = DateTime(day.year, day.month, day.day));
+    setState(() {
+      _day = DateTime(day.year, day.month, day.day);
+      _needsYouExpanded = false;
+    });
     _scrollToNow();
   }
 
@@ -999,6 +1063,7 @@ class _DailyScreenState extends State<DailyScreen> {
                         selectedDay: _day,
                         onSelectDay: _selectDay,
                         onWeekChange: _changeWeek,
+                        today: widget.now,
                       ),
                     // Day progress: "X / Y done · 🪙 Zcc"
                     Padding(
@@ -1075,6 +1140,8 @@ class _DailyScreenState extends State<DailyScreen> {
     if (app.isCaregiver) {
       for (final a in _activities) {
         if (a['is_template'] == true) continue;
+        // A coverage shift's bounty is the requester's sweetener, not an offer.
+        if (a['type'] == 'coverage' || isSelfActivity(a)) continue;
         if (toNum(a['bounty_amount']) > 0 &&
             a['status'] != 'completed' &&
             a['status'] != 'rejected' &&
@@ -1089,7 +1156,40 @@ class _DailyScreenState extends State<DailyScreen> {
     return items;
   }
 
-  Widget _buildNeedsYou(AppLocalizations l) {
+  String _needsItemLabel(_NeedsItem item, AppLocalizations l) {
+    switch (item) {
+      case _NeedsValidation(:final activity):
+        final title = (activity['title'] ?? '').toString();
+        final assignee = (activity['assigned_alias'] ??
+                activity['assigned_to_name'] ??
+                '')
+            .toString()
+            .trim();
+        return assignee.isNotEmpty
+            ? l.needsValidateTask(title, assignee)
+            : l.needsValidateTaskNoAssignee(title);
+
+      case _NeedsCoverRequest(:final request):
+        final name = (request['requester_name'] ?? '').toString().trim();
+        final title = (request['title'] ?? '').toString();
+        return l.needsCoverRequest(
+            name.isNotEmpty ? name : l.fallbackACaregiver, title);
+
+      case _NeedsMemberApproval(:final member):
+        final name = (member['name'] ??
+                l.fallbackUser(
+                    (member['user_id'] ?? member['id'] ?? '').toString()))
+            .toString();
+        return l.needsApproveMember(name);
+
+      case _NeedsTakeOverOffer(:final activity):
+        final title = (activity['title'] ?? '').toString();
+        final bounty = toNum(activity['bounty_amount']).toInt();
+        return l.needsTakeOverOffer(title, bounty);
+    }
+  }
+
+  Widget _buildNeedsYou(AppLocalizations l, {required bool isNarrow}) {
     final app = context.watch<AppState>();
     final items = _getNeedsItems(app);
     if (items.isEmpty) {
@@ -1121,6 +1221,54 @@ class _DailyScreenState extends State<DailyScreen> {
       );
     }
 
+    if (isNarrow && !_needsYouExpanded) {
+      final firstLabel = _needsItemLabel(items.first, l);
+      final collapsedText = items.length == 1
+          ? firstLabel
+          : l.needsYouFolded(firstLabel, items.length - 1);
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          onTap: () => setState(() => _needsYouExpanded = true),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.pending_actions_rounded,
+                    size: 18, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    collapsedText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l.dashTitle,
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                  onPressed: () => setState(() => _needsYouExpanded = true),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -1132,14 +1280,26 @@ class _DailyScreenState extends State<DailyScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(
-              l.needsYouTitle,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l.needsYouTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                if (isNarrow)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                    onPressed: () => setState(() => _needsYouExpanded = false),
+                  ),
+              ],
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
@@ -1155,17 +1315,9 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 
   Widget _buildNeedsYouItem(_NeedsItem item, AppLocalizations l) {
+    final label = _needsItemLabel(item, l);
     switch (item) {
       case _NeedsValidation(:final activity):
-        final title = (activity['title'] ?? '').toString();
-        final assignee = (activity['assigned_alias'] ??
-                activity['assigned_to_name'] ??
-                '')
-            .toString()
-            .trim();
-        final label = assignee.isNotEmpty
-            ? l.needsValidateTask(title, assignee)
-            : l.needsValidateTaskNoAssignee(title);
         final coins = toNum(activity['coin_value']).toInt();
         return _NeedsRow(
           icon: Icons.verified_outlined,
@@ -1180,15 +1332,12 @@ class _DailyScreenState extends State<DailyScreen> {
         );
 
       case _NeedsCoverRequest(:final request):
-        final name = (request['requester_name'] ?? '').toString().trim();
-        final title = (request['title'] ?? '').toString();
         final sweetener = toNum(request['sweetener_coins']).toInt();
         return _NeedsRow(
           icon: Icons.swap_horiz_rounded,
           iconColor: AppColors.warning,
           iconBg: AppColors.warningSoft,
-          label: l.needsCoverRequest(
-              name.isNotEmpty ? name : l.fallbackACaregiver, title),
+          label: label,
           badge: sweetener > 0 ? '+${sweetener}cc' : null,
           badgeColor: AppColors.warningInk,
           badgeBg: AppColors.warningSoft,
@@ -1197,28 +1346,23 @@ class _DailyScreenState extends State<DailyScreen> {
         );
 
       case _NeedsMemberApproval(:final member):
-        final name = (member['name'] ??
-                l.fallbackUser(
-                    (member['user_id'] ?? member['id'] ?? '').toString()))
-            .toString();
         return _NeedsRow(
           icon: Icons.person_add_outlined,
           iconColor: AppColors.indigo,
           iconBg: AppColors.primarySoft,
-          label: l.needsApproveMember(name),
+          label: label,
           badge: null,
           actionLabel: l.approve,
           onTap: () => _approveMember(member['user_id'] ?? member['id']),
         );
 
       case _NeedsTakeOverOffer(:final activity):
-        final title = (activity['title'] ?? '').toString();
         final bounty = toNum(activity['bounty_amount']).toInt();
         return _NeedsRow(
           icon: Icons.bolt_rounded,
           iconColor: AppColors.success,
           iconBg: AppColors.successSoft,
-          label: l.needsTakeOverOffer(title, bounty),
+          label: label,
           badge: '+$bounty cc',
           badgeColor: AppColors.successInk,
           badgeBg: AppColors.successSoft,
@@ -1237,531 +1381,140 @@ class _DailyScreenState extends State<DailyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildNeedsYou(l),
+          _buildNeedsYou(l, isNarrow: false),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-          SizedBox(
-            width: 300,
-            child: DragTarget<Map<String, dynamic>>(
-              onWillAcceptWithDetails: (d) =>
-                  d.data['type'] == 'scheduled' &&
-                  _canRemoveActivity(
-                      d.data['activity'] as Map<String, dynamic>),
-              onAcceptWithDetails: (d) =>
-                  _removeFlow(d.data['activity'] as Map<String, dynamic>),
-              builder: (context, candidates, _) => Container(
-                decoration: BoxDecoration(
-                  color: candidates.isNotEmpty
-                      ? AppColors.dangerSoft
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  border: _draggingScheduled
-                      ? Border.all(color: AppColors.danger)
-                      : null,
-                ),
-                child: _draggingScheduled
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.delete_outline_rounded,
-                                size: 34, color: AppColors.dangerInk),
-                            const SizedBox(height: 8),
-                            Text(AppLocalizations.of(context).dropToUnschedule,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.dangerInk)),
-                          ],
-                        ),
-                      )
-                    : _TaskLibraryPanel(
-                        templates: _templates,
-                        onSchedule: (a) => _openScheduleDialog(a),
+                SizedBox(
+                  width: 300,
+                  child: DragTarget<Map<String, dynamic>>(
+                    onWillAcceptWithDetails: (d) =>
+                        d.data['type'] == 'scheduled' &&
+                        _canRemoveActivity(
+                            d.data['activity'] as Map<String, dynamic>),
+                    onAcceptWithDetails: (d) =>
+                        _removeFlow(d.data['activity'] as Map<String, dynamic>),
+                    builder: (context, candidates, _) => Container(
+                      decoration: BoxDecoration(
+                        color: candidates.isNotEmpty
+                            ? AppColors.dangerSoft
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppRadii.md),
+                        border: _draggingScheduled
+                            ? Border.all(color: AppColors.danger)
+                            : null,
                       ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(AppRadii.lg),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  if (_dayAbsences.isNotEmpty || _dayRequests.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (final r in _dayRequests) _requestChip(r),
-                            for (final abs in _dayAbsences)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: Tappable(
-                                  onTap: () => _absenceDetail(abs),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.dangerSoft,
-                                      borderRadius:
-                                          BorderRadius.circular(AppRadii.sm),
-                                    ),
-                                    child: Text(
-                                      '✈️ ${abs['user_alias'] ?? abs['user_name'] ?? ''} · ${abs['title']}',
-                                      style: const TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.danger),
+                      child: _draggingScheduled
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.delete_outline_rounded,
+                                      size: 34, color: AppColors.dangerInk),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppLocalizations.of(context)
+                                        .dropToUnschedule,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.dangerInk,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                          ],
-                        ),
-                      ),
+                            )
+                          : _TaskLibraryPanel(
+                              templates: _templates,
+                              onSchedule: (a) => _openScheduleDialog(a),
+                            ),
                     ),
-                  Expanded(child: _buildHourGrid(items)),
-                ],
-              ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: _DayHourGrid(
+                      items: items,
+                      absences: _dayAbsences,
+                      requests: _dayRequests,
+                      day: _day,
+                      isToday: _isToday,
+                      nowLineTop: _nowLineTop,
+                      isNarrow: false,
+                      scrollController: _gridScroll,
+                      onRefresh: _load,
+                      onGridDrop: _onGridDrop,
+                      onDoubleTap: (dy) => _openPersonalTime(dy),
+                      onAbsenceTap: _absenceDetail,
+                      onRequestTap: _openRequest,
+                      onValidate: _validate,
+                      onBounty: _openBountyDialog,
+                      onTakeOver: _acceptBounty,
+                      onRecurrence: _openRecurrenceDialog,
+                      onCompletedInfo: _showCompletedLockedDialog,
+                      canRemove: (a) => _canRemoveActivity(a),
+                      onDragStarted: () =>
+                          setState(() => _draggingScheduled = true),
+                      onDragEnd: () =>
+                          setState(() => _draggingScheduled = false),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    ),
-  ],
-),
-);
-}
-
-  Widget _buildHourGrid(List<Map<String, dynamic>> items) {
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: SingleChildScrollView(
-        controller: _gridScroll,
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: DragTarget<Map<String, dynamic>>(
-          onWillAcceptWithDetails: (_) => true,
-          onAcceptWithDetails: (details) {
-            final box =
-                _gridKey.currentContext?.findRenderObject() as RenderBox?;
-            if (box == null) return;
-            final local = box.globalToLocal(details.offset);
-            _onGridDrop(details.data, local.dy);
-          },
-          builder: (context, candidates, _) => GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            // onDoubleTapDown lands first and carries the position; onDoubleTap
-            // fires without one, so the slot is remembered between them.
-            onDoubleTapDown: (d) => _doubleTapDy = d.localPosition.dy,
-            onDoubleTap: () => _openPersonalTime(_doubleTapDy),
-            child: Container(
-              key: _gridKey,
-              height: kGridHeight,
-              color: candidates.isNotEmpty
-                  ? AppColors.primarySoft.withValues(alpha: 0.4)
-                  : Colors.transparent,
-              child: Stack(
-                children: [
-                  // Hour lines + labels
-                  for (var h = 0; h <= kTotalHours; h++)
-                    Positioned(
-                      top: h / kTotalHours * kGridHeight,
-                      left: 0,
-                      right: 0,
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 62,
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Text(
-                                _hourLabel(kStartHour + h),
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary),
-                              ),
-                            ),
-                          ),
-                          const Expanded(
-                              child:
-                                  Divider(height: 1, color: AppColors.border)),
-                        ],
-                      ),
-                    ),
-                  // Now line
-                  if (_isToday && _nowLineTop != null)
-                    Positioned(
-                      top: _nowLineTop! / 100 * kGridHeight,
-                      left: 60,
-                      right: 10,
-                      child: IgnorePointer(
-                        child: Row(
-                          children: [
-                            Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                    color: AppColors.danger,
-                                    shape: BoxShape.circle)),
-                            Expanded(
-                                child: Container(
-                                    height: 2, color: AppColors.danger)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // Scheduled chips
-                  for (final a in items) _buildChip(a),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
-  /// A request nobody has answered yet: dashed, muted, and tappable. Nothing is
-  /// booked until someone accepts, so it deliberately does not look like a
-  /// scheduled activity.
-  Widget _requestChip(Map<String, dynamic> r) {
-    final l = AppLocalizations.of(context);
-    final app = context.read<AppState>();
-    final mine = r['requester_id']?.toString() == app.userId?.toString();
-    final label = mine
-        ? (r['requested_of_name'] == null
-            ? l.ptAwaitingAnyone
-            : l.ptAwaiting(r['requested_of_name'].toString()))
-        : l.ptAskedYouToCover((r['requester_name'] ?? '').toString());
-    final start =
-        DateTime.tryParse(r['starts_at']?.toString() ?? '')?.toLocal();
-
-    return Tappable(
-      onTap: () => _openRequest(r),
-      child: Container(
-        margin: const EdgeInsets.only(right: 8, bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          border: Border.all(color: AppColors.inputBorder),
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-        ),
-        child: Text(
-          '${personalTimeTypeGlyph(r['type']?.toString() ?? '')} '
-          '${r['title']} · $label'
-          '${start == null ? '' : ' · ${DateFormat('HH:mm').format(start)}'}',
-          style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textSecondary),
-        ),
-      ),
-    );
-  }
-
-  // 24-hour labels, consistent with the HH:mm format on every chip/card.
-  String _hourLabel(int h24) => '${(h24 % 24).toString().padLeft(2, '0')}:00';
-
-  Widget _buildChip(Map<String, dynamic> a) {
-    final ts = _startsAt(a)!;
-    final hour = ts.hour + ts.minute / 60;
-    final clamped = hour < kStartHour ? kStartHour.toDouble() : hour;
-    final top = (clamped - kStartHour) / kTotalHours * kGridHeight;
-    final durMin = toNum(a['duration_minutes']).toDouble();
-    final durH = (durMin < 60 ? 60 : durMin) / 60;
-    final visibleH = durH < (24 - clamped) ? durH : (24 - clamped);
-    final height =
-        (visibleH / kTotalHours * kGridHeight).clamp(52.0, kGridHeight);
-    final overlap = (a['_overlapCount'] as int?) ?? 0;
-    final cappedOverlap = overlap > 4 ? 4 : overlap;
-    final left = 70.0 + cappedOverlap * 45.0;
-    final status = a['status']?.toString() ?? 'pending';
-    final completed = status == 'completed';
-    final isCare = a['type'] == 'care';
-    final isSelf = isSelfActivity(a);
-    // Personal time earns nothing, so it never gets the filled "completed work"
-    // treatment — it reads as a claim on the day, not as a contribution.
-    final filled = completed && !isSelf;
-
-    final (bg, fg, border) = status == 'rejected'
-        ? (AppColors.dangerSoft, AppColors.dangerInk, AppColors.dangerSoft)
-        : filled
-            ? (
-                isCare ? AppColors.successStrong : AppColors.warningStrong,
-                Colors.white,
-                Colors.transparent
-              )
-            : isSelf
-                ? (AppColors.bg, AppColors.textSecondary, AppColors.inputBorder)
-                : (AppColors.surface, AppColors.textPrimary, AppColors.border);
-
-    final app = context.read<AppState>();
-    final l = AppLocalizations.of(context);
-    final semanticsLabel = _activitySemanticsLabel(l: l, item: a, app: app);
-
-    final chip = Semantics(
-      container: true,
-      label: semanticsLabel,
-      child: Container(
-        height: height,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(
-                    alpha: overlap > 0 ? 0.2 + 0.1 * cappedOverlap : 0.12),
-                blurRadius: 15,
-                offset: overlap > 0 ? const Offset(-5, 5) : const Offset(0, 4)),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ExcludeSemantics(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child:
-                    Text(_activityEmoji(a), style: const TextStyle(fontSize: 15)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ExcludeSemantics(
-                child: Text.rich(
-                  TextSpan(children: [
-                    if (status == 'rejected') const TextSpan(text: '⚠️ '),
-                    TextSpan(text: (a['title'] ?? '').toString()),
-                    if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
-                  ]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 13.5, fontWeight: FontWeight.w800, color: fg),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            ExcludeSemantics(
-              child: AssigneeBadge(item: a, compact: true),
-            ),
-            const SizedBox(width: 6),
-            ExcludeSemantics(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color:
-                      filled ? Colors.black.withValues(alpha: 0.15) : AppColors.bg,
-                  border: filled ? null : Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                ),
-                child: Text(DateFormat('HH:mm').format(ts),
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: filled ? Colors.white : AppColors.textSecondary)),
-              ),
-            ),
-            const SizedBox(width: 6),
-            _ActivityAction(
-              item: a,
-              compact: true,
-              onValidate: () => _validate(a['id']),
-              onDelegate: () => _openBountyDialog(a),
-              onTakeOver: () => _acceptBounty(a),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    final interactive = Tappable(
-      onTap: completed
-          ? _showCompletedLockedDialog
-          : (a['is_recurrent'] == true ? () => _openRecurrenceDialog(a) : null),
-      child: chip,
-    );
-
-    final isDraggable = !completed && _canRemoveActivity(a, appState: app);
-
-    return Positioned(
-      top: top,
-      left: left,
-      right: 10,
-      child: isDraggable
-          ? touchAwareDraggable(
-              data: {'type': 'scheduled', 'activity': a},
-              onDragStarted: () => setState(() => _draggingScheduled = true),
-              onDragEnd: (_) => setState(() => _draggingScheduled = false),
-              feedback: Material(
-                color: Colors.transparent,
-                child: SizedBox(
-                    width: 320, child: Opacity(opacity: 0.85, child: chip)),
-              ),
-              childWhenDragging: Opacity(opacity: 0.3, child: chip),
-              child: interactive,
-            )
-          : interactive,
-    );
-  }
-
-  // ── Narrow: timeline list with gaps + swipe ─────────────────────
+  // ── Narrow: shared hour grid + folded Needs you ──────────────────
 
   Widget _buildNarrow(List<Map<String, dynamic>> items) {
     final l = AppLocalizations.of(context);
-    return RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-          children: [
-            _buildNeedsYou(l),
-            for (final abs in _dayAbsences)
-              Tappable(
-                onTap: () => _absenceDetail(abs),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.dangerSoft,
-                    borderRadius: BorderRadius.circular(AppRadii.sm),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text('✈️', style: TextStyle(fontSize: 16)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          '${abs['user_alias'] ?? abs['user_name'] ?? AppLocalizations.of(context).absAway} · ${abs['title']}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: AppColors.danger),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (_dayRequests.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Wrap(children: [
-                  for (final r in _dayRequests) _requestChip(r),
-                ]),
-              ),
-            if (items.isEmpty)
-              Tappable(
-                onTap: _openScheduleSheet,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 60),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.calendar_today_rounded,
-                          size: 28, color: AppColors.textSecondary),
-                      const SizedBox(height: 12),
-                      Text(AppLocalizations.of(context).emptyDayTitle,
-                          style: const TextStyle(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(AppLocalizations.of(context).emptyDayAction,
-                          style: const TextStyle(color: AppColors.primary)),
-                    ],
-                  ),
-                ),
-              )
-            else
-              for (final a in items) ...[
-                if (((a['_gapBeforeMinutes'] as int?) ?? 0) >= 30)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12, left: 52),
-                    child: Tappable(
-                      // Double-tap is invisible; a free gap that says what it is
-                      // for gives the gesture somewhere discoverable to live.
-                      onTap: () => _openPersonalTime(
-                          null,
-                          _startsAt(a)!.subtract(Duration(
-                              minutes: (a['_gapBeforeMinutes'] as int?) ?? 0))),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                              child: Divider(color: AppColors.border)),
-                          Flexible(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              child: Text(
-                                  '${formatGap(l, (a['_gapBeforeMinutes'] as int?) ?? 0)} · ${l.personalTimeGapHint}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary)),
-                            ),
-                          ),
-                          const Expanded(
-                              child: Divider(color: AppColors.border)),
-                        ],
-                      ),
-                    ),
-                  ),
-                _buildDismissibleCard(a),
-              ],
-          ],
+    // TODO(P2-9): activity sheet with Remove (replaces phone swipe-to-remove).
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildNeedsYou(l, isNarrow: true),
         ),
-      );
-  }
-
-  Widget _buildDismissibleCard(Map<String, dynamic> a) {
-    final status = a['status']?.toString() ?? 'pending';
-    final card = _TimelineCard(
-      item: a,
-      onValidate: () => _validate(a['id']),
-      onDelegate: () => _openBountyDialog(a),
-      onTakeOver: () => _acceptBounty(a),
-      onRecurrence: () => _openRecurrenceDialog(a),
-      onCompletedInfo: _showCompletedLockedDialog,
-    );
-    if (status == 'completed') return card;
-    final app = context.watch<AppState>();
-    if (!_canRemoveActivity(a, appState: app)) return card;
-    return Dismissible(
-      key: ValueKey('act-${a['id']}'),
-      direction: DismissDirection.endToStart,
-      confirmDismiss: (_) async {
-        await _removeFlow(a);
-        return false;
-      },
-      background: Container(
-        alignment: Alignment.centerRight,
-        margin: const EdgeInsets.only(bottom: 12, left: 52),
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: AppColors.dangerSoft,
-          borderRadius: BorderRadius.circular(AppRadii.md),
+        Expanded(
+          child: _DayHourGrid(
+            items: items,
+            absences: _dayAbsences,
+            requests: _dayRequests,
+            day: _day,
+            isToday: _isToday,
+            nowLineTop: _nowLineTop,
+            isNarrow: true,
+            scrollController: _gridScroll,
+            onRefresh: _load,
+            onGridDrop: _onGridDrop,
+            onDoubleTap: (dy) => _openPersonalTime(dy),
+            onAbsenceTap: _absenceDetail,
+            onRequestTap: _openRequest,
+            onValidate: _validate,
+            onBounty: _openBountyDialog,
+            onTakeOver: _acceptBounty,
+            onRecurrence: _openRecurrenceDialog,
+            onCompletedInfo: _showCompletedLockedDialog,
+            canRemove: (a) => _canRemoveActivity(a),
+            onDragStarted: () =>
+                setState(() => _draggingScheduled = true),
+            onDragEnd: () =>
+                setState(() => _draggingScheduled = false),
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.delete_rounded, color: AppColors.dangerInk),
-            const SizedBox(width: 6),
-            Text(AppLocalizations.of(context).remove,
-                style: const TextStyle(
-                    color: AppColors.dangerInk, fontWeight: FontWeight.w800)),
-          ],
-        ),
-      ),
-      child: card,
+      ],
     );
   }
 }
@@ -1799,6 +1552,8 @@ class _ActivityAction extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.pill),
         ),
         child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
@@ -1840,6 +1595,9 @@ class _ActivityAction extends StatelessWidget {
       return pill(l.pillRejected, AppColors.dangerInk, AppColors.dangerSoft);
     }
     // pending / approved
+    // Coverage is an agreement to cover one person's time, and its bounty
+    // fields hold their sweetener: never delegated, never taken over.
+    if (item['type'] == 'coverage') return const SizedBox.shrink();
     if (mine && bounty == 0 && app.isCaregiver) {
       return pill(
           l.pillDelegate, AppColors.warningInk, AppColors.warningSoft, onDelegate);
@@ -2257,135 +2015,734 @@ class _TaskSheetState extends State<_TaskSheet> {
   }
 }
 
-class _TimelineCard extends StatelessWidget {
-  final Map<String, dynamic> item;
-  final VoidCallback onValidate;
-  final VoidCallback onDelegate;
-  final VoidCallback onTakeOver;
-  final VoidCallback onRecurrence;
-  final VoidCallback onCompletedInfo;
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double radius;
 
-  const _TimelineCard({
-    required this.item,
+  static const double strokeWidth = 1.5;
+  static const double dash = 5.0;
+  static const double gap = 3.0;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.radius = 8.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+    final dashedPath = Path();
+
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final length = (distance + dash < metric.length)
+            ? dash
+            : metric.length - distance;
+        dashedPath.addPath(
+          metric.extractPath(distance, distance + length),
+          Offset.zero,
+        );
+        distance += dash + gap;
+      }
+    }
+    canvas.drawPath(dashedPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
+      color != oldDelegate.color || radius != oldDelegate.radius;
+}
+
+class _DayHourGrid extends StatefulWidget {
+  final List<Map<String, dynamic>> items;
+  final List<Map<String, dynamic>> absences;
+  final List<Map<String, dynamic>> requests;
+  final DateTime day;
+  final bool isToday;
+  final double? nowLineTop;
+  final bool isNarrow;
+  final ScrollController scrollController;
+  final RefreshCallback onRefresh;
+  final void Function(Map<String, dynamic> data, double dy) onGridDrop;
+  final void Function(double dy) onDoubleTap;
+  final void Function(Map<String, dynamic> abs) onAbsenceTap;
+  final void Function(Map<String, dynamic> req) onRequestTap;
+  final void Function(dynamic id) onValidate;
+  final void Function(Map<String, dynamic> a) onBounty;
+  final void Function(Map<String, dynamic> a) onTakeOver;
+  final void Function(Map<String, dynamic> a) onRecurrence;
+  final VoidCallback onCompletedInfo;
+  final bool Function(Map<String, dynamic> a) canRemove;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnd;
+
+  const _DayHourGrid({
+    required this.items,
+    required this.absences,
+    required this.requests,
+    required this.day,
+    required this.isToday,
+    required this.nowLineTop,
+    required this.isNarrow,
+    required this.scrollController,
+    required this.onRefresh,
+    required this.onGridDrop,
+    required this.onDoubleTap,
+    required this.onAbsenceTap,
+    required this.onRequestTap,
     required this.onValidate,
-    required this.onDelegate,
+    required this.onBounty,
     required this.onTakeOver,
     required this.onRecurrence,
     required this.onCompletedInfo,
+    required this.canRemove,
+    required this.onDragStarted,
+    required this.onDragEnd,
+  });
+
+  @override
+  State<_DayHourGrid> createState() => _DayHourGridState();
+}
+
+class _DayHourGridState extends State<_DayHourGrid> {
+  final _gridKey = GlobalKey();
+  double _doubleTapDy = 0.0;
+
+  DateTime? _startsAt(Map<String, dynamic> a) =>
+      DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
+
+  String _hourLabel(int h24) => '${(h24 % 24).toString().padLeft(2, '0')}:00';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final app = context.watch<AppState>();
+
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: DragTarget<Map<String, dynamic>>(
+          onWillAcceptWithDetails: (_) => true,
+          onAcceptWithDetails: (details) {
+            final box =
+                _gridKey.currentContext?.findRenderObject() as RenderBox?;
+            if (box == null) return;
+            final local = box.globalToLocal(details.offset);
+            widget.onGridDrop(details.data, local.dy);
+          },
+          builder: (context, candidates, _) => GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onDoubleTapDown: (d) => _doubleTapDy = d.localPosition.dy,
+            onDoubleTap: () => widget.onDoubleTap(_doubleTapDy),
+            child: Container(
+              key: _gridKey,
+              height: kGridHeight,
+              color: candidates.isNotEmpty
+                  ? AppColors.primarySoft.withValues(alpha: 0.4)
+                  : Colors.transparent,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final leftHourWidth = widget.isNarrow ? 44.0 : 62.0;
+                  final availableWidth =
+                      (constraints.maxWidth - leftHourWidth - 10.0)
+                          .clamp(100.0, 5000.0);
+
+                  return Stack(
+                    children: [
+                      // 1. Hour lines + labels
+                      for (var h = 0; h <= kTotalHours; h++)
+                        Positioned(
+                          top: h / kTotalHours * kGridHeight,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: leftHourWidth,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                      left: widget.isNarrow ? 4 : 8),
+                                  child: Text(
+                                    _hourLabel(kStartHour + h),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const Expanded(
+                                child: Divider(
+                                  height: 1,
+                                  color: AppColors.border,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // 2. Absence bands across the grid
+                      for (final abs in widget.absences)
+                        _buildAbsenceBand(abs, leftHourWidth, l),
+
+                      // 3. Past hours muted on today
+                      if (widget.isToday && widget.nowLineTop != null)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: (widget.nowLineTop! / 100 * kGridHeight)
+                              .clamp(0.0, kGridHeight),
+                          child: IgnorePointer(
+                            child: Container(
+                              color: AppColors.bg.withValues(alpha: 0.45),
+                            ),
+                          ),
+                        ),
+
+                      // 4. NOW line
+                      if (widget.isToday && widget.nowLineTop != null)
+                        Positioned(
+                          top: widget.nowLineTop! / 100 * kGridHeight,
+                          left: leftHourWidth - 2,
+                          right: 10,
+                          child: IgnorePointer(
+                            child: Row(
+                              children: [
+                                Container(
+                                  key: const ValueKey('now-line-dot'),
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.danger,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    height: 2,
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // 5. Pending personal-time requests (dashed blocks)
+                      for (final req in widget.requests)
+                        _buildRequestBlock(req, leftHourWidth, l, app),
+
+                      // 6. Scheduled activity chips
+                      for (final a in widget.items)
+                        _buildChip(a, availableWidth, leftHourWidth, l, app),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAbsenceBand(
+      Map<String, dynamic> abs, double leftHourWidth, AppLocalizations l) {
+    final start =
+        DateTime.tryParse(abs['start_time']?.toString() ?? '')?.toLocal();
+    final end =
+        DateTime.tryParse(abs['end_time']?.toString() ?? '')?.toLocal();
+    if (start == null) return const SizedBox.shrink();
+    final dayStart =
+        DateTime(widget.day.year, widget.day.month, widget.day.day, kStartHour);
+    final dayEnd = DateTime(
+        widget.day.year, widget.day.month, widget.day.day, kStartHour + kTotalHours);
+
+    final safeEnd = end ?? start.add(const Duration(hours: 24));
+    if (safeEnd.isBefore(dayStart) || start.isAfter(dayEnd)) {
+      return const SizedBox.shrink();
+    }
+
+    final effStart = start.isBefore(dayStart) ? dayStart : start;
+    final effEnd = safeEnd.isAfter(dayEnd) ? dayEnd : safeEnd;
+
+    final sHour = effStart.hour + effStart.minute / 60.0;
+    final eHour = (effEnd.day > effStart.day || effEnd.isAfter(dayEnd))
+        ? (kStartHour + kTotalHours).toDouble()
+        : (effEnd.hour + effEnd.minute / 60.0);
+
+    final top =
+        ((sHour - kStartHour) / kTotalHours * kGridHeight).clamp(0.0, kGridHeight);
+    final bottom =
+        ((eHour - kStartHour) / kTotalHours * kGridHeight).clamp(0.0, kGridHeight);
+    final h = (bottom - top).clamp(28.0, kGridHeight);
+
+    final who =
+        (abs['user_alias'] ?? abs['user_name'] ?? l.absAway).toString();
+    final label = l.absenceBandAway(who);
+
+    return Positioned(
+      top: top,
+      left: leftHourWidth + 4,
+      right: 10,
+      height: h,
+      child: Semantics(
+        label: label,
+        child: Tappable(
+          onTap: () => widget.onAbsenceTap(abs),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.dangerSoft.withValues(alpha: 0.65),
+              border:
+                  Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+            ),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.dangerInk,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRequestBlock(Map<String, dynamic> req, double leftHourWidth,
+      AppLocalizations l, AppState app) {
+    final start =
+        DateTime.tryParse(req['starts_at']?.toString() ?? '')?.toLocal();
+    final end = DateTime.tryParse(req['ends_at']?.toString() ?? '')?.toLocal();
+    if (start == null) return const SizedBox.shrink();
+    final hour = start.hour + start.minute / 60.0;
+    final clamped = hour < kStartHour ? kStartHour.toDouble() : hour;
+    final top = (clamped - kStartHour) / kTotalHours * kGridHeight;
+    final durMin =
+        (end != null ? end.difference(start).inMinutes : 60).toDouble();
+    final durH = (durMin <= 0 ? 30.0 : durMin) / 60.0;
+    final visibleH = durH < (24 - clamped) ? durH : (24 - clamped);
+    final height =
+        (visibleH / kTotalHours * kGridHeight).clamp(52.0, kGridHeight);
+
+    final mine = req['requester_id']?.toString() == app.userId?.toString();
+    final requester =
+        (req['requester_alias'] ?? req['requester_name'] ?? '').toString();
+    final reqState = mine
+        ? (req['requested_of_name'] == null
+            ? l.ptAwaitingAnyone
+            : l.ptAwaiting(req['requested_of_name'].toString()))
+        : l.ptAskedYouToCover(requester);
+    final title = (req['title'] ?? '').toString();
+    final glyph = personalTimeTypeGlyph(req['type']?.toString() ?? '');
+    final semanticsLabel =
+        '$glyph $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
+
+    return Positioned(
+      top: top,
+      left: leftHourWidth + 6,
+      right: 10,
+      height: height,
+      child: Semantics(
+        container: true,
+        label: semanticsLabel,
+        child: Tappable(
+          onTap: () => widget.onRequestTap(req),
+          child: CustomPaint(
+            painter: _DashedBorderPainter(
+              color: AppColors.inputBorder,
+              radius: AppRadii.md,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(AppRadii.md),
+              ),
+              child: Row(
+                children: [
+                  Text(glyph, style: const TextStyle(fontSize: 15)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          '$requester · $reqState',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('HH:mm').format(start),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(Map<String, dynamic> a, double availableWidth,
+      double leftHourWidth, AppLocalizations l, AppState app) {
+    final ts = _startsAt(a)!;
+    final hour = ts.hour + ts.minute / 60.0;
+    final clamped = hour < kStartHour ? kStartHour.toDouble() : hour;
+    final top = (clamped - kStartHour) / kTotalHours * kGridHeight;
+    final durMin = toNum(a['duration_minutes']).toDouble();
+    final durH = (durMin <= 0 ? 30.0 : durMin) / 60.0;
+    final visibleH = durH < (24 - clamped) ? durH : (24 - clamped);
+    final height =
+        (visibleH / kTotalHours * kGridHeight).clamp(52.0, kGridHeight);
+
+    final colCount = (a['_colCount'] as int?) ?? 1;
+    final colIndex = (a['_colIndex'] as int?) ?? 0;
+    final colWidth = availableWidth / colCount;
+    final left = leftHourWidth + colIndex * colWidth;
+    final width = (colWidth - 4.0).clamp(40.0, availableWidth);
+
+    final status = a['status']?.toString() ?? 'pending';
+    final completed = status == 'completed';
+
+    final chip = DayActivityBlock(
+      activity: a,
+      onValidate: widget.onValidate,
+      onDelegate: widget.onBounty,
+      onTakeOver: widget.onTakeOver,
+    );
+
+    final interactive = Tappable(
+      onTap: completed
+          ? widget.onCompletedInfo
+          : (a['is_recurrent'] == true
+              ? () => widget.onRecurrence(a)
+              : null),
+      child: chip,
+    );
+
+    final isDraggable = !completed && widget.canRemove(a);
+
+    return Positioned(
+      top: top,
+      left: left,
+      width: width,
+      height: height,
+      child: isDraggable
+          ? touchAwareDraggable(
+              data: {'type': 'scheduled', 'activity': a},
+              onDragStarted: widget.onDragStarted,
+              onDragEnd: (_) => widget.onDragEnd(),
+              feedback: Material(
+                color: Colors.transparent,
+                child: SizedBox(
+                  width: width.clamp(160.0, 320.0),
+                  height: height,
+                  child: Opacity(opacity: 0.85, child: chip),
+                ),
+              ),
+              childWhenDragging: Opacity(opacity: 0.3, child: chip),
+              child: interactive,
+            )
+          : interactive,
+    );
+  }
+}
+
+bool _hasActivityAction(Map<String, dynamic> item, AppState app) {
+  if (isSelfActivity(item)) return false;
+  final status = item['status']?.toString() ?? 'pending';
+  final bounty = toNum(item['bounty_amount']);
+  final mine = item['assigned_to'] != null &&
+      app.userId != null &&
+      item['assigned_to'].toString() == app.userId.toString();
+  if (status == 'pending_validation') return true;
+  if (status == 'completed') return true;
+  if (status == 'rejected') return true;
+  if (mine && bounty == 0 && app.isCaregiver) return true;
+  if (mine && bounty > 0) return true;
+  if (!mine && bounty > 0 && app.isCaregiver) return true;
+  return false;
+}
+
+Widget _buildAvatarCircle(
+    Map<String, dynamic> item, AppState app, AppLocalizations l) {
+  final mine = item['assigned_to'] != null &&
+      app.userId != null &&
+      item['assigned_to'].toString() == app.userId.toString();
+  final name = (item['assigned_alias'] ?? item['assigned_to_name'] ?? '')
+      .toString()
+      .trim();
+  if (!mine && name.isEmpty) return const SizedBox.shrink();
+
+  final initial = () {
+    if (mine) {
+      final myName = (app.family?['alias'] ??
+              app.profile?['display_name'] ??
+              item['assigned_alias'] ??
+              item['assigned_to_name'] ??
+              '')
+          .toString()
+          .trim();
+      if (myName.isNotEmpty) return myName[0].toUpperCase();
+      return l.assigneeYou.isNotEmpty ? l.assigneeYou[0].toUpperCase() : 'Y';
+    }
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }();
+
+  return ExcludeSemantics(
+    child: Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: mine ? AppColors.primarySoft : AppColors.bg,
+        border: Border.all(
+          color: mine ? AppColors.primary : AppColors.border,
+          width: 1.0,
+        ),
+      ),
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: mine ? AppColors.primaryInk : AppColors.textSecondary,
+          height: 1.0,
+        ),
+      ),
+    ),
+  );
+}
+
+class DayActivityBlock extends StatelessWidget {
+  final Map<String, dynamic> activity;
+  final ValueChanged<dynamic>? onValidate;
+  final ValueChanged<Map<String, dynamic>>? onDelegate;
+  final ValueChanged<Map<String, dynamic>>? onTakeOver;
+
+  const DayActivityBlock({
+    super.key,
+    required this.activity,
+    this.onValidate,
+    this.onDelegate,
+    this.onTakeOver,
   });
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
     final l = AppLocalizations.of(context);
-    final status = item['status']?.toString() ?? 'pending';
-    final isCare = item['type'] == 'care';
-    final isSelf = isSelfActivity(item);
-    final ts =
-        DateTime.tryParse(item['starts_at']?.toString() ?? '')?.toLocal();
-    final bounty = toNum(item['bounty_amount']);
-    final isRecurrent = item['is_recurrent'] == true;
+    final app = context.watch<AppState>();
+    final a = activity;
+
+    final status = a['status']?.toString() ?? 'pending';
     final completed = status == 'completed';
+    final isCare = a['type'] == 'care' || a['category'] == 'care';
+    final isCoverage = a['type'] == 'coverage';
+    final isSelf = isSelfActivity(a);
+    final coins = toNum(a['coin_value']).toInt();
     final filled = completed && !isSelf;
 
-    final semanticsLabel = _activitySemanticsLabel(l: l, item: item, app: app);
+    final (bg, fg, border) = status == 'rejected'
+        ? (AppColors.dangerSoft, AppColors.dangerInk, null)
+        : filled
+            ? (
+                isCare ? AppColors.successStrong : AppColors.warningStrong,
+                Colors.white,
+                null,
+              )
+            : isSelf
+                ? (
+                    AppColors.surface,
+                    AppColors.textPrimary,
+                    Border.all(color: AppColors.inputBorder, width: 1.0),
+                  )
+                : isCoverage
+                    ? (AppColors.primarySoft, AppColors.primaryInk, null)
+                    : isCare
+                        ? (AppColors.successSoft, AppColors.successInk, null)
+                        : (AppColors.warningSoft, AppColors.warningInk, null);
+
+    final semanticsLabel = _activitySemanticsLabel(l: l, item: a, app: app);
 
     return Semantics(
       container: true,
       label: semanticsLabel,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ExcludeSemantics(
-            child: SizedBox(
-              width: 52,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 18),
-                child: Text(ts != null ? DateFormat('HH:mm').format(ts) : '—',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary)),
-              ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final blockW = constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : double.infinity;
+          final blockH = constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : double.infinity;
+
+          final showEmoji = blockW >= 120;
+          final titleMaxLines = blockH >= 72 ? 2 : 1;
+
+          final titleText = Text.rich(
+            TextSpan(children: [
+              if (status == 'rejected') const TextSpan(text: '⚠️ '),
+              TextSpan(text: (a['title'] ?? '').toString()),
+              if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
+            ]),
+            maxLines: titleMaxLines,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: fg,
             ),
-          ),
-          Expanded(
-            child: Tappable(
-              onTap: completed
-                  ? onCompletedInfo
-                  : (isRecurrent ? onRecurrence : null),
-              onLongPress: completed ? onCompletedInfo : onRecurrence,
+          );
+
+          final titleWidget = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showEmoji) ...[
+                ExcludeSemantics(
+                  child: Text(
+                    _activityEmoji(a),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: ExcludeSemantics(
+                  child: titleText,
+                ),
+              ),
+            ],
+          );
+
+          Widget? coinPill;
+          if (coins > 0 && !isSelf) {
+            coinPill = ExcludeSemantics(
               child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: filled
-                      ? (isCare ? AppColors.successStrong : AppColors.warningStrong)
-                      : AppColors.surface,
-                  border: Border.all(
-                      color: filled
-                          ? Colors.transparent
-                          : (isSelf ? AppColors.inputBorder : AppColors.border)),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
+                      ? Colors.black.withValues(alpha: 0.15)
+                      : AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ExcludeSemantics(
-                      child: Row(
-                        children: [
-                          Text(_activityEmoji(item),
-                              style: const TextStyle(fontSize: 20)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text.rich(
-                              TextSpan(children: [
-                                if (status == 'rejected')
-                                  const TextSpan(text: '⚠️ '),
-                                TextSpan(text: (item['title'] ?? '').toString()),
-                                if (isRecurrent) const TextSpan(text: '  🔁'),
-                              ]),
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: filled
-                                      ? Colors.white
-                                      : AppColors.textPrimary),
-                            ),
-                          ),
-                          if (bounty > 0 && !completed)
-                            PillBadge(text: '+${bounty}cc'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: ExcludeSemantics(
-                            child: AssigneeBadge(item: item),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _ActivityAction(
-                          item: item,
-                          onValidate: onValidate,
-                          onDelegate: onDelegate,
-                          onTakeOver: onTakeOver,
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  '🪙 ${coins}cc',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: filled ? Colors.white : AppColors.primaryInk,
+                  ),
                 ),
               ),
+            );
+          }
+
+          final metaRow = Wrap(
+            spacing: 4,
+            runSpacing: 2,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (blockW < 120)
+                _buildAvatarCircle(a, app, l)
+              else
+                ExcludeSemantics(child: AssigneeBadge(item: a, compact: true)),
+              if (coinPill != null) coinPill,
+            ],
+          );
+
+          final hasAction = _hasActivityAction(a, app);
+
+          return Container(
+            width: constraints.hasBoundedWidth ? double.infinity : null,
+            height: constraints.hasBoundedHeight ? double.infinity : null,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: bg,
+              border: border,
+              borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
-          ),
-        ],
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (constraints.hasBoundedHeight)
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: titleWidget,
+                  )
+                else
+                  titleWidget,
+                if (blockH >= 44) ...[
+                  const SizedBox(height: 3),
+                  metaRow,
+                ],
+                if (blockH >= 72 && hasAction) ...[
+                  const SizedBox(height: 3),
+                  _ActivityAction(
+                    item: a,
+                    compact: true,
+                    onValidate: () => onValidate?.call(a['id']),
+                    onDelegate: () => onDelegate?.call(a),
+                    onTakeOver: () => onTakeOver?.call(a),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 }
+
 
 class WeekStrip extends StatelessWidget {
   final DateTime selectedDay;

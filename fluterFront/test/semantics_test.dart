@@ -95,9 +95,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      final cardNode = tester.getSemantics(find.byWidgetPredicate(
-        (w) => w.runtimeType.toString() == '_TimelineCard',
-      ).first);
+      final cardNode = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('Morning Walk')).first,
+      );
 
       expect(cardNode.label, contains('Morning Walk'));
       expect(cardNode.label, contains('Care'));
@@ -110,9 +110,9 @@ void main() {
       expect(cardNode.label, isNot(contains('🏠')));
 
       // Personal time (self) card
-      final restNode = tester.getSemantics(find.byWidgetPredicate(
-        (w) => w.runtimeType.toString() == '_TimelineCard',
-      ).at(1));
+      final restNode = tester.getSemantics(
+        find.bySemanticsLabel(RegExp('Quiet rest')).first,
+      );
 
       expect(restNode.label, contains('Quiet rest'));
       expect(restNode.label, contains('Rest'));

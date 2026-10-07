@@ -45,6 +45,14 @@
   "@needsYouEmpty": {
     "description": "Empty state of the Needs you block at top of Daily view"
   },
+  "needsYouFolded": "{first}, and {count, plural, =1{1 more} other{{count} more}}",
+  "@needsYouFolded": {
+    "description": "Collapsed single-line Needs You summary on mobile",
+    "placeholders": {
+      "first": { "type": "String" },
+      "count": { "type": "num" }
+    }
+  },
   "needsValidateTask": "Validate \"{title}\" · {assignee}",
   "@needsValidateTask": {
     "description": "Needs you item: validation pending for an assignee",
@@ -627,6 +635,13 @@
   "@absenceAway": {
     "description": "Absence detail dialog: who is absent",
     "placeholders": { "name": {} }
+  },
+  "absenceBandAway": "{name} away",
+  "@absenceBandAway": {
+    "description": "Grid absence band label indicating someone is away",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
   },
   "close": "Close",
   "@close": { "description": "Generic close button" },

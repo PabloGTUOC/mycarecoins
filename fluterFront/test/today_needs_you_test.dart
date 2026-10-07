@@ -213,6 +213,12 @@ void main() {
       await tester.pumpWidget(_wrap(const DailyScreen(date: '2026-10-06'), app));
       await tester.pumpAndSettle();
 
+      final expandChevron = find.byIcon(Icons.keyboard_arrow_down_rounded);
+      if (expandChevron.evaluate().isNotEmpty) {
+        await tester.tap(expandChevron);
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('Needs you'), findsOneWidget);
       expect(find.text('Validate "Bath time" · Ben'), findsOneWidget);
       expect(find.text('Ana asks you to cover "Friday shift"'), findsOneWidget);

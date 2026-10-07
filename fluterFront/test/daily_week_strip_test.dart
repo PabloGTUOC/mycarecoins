@@ -337,9 +337,9 @@ void main() {
       // Initial date in AppBar is Tue, Oct 6
       expect(find.text('Tue, Oct 6'), findsOneWidget);
 
-      // Perform a strong horizontal drag on the ListView area
-      final listFinder = find.byType(ListView);
-      expect(listFinder, findsOneWidget);
+      // Perform a strong horizontal drag on the grid scroll area
+      final listFinder = find.byType(SingleChildScrollView);
+      expect(listFinder, findsWidgets);
 
       await tester.fling(listFinder, const Offset(-400, 0), 1000);
       await tester.pumpAndSettle();

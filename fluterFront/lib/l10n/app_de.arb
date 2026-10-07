@@ -12,6 +12,7 @@
   "seeStats": "Statistiken ansehen",
   "needsYouTitle": "Braucht dich",
   "needsYouEmpty": "Alles erledigt.",
+  "needsYouFolded": "{first}, und {count, plural, =1{1 weitere} other{{count} weitere}}",
   "needsValidateTask": "Bestätigen: \"{title}\" · {assignee}",
   "needsValidateTaskNoAssignee": "Bestätigen: \"{title}\"",
   "needsCoverRequest": "{name} bittet dich um Vertretung für \"{title}\"",
@@ -230,6 +231,7 @@
   "logAction": "Eintragen",
 
   "absenceAway": "{name} ist abwesend",
+  "absenceBandAway": "{name} abwesend",
   "close": "Schließen",
   "remove": "Entfernen",
   "fallbackACaregiver": "Eine Betreuungsperson",

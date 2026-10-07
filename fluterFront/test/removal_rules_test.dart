@@ -182,35 +182,42 @@ void main() {
       expect(find.text('My Personal Time'), findsOneWidget);
       expect(find.text('Care Task'), findsOneWidget);
 
-      // (1) Coverage card has NO Dismissible
-      expect(find.byKey(const ValueKey('act-101')), findsNothing);
+      // (1) In phone layout, swipe-to-remove (Dismissible) is removed (P2-7, replaced in P2-9)
+      expect(find.byType(Dismissible), findsNothing);
+
+      // (2) Coverage card has NO Draggable
       expect(
         find.ancestor(
-            of: find.text('Coverage Shift'), matching: find.byType(Dismissible)),
+            of: find.text('Coverage Shift'),
+            matching: find.byWidgetPredicate(
+                (w) => w is Draggable || w is LongPressDraggable)),
         findsNothing,
       );
 
-      // (2) Another person's self card has NO Dismissible
-      expect(find.byKey(const ValueKey('act-102')), findsNothing);
+      // (3) Another person's self card has NO Draggable
       expect(
         find.ancestor(
-            of: find.text('Other Personal Time'), matching: find.byType(Dismissible)),
+            of: find.text('Other Personal Time'),
+            matching: find.byWidgetPredicate(
+                (w) => w is Draggable || w is LongPressDraggable)),
         findsNothing,
       );
 
-      // (3) My own self card HAS Dismissible
-      expect(find.byKey(const ValueKey('act-103')), findsOneWidget);
+      // (4) My own self card HAS Draggable
       expect(
         find.ancestor(
-            of: find.text('My Personal Time'), matching: find.byType(Dismissible)),
+            of: find.text('My Personal Time'),
+            matching: find.byWidgetPredicate(
+                (w) => w is Draggable || w is LongPressDraggable)),
         findsOneWidget,
       );
 
-      // (4) Normal care card HAS Dismissible
-      expect(find.byKey(const ValueKey('act-104')), findsOneWidget);
+      // (5) Normal care card HAS Draggable
       expect(
         find.ancestor(
-            of: find.text('Care Task'), matching: find.byType(Dismissible)),
+            of: find.text('Care Task'),
+            matching: find.byWidgetPredicate(
+                (w) => w is Draggable || w is LongPressDraggable)),
         findsOneWidget,
       );
     });
@@ -322,7 +329,7 @@ void main() {
     testWidgets(
         'shows counterpart cancellation and sweetener warning dialog, cancels on dismiss',
         (tester) async {
-      tester.view.physicalSize = const Size(500, 1000);
+      tester.view.physicalSize = const Size(1000, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
@@ -350,8 +357,17 @@ void main() {
       await tester.pumpWidget(_wrap(const DailyScreen(date: '2026-10-06'), app));
       await tester.pumpAndSettle();
 
-      // Swipe to trigger removal flow
-      await tester.drag(find.text('My Yoga with Coverage'), const Offset(-300, 0));
+      // Drag chip to the unschedule drop target on the left panel
+      final chipFinder = find.text('My Yoga with Coverage');
+      final dropTarget = find.byType(DragTarget<Map<String, dynamic>>).first;
+      final targetLoc = tester.getCenter(dropTarget);
+      final chipLoc = tester.getCenter(chipFinder);
+
+      var gesture = await tester.startGesture(chipLoc);
+      await tester.pump(const Duration(milliseconds: 600));
+      await gesture.moveTo(targetLoc);
+      await tester.pump();
+      await gesture.up();
       await tester.pumpAndSettle();
 
       // Confirmation dialog must appear with the counterpart cancellation warning string
@@ -367,8 +383,12 @@ void main() {
 
       expect(api.deletedPaths, isEmpty);
 
-      // Swipe again and confirm
-      await tester.drag(find.text('My Yoga with Coverage'), const Offset(-300, 0));
+      // Drag again and confirm
+      gesture = await tester.startGesture(chipLoc);
+      await tester.pump(const Duration(milliseconds: 600));
+      await gesture.moveTo(targetLoc);
+      await tester.pump();
+      await gesture.up();
       await tester.pumpAndSettle();
 
       expect(
