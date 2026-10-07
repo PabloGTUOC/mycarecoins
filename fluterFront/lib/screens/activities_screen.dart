@@ -30,7 +30,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
   Map<String, dynamic>? _budget;
   bool _loading = true;
   bool _error = false;
-  int _tab = 0; // 0 catalogue, 1 new, 2 budget
+  int _tab = 0; // 0 catalogue, 1 budget
   int _filter = 0; // 0 all, 1 care, 2 household
 
   final _title = TextEditingController();
@@ -140,12 +140,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     return l.durHoursMins(h, m);
   }
 
-  Future<void> _create() async {
+  Future<bool> _create() async {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
     if (_title.text.trim().isEmpty) {
       app.setError(l.errNameFirst);
-      return;
+      return false;
     }
     final ok = await app.runAction(() async {
       await app.api.post('/api/activities', {
@@ -160,8 +160,227 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     }, l.toastTemplateCreated);
     if (ok) {
       _title.clear();
-      setState(() => _tab = 0);
+      return true;
     }
+    return false;
+  }
+
+  void _openNewActivitySheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final l = AppLocalizations.of(sheetContext);
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l.tabNewActivity,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l.newActivityIntro,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    VInput(
+                      controller: _title,
+                      label: l.fieldTitle,
+                      placeholder: l.activityTitleHint,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l.categoryLabel,
+                      style: const TextStyle(
+                        fontSize: 13.6,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        for (final (value, label) in [
+                          ('care', l.catCareEmoji),
+                          ('household', l.catHouseholdEmoji)
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(label),
+                              selected: _type == value,
+                              selectedColor: AppColors.primarySoft,
+                              labelStyle: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: _type == value
+                                    ? AppColors.primaryInk
+                                    : AppColors.textSecondary,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadii.pill),
+                                side: BorderSide(
+                                  color: _type == value
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                ),
+                              ),
+                              onSelected: (_) {
+                                setState(() => _type = value);
+                                setSheetState(() {});
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      l.durationFieldLabel,
+                      style: const TextStyle(
+                        fontSize: 13.6,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      initialValue: _durationMinutes,
+                      decoration: const InputDecoration(isDense: true),
+                      items: [
+                        for (var i = 1; i <= 24; i++)
+                          DropdownMenuItem(
+                            value: i * 30,
+                            child: Text(_durationLabel(l, i * 30)),
+                          ),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) {
+                          _onDurationChanged(v);
+                          setSheetState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () {
+                        setState(() => _isRecurrent = !_isRecurrent);
+                        setSheetState(() {});
+                      },
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _isRecurrent,
+                            activeColor: AppColors.primary,
+                            onChanged: (v) {
+                              setState(() => _isRecurrent = v ?? false);
+                              setSheetState(() {});
+                            },
+                          ),
+                          Text(
+                            l.recurringCheckbox,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 28),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l.coinValueLabel,
+                          style: const TextStyle(
+                            fontSize: 13.6,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '${_coins.round()} cc',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: _coins.clamp(
+                          _minCoins.toDouble(), _maxCoins.toDouble()),
+                      min: _minCoins.toDouble(),
+                      max: _maxCoins.toDouble(),
+                      divisions: math.max(1, _maxCoins - _minCoins),
+                      activeColor: AppColors.warning,
+                      onChanged: (v) {
+                        setState(() => _coins = v);
+                        setSheetState(() {});
+                      },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l.minLabel('$_minCoins'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          l.suggestedLabel('$_baseScore'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          l.maxLabel('$_maxCoins'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    VButton(
+                      onPressed: () async {
+                        final ok = await _create();
+                        if (ok && sheetContext.mounted) {
+                          Navigator.pop(sheetContext);
+                        }
+                      },
+                      block: true,
+                      child: Text(l.createTemplateBtn),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _approve(dynamic id) async {
@@ -222,14 +441,13 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
           PageHeading(title: l.actTitle, subtitle: l.actSubtitle),
           SegmentedTabs(
             key: _tourTabsKey,
-            tabs: [l.tabCatalogue, l.tabNewActivity, l.tabBudget],
+            tabs: [l.tabCatalogue, l.tabBudget],
             selected: _tab,
             onChanged: (i) => setState(() => _tab = i),
           ),
           const SizedBox(height: 20),
           if (_tab == 0) ..._buildCatalogue(),
-          if (_tab == 1) _buildNewActivity(),
-          if (_tab == 2) _buildBudget(),
+          if (_tab == 1) _buildBudget(),
         ],
       ),
     );
@@ -251,6 +469,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     }).toList();
 
     return [
+      FilledButton.tonal(
+        onPressed: () => _openNewActivitySheet(context),
+        child: Text(l.tabNewActivity),
+      ),
+      const SizedBox(height: 12),
       Row(
         key: _tourFilterKey,
         children: [
@@ -287,7 +510,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 title: l.catEmptyTitle,
                 body: l.catEmptyBody,
                 actionLabel: l.catEmptyAction,
-                onAction: () => setState(() => _tab = 1),
+                onAction: () => _openNewActivitySheet(context),
               )
             : EmptyState(
                 icon: Icons.filter_list_off_rounded,
@@ -372,140 +595,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       VButton(
           type: VButtonType.secondary,
           block: true,
-          onPressed: () => setState(() => _tab = 1),
+          onPressed: () => _openNewActivitySheet(context),
           child: Text(l.newActivityBtn)),
     ];
-  }
-
-  // ── New Activity tab ─────────────────────────────────────────────
-
-  Widget _buildNewActivity() {
-    final l = AppLocalizations.of(context);
-    return VCard(
-      title: l.tabNewActivity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l.newActivityIntro,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
-          VInput(
-              controller: _title,
-              label: l.fieldTitle,
-              placeholder: l.activityTitleHint),
-          const SizedBox(height: 16),
-          Text(l.categoryLabel,
-              style: const TextStyle(
-                  fontSize: 13.6,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (final (value, label) in [
-                ('care', l.catCareEmoji),
-                ('household', l.catHouseholdEmoji)
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(label),
-                    selected: _type == value,
-                    selectedColor: AppColors.primarySoft,
-                    labelStyle: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: _type == value
-                            ? AppColors.primaryInk
-                            : AppColors.textSecondary),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadii.pill),
-                        side: BorderSide(
-                            color: _type == value
-                                ? AppColors.primary
-                                : AppColors.border)),
-                    onSelected: (_) => setState(() => _type = value),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(l.durationFieldLabel,
-              style: const TextStyle(
-                  fontSize: 13.6,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            initialValue: _durationMinutes,
-            decoration: const InputDecoration(isDense: true),
-            items: [
-              for (var i = 1; i <= 24; i++)
-                DropdownMenuItem(
-                    value: i * 30, child: Text(_durationLabel(l, i * 30))),
-            ],
-            onChanged: (v) {
-              if (v != null) _onDurationChanged(v);
-            },
-          ),
-          const SizedBox(height: 16),
-          InkWell(
-            onTap: () => setState(() => _isRecurrent = !_isRecurrent),
-            child: Row(
-              children: [
-                Checkbox(
-                    value: _isRecurrent,
-                    activeColor: AppColors.primary,
-                    onChanged: (v) =>
-                        setState(() => _isRecurrent = v ?? false)),
-                Text(l.recurringCheckbox,
-                    style: const TextStyle(
-                        fontSize: 14, color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          const Divider(height: 28),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l.coinValueLabel,
-                  style: const TextStyle(
-                      fontSize: 13.6, color: AppColors.textSecondary)),
-              Text('${_coins.round()} cc',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, color: AppColors.primary)),
-            ],
-          ),
-          Slider(
-            value: _coins.clamp(_minCoins.toDouble(), _maxCoins.toDouble()),
-            min: _minCoins.toDouble(),
-            max: _maxCoins.toDouble(),
-            divisions: math.max(1, _maxCoins - _minCoins),
-            activeColor: AppColors.warning,
-            onChanged: (v) => setState(() => _coins = v),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l.minLabel('$_minCoins'),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              Text(l.suggestedLabel('$_baseScore'),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              Text(l.maxLabel('$_maxCoins'),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          VButton(
-              onPressed: _create,
-              block: true,
-              child: Text(l.createTemplateBtn)),
-        ],
-      ),
-    );
   }
 
   // ── Budget tab ───────────────────────────────────────────────────

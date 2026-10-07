@@ -680,73 +680,16 @@ class _DailyScreenState extends State<DailyScreen> {
 
   Future<void> _openScheduleDialog(Map<String, dynamic> activity,
       {int? hour, int? minute}) async {
-    final l = AppLocalizations.of(context);
-    final loc = l.localeName;
-    var h = (hour ?? DateTime.now().hour).clamp(kStartHour, 23);
-    var m = (minute ?? (DateTime.now().minute >= 30 ? 30 : 0)) >= 30 ? 30 : 0;
+    final h = (hour ?? DateTime.now().hour).clamp(kStartHour, 23);
+    final m = (minute ?? (DateTime.now().minute >= 30 ? 30 : 0)) >= 30 ? 30 : 0;
 
-    final confirmed = await showDialog<bool>(
+    final picked = await showTimePicker(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.lg)),
-          title: Text(l.scheduleTaskTitle,
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  l.scheduleTaskBody((activity['title'] ?? '').toString(),
-                      DateFormat('EEEE, MMM d', loc).format(_day)),
-                  style: const TextStyle(color: AppColors.textSecondary)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: h,
-                      decoration: InputDecoration(labelText: l.hourLabel),
-                      items: [
-                        for (var i = kStartHour; i <= 23; i++)
-                          DropdownMenuItem(
-                              value: i,
-                              child: Text(i.toString().padLeft(2, '0'))),
-                      ],
-                      onChanged: (v) => setLocal(() => h = v ?? h),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: m,
-                      decoration: InputDecoration(labelText: l.minuteLabel),
-                      items: const [
-                        DropdownMenuItem(value: 0, child: Text('00')),
-                        DropdownMenuItem(value: 30, child: Text('30')),
-                      ],
-                      onChanged: (v) => setLocal(() => m = v ?? m),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l.cancel)),
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l.scheduleAction)),
-          ],
-        ),
-      ),
+      initialTime: TimeOfDay(hour: h, minute: m),
     );
-    if (confirmed != true) return;
+    if (picked == null) return;
     await _confirmSchedule(
-        activity['id'], DateTime(_day.year, _day.month, _day.day, h, m));
+        activity['id'], DateTime(_day.year, _day.month, _day.day, picked.hour, picked.minute));
   }
 
   Future<void> _confirmSchedule(dynamic activityId, DateTime startsAt) async {

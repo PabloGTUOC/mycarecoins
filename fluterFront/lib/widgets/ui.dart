@@ -23,17 +23,8 @@ class VCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Card(
       margin: margin,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0x0D000000), blurRadius: 25, offset: Offset(0, 10)),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -78,59 +69,30 @@ class VButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, fg, side, shadow) = switch (type) {
-      VButtonType.primary => (
-          AppColors.primary,
-          Colors.white,
-          BorderSide.none,
-          const [
-            BoxShadow(
-                color: Color(0x4D2563EB), blurRadius: 14, offset: Offset(0, 4))
-          ],
+    final effectiveOnPressed = disabled ? null : onPressed;
+
+    final Widget button = switch (type) {
+      VButtonType.primary => FilledButton(
+          onPressed: effectiveOnPressed,
+          child: child,
         ),
-      VButtonType.secondary => (
-          const Color(0x0D0F172A),
-          AppColors.textPrimary,
-          const BorderSide(color: AppColors.inputBorder),
-          const <BoxShadow>[],
+      VButtonType.secondary => FilledButton.tonal(
+          onPressed: effectiveOnPressed,
+          child: child,
         ),
-      VButtonType.outline => (
-          Colors.transparent,
-          AppColors.primary,
-          const BorderSide(color: AppColors.primary),
-          const <BoxShadow>[],
+      VButtonType.outline => OutlinedButton(
+          onPressed: effectiveOnPressed,
+          child: child,
         ),
-      VButtonType.danger => (
-          AppColors.dangerSoft,
-          AppColors.dangerInk,
-          const BorderSide(color: AppColors.dangerSoft),
-          const <BoxShadow>[],
+      VButtonType.danger => FilledButton(
+          onPressed: effectiveOnPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.onError,
+          ),
+          child: child,
         ),
     };
-
-    final button = DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        boxShadow: disabled ? const [] : shadow,
-      ),
-      child: FilledButton(
-        onPressed: disabled ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: bg,
-          foregroundColor: fg,
-          disabledBackgroundColor: bg.withValues(alpha: 0.6),
-          disabledForegroundColor: fg.withValues(alpha: 0.6),
-          minimumSize: const Size(44, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            side: side,
-          ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        ),
-        child: child,
-      ),
-    );
 
     return block ? SizedBox(width: double.infinity, child: button) : button;
   }
@@ -434,62 +396,33 @@ class SegmentedTabs extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onChanged;
 
-  const SegmentedTabs(
-      {super.key,
-      required this.tabs,
-      required this.selected,
-      required this.onChanged});
+  const SegmentedTabs({
+    super.key,
+    required this.tabs,
+    required this.selected,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // scaleDown keeps all three labels visible on 320dp-wide phones instead
-    // of overflowing ("Catalogue / New Activity / Budget").
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < tabs.length; i++)
-              Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                child: InkWell(
-                  onTap: () => onChanged(i),
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                  hoverColor: i == selected
-                      ? Colors.transparent
-                      : AppColors.primarySoft,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: i == selected
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                    ),
-                    child: Text(tabs[i],
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: i == selected
-                                ? Colors.white
-                                : AppColors.textSecondary)),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    final validSelected = (selected >= 0 && selected < tabs.length)
+        ? {selected}
+        : (tabs.isNotEmpty ? {0} : <int>{});
+    return SegmentedButton<int>(
+      showSelectedIcon: false,
+      segments: [
+        for (var i = 0; i < tabs.length; i++)
+          ButtonSegment<int>(
+            value: i,
+            label: Text(tabs[i]),
+          ),
+      ],
+      selected: validSelected,
+      onSelectionChanged: (newSelection) {
+        if (newSelection.isNotEmpty) {
+          onChanged(newSelection.first);
+        }
+      },
     );
   }
 }

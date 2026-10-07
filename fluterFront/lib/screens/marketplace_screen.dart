@@ -23,7 +23,6 @@ class MarketplaceScreen extends StatefulWidget {
 }
 
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
-  int _tab = 0;
   bool _loading = true;
   bool _error = false;
   List<Map<String, dynamic>> _rewards = [];
@@ -133,12 +132,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  Future<void> _create() async {
+  Future<bool> _create() async {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
     if (_title.text.trim().isEmpty || _cost.text.trim().isEmpty) {
       app.setError(l.errTitleCostRequired);
-      return;
+      return false;
     }
     final ok = await app.runAction(() async {
       await app.api.post('/api/marketplace/rewards', {
@@ -163,12 +162,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       setState(() {
         _validFrom = null;
         _validUntil = null;
-        _tab = 0;
       });
+      return true;
     }
+    return false;
   }
 
-  Future<void> _pickValidity(bool from) async {
+  Future<void> _pickValidity(bool from, [StateSetter? setSheetState]) async {
     final initial = (from ? _validFrom : _validUntil) ?? DateTime.now();
     final d = await showDatePicker(
         context: context,
@@ -187,6 +187,122 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         _validUntil = picked;
       }
     });
+    if (setSheetState != null) {
+      setSheetState(() {});
+    }
+  }
+
+  void _openCreateSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final l = AppLocalizations.of(sheetContext);
+          final loc = l.localeName;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l.createRewardTitle,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    VInput(
+                      controller: _title,
+                      label: l.fieldTitle,
+                      placeholder: l.rewardTitleHint,
+                    ),
+                    const SizedBox(height: 14),
+                    VInput(
+                      controller: _description,
+                      label: l.descriptionLabel,
+                      placeholder: l.rewardDescHint,
+                      pill: false,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: VInput(
+                            controller: _cost,
+                            label: l.costLabel,
+                            placeholder: '50',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: VInput(
+                            controller: _maxUses,
+                            label: l.maxUsesLabel,
+                            placeholder: '∞',
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        for (final (label, from, value) in [
+                          (l.validFrom, true, _validFrom),
+                          (l.validUntil, false, _validUntil),
+                        ])
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(right: from ? 12 : 0),
+                              child: OutlinedButton.icon(
+                                onPressed: () =>
+                                    _pickValidity(from, setSheetState),
+                                icon: const Icon(Icons.event_rounded, size: 16),
+                                label: Text(
+                                  value == null
+                                      ? l.fieldOptional(label)
+                                      : l.fieldWithDate(
+                                          label,
+                                          DateFormat('d MMM HH:mm', loc)
+                                              .format(value)),
+                                  style: const TextStyle(fontSize: 12.5),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    VButton(
+                      onPressed: () async {
+                        final ok = await _create();
+                        if (ok && sheetContext.mounted) {
+                          Navigator.pop(sheetContext);
+                        }
+                      },
+                      block: true,
+                      child: Text(l.createRewardBtn),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -201,6 +317,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
 
     final l = AppLocalizations.of(context);
+    final isCaregiver = app.isCaregiver;
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -208,18 +325,29 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         padding: const EdgeInsets.only(top: 16, bottom: 40),
         children: [
           PageHeading(title: l.navMarketplace, subtitle: l.mktSubtitle),
-          SegmentedTabs(
-            key: _tourTabsKey,
-            tabs: app.isCaregiver
-                ? [l.tabStore, l.tabHistory, l.tabCreate]
-                : [l.tabStore, l.tabHistory],
-            selected: _tab,
-            onChanged: (i) => setState(() => _tab = i),
+          if (isCaregiver && _rewards.isNotEmpty) ...[
+            FilledButton.tonal(
+              key: _tourTabsKey,
+              onPressed: _openCreateSheet,
+              child: Text(l.createReward),
+            ),
+            const SizedBox(height: 16),
+          ] else ...[
+            SizedBox(key: _tourTabsKey, height: 0),
+          ],
+          _buildStore(),
+          Padding(
+            padding: const EdgeInsets.only(top: 28, bottom: 12),
+            child: Text(
+              l.tabHistory,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
           ),
-          const SizedBox(height: 24),
-          if (_tab == 0) _buildStore(),
-          if (_tab == 1) _buildHistory(),
-          if (_tab == 2) _buildCreate(),
+          _buildHistory(),
         ],
       ),
     );
@@ -234,7 +362,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         title: l.storeEmptyTitle,
         body: isCaregiver ? l.storeEmptyBodyCaregiver : l.storeEmptyBodyMember,
         actionLabel: isCaregiver ? l.createReward : null,
-        onAction: isCaregiver ? () => setState(() => _tab = 2) : null,
+        onAction: isCaregiver ? _openCreateSheet : null,
       );
     }
     return LayoutBuilder(builder: (context, c) {
@@ -323,77 +451,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildCreate() {
-    final l = AppLocalizations.of(context);
-    final loc = l.localeName;
-    return VCard(
-      title: l.createRewardTitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          VInput(
-              controller: _title,
-              label: l.fieldTitle,
-              placeholder: l.rewardTitleHint),
-          const SizedBox(height: 14),
-          VInput(
-              controller: _description,
-              label: l.descriptionLabel,
-              placeholder: l.rewardDescHint,
-              pill: false,
-              maxLines: 3),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                  child: VInput(
-                      controller: _cost,
-                      label: l.costLabel,
-                      placeholder: '50',
-                      keyboardType: TextInputType.number)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: VInput(
-                      controller: _maxUses,
-                      label: l.maxUsesLabel,
-                      placeholder: '∞',
-                      keyboardType: TextInputType.number)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              for (final (label, from, value) in [
-                (l.validFrom, true, _validFrom),
-                (l.validUntil, false, _validUntil),
-              ])
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: from ? 12 : 0),
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pickValidity(from),
-                      icon: const Icon(Icons.event_rounded, size: 16),
-                      label: Text(
-                          value == null
-                              ? l.fieldOptional(label)
-                              : l.fieldWithDate(label,
-                                  DateFormat('d MMM HH:mm', loc).format(value)),
-                          style: const TextStyle(fontSize: 12.5)),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          VButton(
-              onPressed: _create,
-              block: true,
-              child: Text(l.createRewardBtn)),
-        ],
-      ),
     );
   }
 }
