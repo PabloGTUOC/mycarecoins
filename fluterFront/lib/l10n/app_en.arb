@@ -1,9 +1,17 @@
 {
   "@@locale": "en",
 
+  "tabToday": "Today",
+  "@tabToday": {
+    "description": "Bottom tab bar: the today / daily schedule tab"
+  },
   "tabFamily": "Family",
   "@tabFamily": {
     "description": "Bottom tab bar + desktop nav: the dashboard / family hub tab"
+  },
+  "tabTasks": "Tasks",
+  "@tabTasks": {
+    "description": "Bottom tab bar: the activities / tasks catalogue tab"
   },
   "tabActivities": "Activities",
   "@tabActivities": {
@@ -20,6 +28,60 @@
   "tabMe": "Me",
   "@tabMe": {
     "description": "Bottom tab bar: the personal area / profile tab (short mobile label)"
+  },
+  "tabNeedsAttention": ", needs your attention",
+  "@tabNeedsAttention": {
+    "description": "Accessibility suffix on the Today tab when action items are waiting"
+  },
+  "seeStats": "See stats",
+  "@seeStats": {
+    "description": "Button on family hub opening the family stats screen"
+  },
+  "needsYouTitle": "Needs you",
+  "@needsYouTitle": {
+    "description": "Title of the actionable items block at top of Daily view"
+  },
+  "needsYouEmpty": "You're all caught up.",
+  "@needsYouEmpty": {
+    "description": "Empty state of the Needs you block at top of Daily view"
+  },
+  "needsValidateTask": "Validate \"{title}\" · {assignee}",
+  "@needsValidateTask": {
+    "description": "Needs you item: validation pending for an assignee",
+    "placeholders": {
+      "title": { "type": "String" },
+      "assignee": { "type": "String" }
+    }
+  },
+  "needsValidateTaskNoAssignee": "Validate \"{title}\"",
+  "@needsValidateTaskNoAssignee": {
+    "description": "Needs you item: validation pending without an assignee name",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "needsCoverRequest": "{name} asks you to cover \"{title}\"",
+  "@needsCoverRequest": {
+    "description": "Needs you item: personal time cover request",
+    "placeholders": {
+      "name": { "type": "String" },
+      "title": { "type": "String" }
+    }
+  },
+  "needsApproveMember": "Approve member: {name}",
+  "@needsApproveMember": {
+    "description": "Needs you item: family member awaiting approval",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "needsTakeOverOffer": "Take over \"{title}\" (+{coins} cc)",
+  "@needsTakeOverOffer": {
+    "description": "Needs you item: open bounty / task takeover offer",
+    "placeholders": {
+      "title": { "type": "String" },
+      "coins": { "type": "num" }
+    }
   },
 
   "navMarketplace": "Marketplace",

@@ -1,11 +1,22 @@
 {
   "@@locale": "de",
 
+  "tabToday": "Heute",
   "tabFamily": "Familie",
+  "tabTasks": "Aufgaben",
   "tabActivities": "Aufgaben",
   "tabRewards": "Prämien",
   "tabStats": "Statistik",
   "tabMe": "Ich",
+  "tabNeedsAttention": ", erfordert deine Aufmerksamkeit",
+  "seeStats": "Statistiken ansehen",
+  "needsYouTitle": "Braucht dich",
+  "needsYouEmpty": "Alles erledigt.",
+  "needsValidateTask": "Bestätigen: \"{title}\" · {assignee}",
+  "needsValidateTaskNoAssignee": "Bestätigen: \"{title}\"",
+  "needsCoverRequest": "{name} bittet dich um Vertretung für \"{title}\"",
+  "needsApproveMember": "Mitglied bestätigen: {name}",
+  "needsTakeOverOffer": "\"{title}\" übernehmen (+{coins} cc)",
 
   "navMarketplace": "Marktplatz",
   "navPersonal": "Persönlich",

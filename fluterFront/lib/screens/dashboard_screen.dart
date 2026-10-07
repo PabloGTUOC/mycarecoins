@@ -23,6 +23,7 @@ class DashboardScreen extends StatefulWidget {
   /// Tab jumps used by the activation checklist's deep links.
   final VoidCallback? onOpenActivities;
   final VoidCallback? onOpenMarketplace;
+  final ValueChanged<DateTime>? onOpenDaily;
 
   /// Whether this is the visible tab; becoming active triggers a silent
   /// refetch so the dashboard doesn't go stale between tab switches.
@@ -33,6 +34,7 @@ class DashboardScreen extends StatefulWidget {
     this.onOpenStats,
     this.onOpenActivities,
     this.onOpenMarketplace,
+    this.onOpenDaily,
     this.active = true,
   });
 
@@ -267,6 +269,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _openDaily(DateTime day) async {
+    if (widget.onOpenDaily != null) {
+      widget.onOpenDaily!(day);
+      return;
+    }
     await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) =>
             DailyScreen(date: DateFormat('yyyy-MM-dd').format(day))));
@@ -769,6 +775,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             );
           }),
+
+          if (widget.onOpenStats != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: widget.onOpenStats,
+                icon: const Icon(Icons.bar_chart_rounded, size: 18),
+                label: Text(l.seeStats,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 32),
 

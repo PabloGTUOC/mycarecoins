@@ -1,11 +1,22 @@
 {
   "@@locale": "fr",
 
+  "tabToday": "Aujourd'hui",
   "tabFamily": "Famille",
+  "tabTasks": "Tâches",
   "tabActivities": "Activités",
   "tabRewards": "Prix",
   "tabStats": "Stats",
   "tabMe": "Moi",
+  "tabNeedsAttention": ", requiert votre attention",
+  "seeStats": "Voir les stats",
+  "needsYouTitle": "Besoin de vous",
+  "needsYouEmpty": "Vous êtes à jour.",
+  "needsValidateTask": "Valider « {title} » · {assignee}",
+  "needsValidateTaskNoAssignee": "Valider « {title} »",
+  "needsCoverRequest": "{name} vous demande de couvrir « {title} »",
+  "needsApproveMember": "Approuver le membre : {name}",
+  "needsTakeOverOffer": "Reprendre « {title} » (+{coins} cc)",
 
   "navMarketplace": "Boutique",
   "navPersonal": "Personnel",

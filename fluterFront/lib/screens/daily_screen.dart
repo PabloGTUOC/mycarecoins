@@ -18,8 +18,18 @@ import '../widgets/ui.dart';
 /// drag-out-to-unschedule. Narrow layout: timeline list with gap indicators,
 /// day-swipe, swipe-to-remove and the task bottom sheet.
 class DailyScreen extends StatefulWidget {
-  final String date; // yyyy-MM-dd
-  const DailyScreen({super.key, required this.date});
+  final String? date; // yyyy-MM-dd, defaults to today
+  final bool isTab;
+  final bool active;
+  final ValueChanged<bool>? onNeedsYouChanged;
+
+  const DailyScreen({
+    super.key,
+    this.date,
+    this.isTab = false,
+    this.active = false,
+    this.onNeedsYouChanged,
+  });
 
   @override
   State<DailyScreen> createState() => _DailyScreenState();
@@ -90,6 +100,7 @@ class _DailyScreenState extends State<DailyScreen> {
   List<Map<String, dynamic>> _activities = [];
   List<Map<String, dynamic>> _absences = [];
   List<Map<String, dynamic>> _requests = [];
+  List<Map<String, dynamic>> _pendingMembers = [];
   double? _doubleTapDy;
   bool _loading = true;
   bool _error = false;
@@ -105,8 +116,27 @@ class _DailyScreenState extends State<DailyScreen> {
   @override
   void initState() {
     super.initState();
-    _day = DateTime.parse(widget.date);
+    _day = widget.date != null
+        ? DateTime.parse(widget.date!)
+        : DateTime.now();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant DailyScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.date != oldWidget.date && widget.date != null) {
+      final newDay = DateTime.parse(widget.date!);
+      if (!_sameDay(_day, newDay)) {
+        setState(() {
+          _day = newDay;
+        });
+        _scrollToNow();
+      }
+    }
+    if (widget.active && !oldWidget.active) {
+      _load();
+    }
   }
 
   @override
@@ -152,6 +182,12 @@ class _DailyScreenState extends State<DailyScreen> {
         app.api
             .get('/api/personal-time?familyId=${app.familyId}')
             .catchError((_) => <String, dynamic>{'requests': []}),
+        if (app.isCaregiver && app.familyId != 0)
+          app.api
+              .get('/api/dashboard/${app.familyId}')
+              .catchError((_) => <String, dynamic>{'members': []})
+        else
+          Future.value(<String, dynamic>{'members': []}),
       ]);
       final acts = results[0] is List
           ? results[0] as List
@@ -159,6 +195,13 @@ class _DailyScreenState extends State<DailyScreen> {
       final abs = results[1] is List
           ? results[1] as List
           : (results[1]['absences'] as List? ?? []);
+      final dash = results[3] is Map ? results[3] as Map : <String, dynamic>{};
+      final membersList = (dash['members'] as List?) ?? [];
+      final pendingMems = membersList
+          .cast<Map>()
+          .map((m) => m.cast<String, dynamic>())
+          .where((m) => m['status'] == 'pending')
+          .toList();
       if (mounted) {
         setState(() {
           _activities =
@@ -169,9 +212,12 @@ class _DailyScreenState extends State<DailyScreen> {
               .cast<Map>()
               .map((m) => m.cast<String, dynamic>())
               .toList();
+          _pendingMembers = pendingMems;
           _loading = false;
           _error = false;
         });
+        final items = _getNeedsItems(app);
+        widget.onNeedsYouChanged?.call(items.isNotEmpty);
         _scrollToNow();
         _maybeTour();
       }
@@ -317,6 +363,16 @@ class _DailyScreenState extends State<DailyScreen> {
       await app.api.post('/api/activities/$id/validate');
       await _load();
     }, l.toastValidated);
+  }
+
+  Future<void> _approveMember(dynamic userId) async {
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    await app.runAction(() async {
+      await app.api
+          .post('/api/families/${app.familyId}/members/$userId/approve');
+      await _load();
+    }, l.toastMemberApproved);
   }
 
   Future<void> _unschedule(dynamic id, {required bool series}) async {
@@ -884,6 +940,7 @@ class _DailyScreenState extends State<DailyScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: !widget.isTab,
         titleSpacing: 0,
         title: Row(
           children: [
@@ -986,14 +1043,213 @@ class _DailyScreenState extends State<DailyScreen> {
     );
   }
 
+  // ── Needs you ────────────────────────────────────────────────────
+
+  List<_NeedsItem> _getNeedsItems(AppState app) {
+    final items = <_NeedsItem>[];
+
+    // 1. Validations they can give (pending_validation, not theirs, user is caregiver)
+    if (app.isCaregiver) {
+      for (final a in _activities) {
+        if (a['is_template'] == true) continue;
+        if (a['status'] == 'pending_validation' &&
+            a['assigned_to']?.toString() != app.userId?.toString()) {
+          items.add(_NeedsValidation(a));
+        }
+      }
+    }
+
+    // 2. Cover requests asked of them or of anyone (status pending, not their own)
+    for (final r in _requests) {
+      if (r['status'] == 'pending' &&
+          r['requester_id']?.toString() != app.userId?.toString()) {
+        final reqOf = r['requested_of'];
+        if (reqOf == null || reqOf.toString() == app.userId?.toString()) {
+          items.add(_NeedsCoverRequest(r));
+        }
+      }
+    }
+
+    // 3. Pending member approvals (caregivers only)
+    if (app.isCaregiver) {
+      for (final m in _pendingMembers) {
+        if (m['status'] == 'pending') {
+          items.add(_NeedsMemberApproval(m));
+        }
+      }
+    }
+
+    // 4. Open offers they could take (caregivers only, bounty > 0, not completed/rejected, not mine)
+    if (app.isCaregiver) {
+      for (final a in _activities) {
+        if (a['is_template'] == true) continue;
+        if (toNum(a['bounty_amount']) > 0 &&
+            a['status'] != 'completed' &&
+            a['status'] != 'rejected' &&
+            a['status'] != 'cancelled' &&
+            a['status'] != 'pending_validation' &&
+            a['assigned_to']?.toString() != app.userId?.toString()) {
+          items.add(_NeedsTakeOverOffer(a));
+        }
+      }
+    }
+
+    return items;
+  }
+
+  Widget _buildNeedsYou(AppLocalizations l) {
+    final app = context.watch<AppState>();
+    final items = _getNeedsItems(app);
+    if (items.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadii.md),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.check_circle_outline_rounded,
+                size: 18, color: AppColors.success),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                l.needsYouEmpty,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text(
+              l.needsYouTitle,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              const Divider(
+                  height: 1, indent: 16, endIndent: 16, color: AppColors.border),
+            _buildNeedsYouItem(items[i], l),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNeedsYouItem(_NeedsItem item, AppLocalizations l) {
+    switch (item) {
+      case _NeedsValidation(:final activity):
+        final title = (activity['title'] ?? '').toString();
+        final assignee = (activity['assigned_alias'] ??
+                activity['assigned_to_name'] ??
+                '')
+            .toString()
+            .trim();
+        final label = assignee.isNotEmpty
+            ? l.needsValidateTask(title, assignee)
+            : l.needsValidateTaskNoAssignee(title);
+        final coins = toNum(activity['coin_value']).toInt();
+        return _NeedsRow(
+          icon: Icons.verified_outlined,
+          iconColor: AppColors.primary,
+          iconBg: AppColors.primarySoft,
+          label: label,
+          badge: coins > 0 ? '+${coins}cc' : null,
+          badgeColor: AppColors.primaryInk,
+          badgeBg: AppColors.primarySoft,
+          actionLabel: l.pillValidate,
+          onTap: () => _validate(activity['id']),
+        );
+
+      case _NeedsCoverRequest(:final request):
+        final name = (request['requester_name'] ?? '').toString().trim();
+        final title = (request['title'] ?? '').toString();
+        final sweetener = toNum(request['sweetener_coins']).toInt();
+        return _NeedsRow(
+          icon: Icons.swap_horiz_rounded,
+          iconColor: AppColors.warning,
+          iconBg: AppColors.warningSoft,
+          label: l.needsCoverRequest(
+              name.isNotEmpty ? name : l.fallbackACaregiver, title),
+          badge: sweetener > 0 ? '+${sweetener}cc' : null,
+          badgeColor: AppColors.warningInk,
+          badgeBg: AppColors.warningSoft,
+          actionLabel: l.acceptAction,
+          onTap: () => _openRequest(request),
+        );
+
+      case _NeedsMemberApproval(:final member):
+        final name = (member['name'] ??
+                l.fallbackUser(
+                    (member['user_id'] ?? member['id'] ?? '').toString()))
+            .toString();
+        return _NeedsRow(
+          icon: Icons.person_add_outlined,
+          iconColor: AppColors.indigo,
+          iconBg: AppColors.primarySoft,
+          label: l.needsApproveMember(name),
+          badge: null,
+          actionLabel: l.approve,
+          onTap: () => _approveMember(member['user_id'] ?? member['id']),
+        );
+
+      case _NeedsTakeOverOffer(:final activity):
+        final title = (activity['title'] ?? '').toString();
+        final bounty = toNum(activity['bounty_amount']).toInt();
+        return _NeedsRow(
+          icon: Icons.bolt_rounded,
+          iconColor: AppColors.success,
+          iconBg: AppColors.successSoft,
+          label: l.needsTakeOverOffer(title, bounty),
+          badge: '+$bounty cc',
+          badgeColor: AppColors.successInk,
+          badgeBg: AppColors.successSoft,
+          actionLabel: l.takeOver,
+          onTap: () => _acceptBounty(activity),
+        );
+    }
+  }
+
   // ── Wide: Task Library panel + hour grid ────────────────────────
 
   Widget _buildWide(List<Map<String, dynamic>> items) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildNeedsYou(l),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
           SizedBox(
             width: 300,
             child: DragTarget<Map<String, dynamic>>(
@@ -1088,8 +1344,11 @@ class _DailyScreenState extends State<DailyScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  ],
+),
+);
+}
 
   Widget _buildHourGrid(List<Map<String, dynamic>> items) {
     return RefreshIndicator(
@@ -1376,6 +1635,7 @@ class _DailyScreenState extends State<DailyScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
           children: [
+            _buildNeedsYou(l),
             for (final abs in _dayAbsences)
               Tappable(
                 onTap: () => _absenceDetail(abs),
@@ -2281,6 +2541,114 @@ class WeekDayChip extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+sealed class _NeedsItem {}
+
+class _NeedsValidation extends _NeedsItem {
+  final Map<String, dynamic> activity;
+  _NeedsValidation(this.activity);
+}
+
+class _NeedsCoverRequest extends _NeedsItem {
+  final Map<String, dynamic> request;
+  _NeedsCoverRequest(this.request);
+}
+
+class _NeedsMemberApproval extends _NeedsItem {
+  final Map<String, dynamic> member;
+  _NeedsMemberApproval(this.member);
+}
+
+class _NeedsTakeOverOffer extends _NeedsItem {
+  final Map<String, dynamic> activity;
+  _NeedsTakeOverOffer(this.activity);
+}
+
+class _NeedsRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final String? badge;
+  final Color? badgeColor;
+  final Color? badgeBg;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  const _NeedsRow({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    this.badge,
+    this.badgeColor,
+    this.badgeBg,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Icon(icon, size: 18, color: iconColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (badge != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: badgeBg ?? AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                  child: Text(
+                    badge!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: badgeColor ?? AppColors.primaryInk,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 20, color: AppColors.textSecondary),
+            ],
           ),
         ),
       ),

@@ -148,33 +148,34 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Tab 0 ("Family") is selected initially
+      // Tab 0 ("Today") is selected initially
+      final todayTab = tester.getSemantics(find.bySemanticsLabel('Today'));
+      expect(todayTab.flagsCollection.isSelected, ui.Tristate.isTrue);
+      expect(todayTab.flagsCollection.isButton, isTrue);
+
       final familyTab = tester.getSemantics(find.bySemanticsLabel('Family'));
-      expect(familyTab.flagsCollection.isSelected, ui.Tristate.isTrue);
+      expect(familyTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
       expect(familyTab.flagsCollection.isButton, isTrue);
 
-      final activitiesTab = tester.getSemantics(find.bySemanticsLabel('Activities'));
-      expect(activitiesTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
-      expect(activitiesTab.flagsCollection.isButton, isTrue);
+      final tasksTab = tester.getSemantics(find.bySemanticsLabel('Tasks'));
+      expect(tasksTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
+      expect(tasksTab.flagsCollection.isButton, isTrue);
 
       final rewardsTab = tester.getSemantics(find.bySemanticsLabel('Rewards'));
       expect(rewardsTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final statsTab = tester.getSemantics(find.bySemanticsLabel('Stats'));
-      expect(statsTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
-
       final meTab = tester.getSemantics(find.bySemanticsLabel('Me'));
       expect(meTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      // Tap Activities tab
-      await tester.tap(find.bySemanticsLabel('Activities'));
+      // Tap Tasks tab
+      await tester.tap(find.bySemanticsLabel('Tasks'));
       await tester.pumpAndSettle();
 
-      final familyTabAfter = tester.getSemantics(find.bySemanticsLabel('Family'));
-      expect(familyTabAfter.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
+      final todayTabAfter = tester.getSemantics(find.bySemanticsLabel('Today'));
+      expect(todayTabAfter.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final activitiesTabAfter = tester.getSemantics(find.bySemanticsLabel('Activities'));
-      expect(activitiesTabAfter.flagsCollection.isSelected, ui.Tristate.isTrue);
+      final tasksTabAfter = tester.getSemantics(find.bySemanticsLabel('Tasks'));
+      expect(tasksTabAfter.flagsCollection.isSelected, ui.Tristate.isTrue);
 
       semantics.dispose();
     });
@@ -279,7 +280,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final tab = tester.getRect(find
-        .ancestor(of: find.text('Stats'), matching: find.byType(InkWell))
+        .ancestor(of: find.text('Tasks'), matching: find.byType(InkWell))
         .last);
     expect(tab.height, 60);
     expect(tab.bottom, greaterThan(1000 - 100));

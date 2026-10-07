@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
@@ -10,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/help_sheet.dart';
 import '../widgets/ui.dart';
 import 'activities_screen.dart';
+import 'daily_screen.dart';
 import 'dashboard_screen.dart';
 import 'marketplace_screen.dart';
 import 'profile_screen.dart';
@@ -18,23 +20,29 @@ import 'stats_screen.dart';
 /// App shell: pill header (logo, desktop nav, coin counter, avatar menu)
 /// plus the mobile bottom tab bar with the same five tabs.
 class Shell extends StatefulWidget {
-  const Shell({super.key});
+  final int initialIndex;
+  const Shell({super.key, this.initialIndex = 0});
 
   @override
   State<Shell> createState() => _ShellState();
 }
 
 class _ShellState extends State<Shell> {
-  int _index = 0;
+  late int _index;
   // Lazy tab construction: a tab's screen (and its API calls) is only built
   // on first visit instead of firing ~10 requests at startup.
-  final Set<int> _visited = {0};
+  late final Set<int> _visited;
   late final AppLifecycleListener _lifecycle;
   bool _welcomeChecked = false;
+  String _dailyDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  bool _hasNeedsYou = false;
+  bool _needsAttention = false;
 
   @override
   void initState() {
     super.initState();
+    _index = widget.initialIndex;
+    _visited = {widget.initialIndex, 0};
     // Refresh /api/me when the app comes back to the foreground.
     _lifecycle = AppLifecycleListener(
       onResume: () {
@@ -57,7 +65,19 @@ class _ShellState extends State<Shell> {
   void _go(int i) => setState(() {
         _index = i;
         _visited.add(i);
+        if (i == 0) {
+          _needsAttention = false;
+        }
       });
+
+  void _openDailyTab(DateTime day) {
+    setState(() {
+      _dailyDate = DateFormat('yyyy-MM-dd').format(day);
+      _index = 0;
+      _visited.add(0);
+      _needsAttention = false;
+    });
+  }
 
   /// One-time welcome after the user first lands in the shell with a
   /// family (docs/onboarding-help-plan.md Phase 2). Frames the economy in
@@ -102,10 +122,10 @@ class _ShellState extends State<Shell> {
     final wide = isWideLayout(context);
     final l = AppLocalizations.of(context);
     final tabs = <({IconData icon, String label})>[
+      (icon: Icons.today_rounded, label: l.tabToday),
       (icon: Icons.home_rounded, label: l.tabFamily),
-      (icon: Icons.calendar_today_rounded, label: l.tabActivities),
+      (icon: Icons.checklist_rounded, label: l.tabTasks),
       (icon: Icons.shopping_bag_rounded, label: l.tabRewards),
-      (icon: Icons.bar_chart_rounded, label: l.tabStats),
       (icon: Icons.person_rounded, label: l.tabMe),
     ];
 
@@ -122,14 +142,33 @@ class _ShellState extends State<Shell> {
     // silently refetch — without it, tabs go stale (IndexedStack keeps
     // them alive but initState never runs again).
     final screens = [
+      DailyScreen(
+        date: _dailyDate,
+        isTab: true,
+        active: _index == 0,
+        onNeedsYouChanged: (hasItems) {
+          if (_hasNeedsYou != hasItems) {
+            setState(() {
+              _hasNeedsYou = hasItems;
+              if (hasItems && _index != 0) {
+                _needsAttention = true;
+              } else if (!hasItems) {
+                _needsAttention = false;
+              }
+            });
+          }
+        },
+      ),
       DashboardScreen(
-          active: _index == 0,
-          onOpenStats: () => _go(3),
-          onOpenActivities: () => _go(1),
-          onOpenMarketplace: () => _go(2)),
-      ActivitiesScreen(active: _index == 1),
-      MarketplaceScreen(active: _index == 2),
-      StatsScreen(active: _index == 3),
+        active: _index == 1,
+        onOpenDaily: _openDailyTab,
+        onOpenStats: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const StatsScreen())),
+        onOpenActivities: () => _go(2),
+        onOpenMarketplace: () => _go(3),
+      ),
+      ActivitiesScreen(active: _index == 2),
+      MarketplaceScreen(active: _index == 3),
       ProfileScreen(active: _index == 4),
     ];
 
@@ -183,38 +222,68 @@ class _ShellState extends State<Shell> {
                   height: 60,
                   child: Row(
                     children: [
-                      for (var i = 0; i < tabs.length; i++)
-                        Expanded(
-                          child: Semantics(
-                            button: true,
-                            selected: i == _index,
-                            label: tabs[i].label,
-                            child: InkWell(
-                              onTap: () => _go(i),
-                              child: ExcludeSemantics(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(tabs[i].icon,
-                                        size: 22,
-                                        color: i == _index
-                                            ? AppColors.primary
-                                            : AppColors.textSecondary),
-                                    const SizedBox(height: 2),
-                                    Text(tabs[i].label,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: i == _index
-                                                ? AppColors.primary
-                                                : AppColors.textSecondary)),
-                                  ],
+                      for (var i = 0; i < tabs.length; i++) ...[
+                        () {
+                          final showDot =
+                              i == 0 && _hasNeedsYou && _needsAttention;
+                          final semanticsLabel = showDot
+                              ? '${tabs[i].label}${l.tabNeedsAttention}'
+                              : tabs[i].label;
+                          return Expanded(
+                            child: Semantics(
+                              button: true,
+                              selected: i == _index,
+                              label: semanticsLabel,
+                              child: InkWell(
+                                onTap: () => _go(i),
+                                child: ExcludeSemantics(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Icon(tabs[i].icon,
+                                              size: 22,
+                                              color: i == _index
+                                                  ? AppColors.primary
+                                                  : AppColors.textSecondary),
+                                          if (showDot)
+                                            Positioned(
+                                              top: -1,
+                                              right: -3,
+                                              child: Container(
+                                                key: const Key(
+                                                    'today_tab_dot'),
+                                                width: 7,
+                                                height: 7,
+                                                decoration:
+                                                    const BoxDecoration(
+                                                  color: AppColors.primary,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(tabs[i].label,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: i == _index
+                                                  ? AppColors.primary
+                                                  : AppColors.textSecondary)),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        }(),
+                      ],
                     ],
                   ),
                 ),
@@ -288,20 +357,25 @@ class _PillHeader extends StatelessWidget {
           const Spacer(),
           if (wide && app.hasFamilies) ...[
             _NavLink(
-                label: l.tabFamily,
-                icon: Icons.home_rounded,
+                label: l.tabToday,
+                icon: Icons.today_rounded,
                 active: index == 0,
                 onTap: () => onNavigate(0)),
             _NavLink(
-                label: l.tabActivities,
-                icon: Icons.calendar_today_rounded,
+                label: l.tabFamily,
+                icon: Icons.home_rounded,
                 active: index == 1,
                 onTap: () => onNavigate(1)),
             _NavLink(
-                label: l.navMarketplace,
-                icon: Icons.shopping_bag_rounded,
+                label: l.tabTasks,
+                icon: Icons.checklist_rounded,
                 active: index == 2,
                 onTap: () => onNavigate(2)),
+            _NavLink(
+                label: l.navMarketplace,
+                icon: Icons.shopping_bag_rounded,
+                active: index == 3,
+                onTap: () => onNavigate(3)),
             _NavLink(
                 label: l.navPersonal,
                 icon: Icons.person_rounded,
