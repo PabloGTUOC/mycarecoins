@@ -341,13 +341,13 @@ void main() {
       final listFinder = find.byType(SingleChildScrollView);
       expect(listFinder, findsWidgets);
 
-      await tester.fling(listFinder, const Offset(-400, 0), 1000);
+      await tester.fling(listFinder.first, const Offset(-400, 0), 1000);
       await tester.pumpAndSettle();
 
       // The selected date MUST NOT have changed (remains Tue, Oct 6)
       expect(find.text('Tue, Oct 6'), findsOneWidget);
 
-      await tester.fling(listFinder, const Offset(400, 0), 1000);
+      await tester.fling(listFinder.first, const Offset(400, 0), 1000);
       await tester.pumpAndSettle();
 
       expect(find.text('Tue, Oct 6'), findsOneWidget);

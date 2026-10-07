@@ -115,9 +115,9 @@ void main() {
       expect(find.text('12:00'), findsOneWidget);
       expect(find.text('00:00'), findsOneWidget);
 
-      // T1 week strip and FAB are preserved
+      // T1 week strip is preserved; phones add through the tray (no FAB).
       expect(find.byType(WeekStrip), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
 
     testWidgets('a 30-minute and a 90-minute block have proportional heights',

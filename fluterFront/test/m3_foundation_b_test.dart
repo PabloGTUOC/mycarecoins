@@ -329,9 +329,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Open task sheet via FAB
-      final fab = find.byIcon(Icons.add_rounded);
-      expect(fab, findsOneWidget);
-      await tester.tap(fab);
+      // Phones have no FAB since the tray: "All tasks" expands the library.
+      final allTasks = find.text('All tasks');
+      expect(allTasks, findsOneWidget);
+      await tester.tap(allTasks);
       await tester.pumpAndSettle();
 
       // Pick Dishwashing template

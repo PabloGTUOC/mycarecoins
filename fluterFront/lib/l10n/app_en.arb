@@ -99,6 +99,51 @@
   "@seeAllStats": {
     "description": "Link below KPI cards opening the stats screen"
   },
+  "trayHeaderLabel": "Tasks · drag onto the day",
+  "@trayHeaderLabel": {
+    "description": "Header label on the collapsed tasks tray on Today"
+  },
+  "trayAllTasks": "All tasks",
+  "@trayAllTasks": { "description": "Tray header button that expands the full task library" },
+  "timeForMe": "Time for me",
+  "@timeForMe": {
+    "description": "First row in the expanded task tray for personal time"
+  },
+  "scheduledAtTime": "{title} at {time}",
+  "@scheduledAtTime": {
+    "description": "SnackBar message when a task is scheduled at a time",
+    "placeholders": {
+      "title": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "actionUndo": "Undo",
+  "@actionUndo": {
+    "description": "Undo action label in the SnackBar"
+  },
+  "dayHasPassed": "This day has passed",
+  "@dayHasPassed": {
+    "description": "Message shown when tapping a task chip on a past day"
+  },
+  "trayChipSemantics": "{task}, double-tap to choose a time",
+  "@trayChipSemantics": {
+    "description": "Semantics hint for task chips in the tray",
+    "placeholders": {
+      "task": { "type": "String" }
+    }
+  },
+  "refusalTimePassed": "Time has passed",
+  "@refusalTimePassed": {
+    "description": "Refusal reason when dragging over a past time"
+  },
+  "refusalUserAbsent": "You are away",
+  "@refusalUserAbsent": {
+    "description": "Refusal reason when dragging over an absence"
+  },
+  "refusalAlreadyBusy": "Already scheduled",
+  "@refusalAlreadyBusy": {
+    "description": "Refusal reason when dragging over an overlapping activity"
+  },
   "freeDaysRange": "Free: {start} to {end}",
   "@freeDaysRange": {
     "description": "Collapsed agenda row for a run of empty days",
