@@ -104,6 +104,22 @@ activitiesRouter.post('/:activityId/schedule', validateParams('activityId'), val
   }
 });
 
+activitiesRouter.patch('/:id/time', validateParams('id'), validateBody({
+  startsAt: [required(), isoDate()],
+}), async (req, res) => {
+  try {
+    const result = await withTransaction(async (client) => {
+      const user = await upsertUserFromAuth(client, req.auth);
+      return activityService.rescheduleActivity(client, user.id, Number(req.params.id), req.body.startsAt);
+    });
+    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    return res.json({ activity: result.data });
+  } catch (err) {
+    console.error('PATCH /:id/time error:', err);
+    return res.status(500).json({ error: 'Failed to move activity.' });
+  }
+});
+
 activitiesRouter.post('/:activityId/recurrence', validateParams('activityId'), validateBody({
   frequency: [required(), oneOf(['daily', 'weekdays', 'weekly'])],
   untilDate: [required(), isoDate()],

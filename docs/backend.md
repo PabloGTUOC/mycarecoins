@@ -408,6 +408,7 @@ No auth. Returns `{ status: 'ok', service: 'carecoins-backend' }`. Used by Docke
 | POST | `/api/activities/:id/revert` | assignee | Undo a completion before validation |
 | POST | `/api/activities/:id/bounty` | caregiver | Offer a coin bounty on an activity |
 | POST | `/api/activities/:id/accept-bounty` | member | Accept a bounty (take over the activity) |
+| PATCH | `/api/activities/:id/time` | assignee or caregiver | Move an upcoming activity to `startsAt`, keeping its duration. Coverage never moves on its own; personal time only by its owner and not once covered. Checks the assignee's absences and overlaps (coverage exempt) |
 | DELETE | `/api/activities/:id` | creator/caregiver | Delete single instance or full series (`?series=true`) |
 
 ---

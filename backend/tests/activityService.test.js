@@ -7,6 +7,7 @@ import {
   acceptBounty,
   revertActivity,
   deleteActivity,
+  rescheduleActivity,
   listActivities,
   scheduleActivity,
 } from '../src/services/activityService.js';
@@ -362,5 +363,67 @@ describe('deleteActivity personal time and coverage', () => {
     const client = mockClient([ok([cov])]);
     const result = await revertActivity(client, 77, 501);
     assert.equal(result.error.code, 409);
+  });
+});
+
+// ─── rescheduleActivity ─────────────────────────────────────────────────────
+
+describe('rescheduleActivity', () => {
+  const now = new Date('2026-10-07T08:00:00Z');
+  const later = '2026-10-07T18:00:00.000Z';
+  const care = {
+    family_id: 10, assigned_to: 99, category: 'care', type: 'care', status: 'approved',
+    is_template: false, duration_minutes: 30, counterpart_activity_id: null,
+  };
+
+  test('moves an upcoming activity, keeping its duration', async () => {
+    const client = mockClient([ok([care]), empty(), empty(), ok([{ id: 1 }])]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.ok(result.data);
+    assert.deepEqual(client._calls[3].params, [later, '2026-10-07T18:30:00.000Z', 1]);
+  });
+
+  test('the overlap check ignores the activity being moved, and coverage', async () => {
+    const client = mockClient([ok([care]), empty(), empty(), ok([{ id: 1 }])]);
+    await rescheduleActivity(client, 99, 1, later, now);
+    assert.match(client._calls[2].sql, /id <> \$5 AND type <> 'coverage'/);
+    assert.equal(client._calls[2].params[4], 1);
+  });
+
+  test('refuses a time that has passed', async () => {
+    const client = mockClient([ok([care])]);
+    const result = await rescheduleActivity(client, 99, 1, '2026-10-07T07:00:00.000Z', now);
+    assert.equal(result.error.code, 400);
+  });
+
+  test('refuses when the assignee is busy then', async () => {
+    const client = mockClient([ok([care]), empty(), ok([{ id: 7, title: 'Bath time' }])]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.equal(result.error.code, 409);
+    assert.match(result.error.message, /Bath time/);
+  });
+
+  test('a coverage shift never moves on its own', async () => {
+    const client = mockClient([ok([{ ...care, type: 'coverage' }])]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.equal(result.error.code, 409);
+  });
+
+  test("nobody else may move someone's personal time", async () => {
+    const client = mockClient([ok([{ ...care, category: 'self', type: 'sport', assigned_to: 77 }])]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.equal(result.error.code, 403);
+  });
+
+  test('covered personal time cannot be moved', async () => {
+    const client = mockClient([ok([{ ...care, category: 'self', type: 'sport', counterpart_activity_id: 5 }])]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.equal(result.error.code, 409);
+  });
+
+  test("a member cannot move someone else's task", async () => {
+    const client = mockClient([ok([{ ...care, assigned_to: 77 }]), empty()]);
+    const result = await rescheduleActivity(client, 99, 1, later, now);
+    assert.equal(result.error.code, 403);
   });
 });

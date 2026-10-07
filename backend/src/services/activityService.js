@@ -430,6 +430,81 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
 }
 
 /**
+ * Moves a scheduled activity to a new start, keeping its duration. Who may move
+ * it follows the removal rules: the assignee or a caregiver for ordinary work;
+ * personal time only by the person taking it, and not once someone has agreed
+ * to cover it (they accepted that window); a coverage shift never on its own.
+ * The assignee's absences and other work are checked at the new time, with
+ * coverage exempt as in scheduleActivity.
+ */
+export async function rescheduleActivity(client, userId, activityId, startsAt, now = new Date()) {
+  const { rows } = await client.query(
+    `SELECT family_id, assigned_to, category, type, status, is_template,
+            duration_minutes, counterpart_activity_id
+     FROM activities WHERE id = $1
+     AND family_id IN (SELECT family_id FROM family_members WHERE user_id = $2 AND status = 'active')
+     FOR UPDATE`,
+    [activityId, userId]
+  );
+  if (!rows.length || rows[0].is_template) {
+    return { error: { code: 404, message: 'Activity not found.' } };
+  }
+  const act = rows[0];
+
+  if (act.type === 'coverage') {
+    return { error: { code: 409, message: 'Coverage moves only with its personal time.' } };
+  }
+  if (act.category === 'self') {
+    if (act.assigned_to !== userId) {
+      return { error: { code: 403, message: 'Only the person taking this time can move it.' } };
+    }
+    if (act.counterpart_activity_id) {
+      return { error: { code: 409, message: 'Someone is covering this time. Cancel it and ask again to change it.' } };
+    }
+  } else if (act.assigned_to !== userId) {
+    const roleErr = await assertMemberRole(client, userId, act.family_id, 'caregiver');
+    if (roleErr) return { error: { code: 403, message: 'Cannot move an activity that is not yours.' } };
+  }
+  if (act.status !== 'approved') {
+    return { error: { code: 409, message: 'Only upcoming activities can be moved.' } };
+  }
+
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime()) || start <= now) {
+    return { error: { code: 400, message: 'Pick a time that has not passed.' } };
+  }
+  const end = new Date(start.getTime() + Number(act.duration_minutes) * 60000);
+
+  const { rows: absenceOverlap } = await client.query(
+    `SELECT id, title FROM absences
+     WHERE user_id = $1 AND family_id = $2 AND (start_time < $4 AND end_time > $3)`,
+    [act.assigned_to, act.family_id, start.toISOString(), end.toISOString()]
+  );
+  if (absenceOverlap.length > 0) {
+    return { error: { code: 409, message: `They are away during this time ("${absenceOverlap[0].title}").` } };
+  }
+
+  const { rows: overlap } = await client.query(
+    `SELECT id, title FROM activities
+     WHERE assigned_to = $1 AND family_id = $2 AND is_template = false
+       AND id <> $5 AND type <> 'coverage'
+       AND status IN ('approved', 'pending_validation')
+       AND (starts_at < $4 AND ends_at > $3)`,
+    [act.assigned_to, act.family_id, start.toISOString(), end.toISOString(), activityId]
+  );
+  if (overlap.length > 0) {
+    return { error: { code: 409, message: `"${overlap[0].title}" is already scheduled during this time.` } };
+  }
+
+  const { rows: updated } = await client.query(
+    `UPDATE activities SET starts_at = $1::timestamptz, ends_at = $2::timestamptz
+     WHERE id = $3 RETURNING *`,
+    [start.toISOString(), end.toISOString(), activityId]
+  );
+  return { data: updated[0] };
+}
+
+/**
  * Deletes a personal-time activity and, when someone accepted to cover it, the
  * coverage shift too, returning the shift's sweetener to the requester: the
  * favour it paid for will not happen. A coverage shift that has already been
