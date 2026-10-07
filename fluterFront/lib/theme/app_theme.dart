@@ -72,6 +72,72 @@ bool isWideLayout(BuildContext context) {
   return size.width > kMobileBreakpoint && size.shortestSide >= 600;
 }
 
+/// Theme extension for CareCoins semantic ink and strong status colors.
+@immutable
+class CareColors extends ThemeExtension<CareColors> {
+  final Color primaryInk;
+  final Color successInk;
+  final Color successStrong;
+  final Color warningInk;
+  final Color warningStrong;
+  final Color dangerInk;
+
+  const CareColors({
+    required this.primaryInk,
+    required this.successInk,
+    required this.successStrong,
+    required this.warningInk,
+    required this.warningStrong,
+    required this.dangerInk,
+  });
+
+  static const light = CareColors(
+    primaryInk: AppColors.primaryInk,
+    successInk: AppColors.successInk,
+    successStrong: AppColors.successStrong,
+    warningInk: AppColors.warningInk,
+    warningStrong: AppColors.warningStrong,
+    dangerInk: AppColors.dangerInk,
+  );
+
+  @override
+  CareColors copyWith({
+    Color? primaryInk,
+    Color? successInk,
+    Color? successStrong,
+    Color? warningInk,
+    Color? warningStrong,
+    Color? dangerInk,
+  }) {
+    return CareColors(
+      primaryInk: primaryInk ?? this.primaryInk,
+      successInk: successInk ?? this.successInk,
+      successStrong: successStrong ?? this.successStrong,
+      warningInk: warningInk ?? this.warningInk,
+      warningStrong: warningStrong ?? this.warningStrong,
+      dangerInk: dangerInk ?? this.dangerInk,
+    );
+  }
+
+  @override
+  CareColors lerp(ThemeExtension<CareColors>? other, double t) {
+    if (other is! CareColors) return this;
+    return CareColors(
+      primaryInk: Color.lerp(primaryInk, other.primaryInk, t)!,
+      successInk: Color.lerp(successInk, other.successInk, t)!,
+      successStrong: Color.lerp(successStrong, other.successStrong, t)!,
+      warningInk: Color.lerp(warningInk, other.warningInk, t)!,
+      warningStrong: Color.lerp(warningStrong, other.warningStrong, t)!,
+      dangerInk: Color.lerp(dangerInk, other.dangerInk, t)!,
+    );
+  }
+}
+
+extension CareColorsTheme on BuildContext {
+  CareColors get careColors =>
+      Theme.of(this).extension<CareColors>() ?? CareColors.light;
+}
+
 ThemeData buildAppTheme() {
   final base = ThemeData(
     useMaterial3: true,
@@ -92,6 +158,54 @@ ThemeData buildAppTheme() {
   return base.copyWith(
     textTheme: textTheme,
     dividerColor: AppColors.border,
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.surface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: GoogleFonts.plusJakartaSans(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+      iconTheme: const IconThemeData(color: AppColors.textSecondary),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppColors.surface,
+      elevation: 0,
+      indicatorColor: AppColors.primarySoft,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: AppColors.primaryInk);
+        }
+        return const IconThemeData(color: AppColors.textSecondary);
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primaryInk,
+          );
+        }
+        return GoogleFonts.plusJakartaSans(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        );
+      }),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      showDragHandle: true,
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.lg)),
+      ),
+    ),
+    badgeTheme: const BadgeThemeData(
+      backgroundColor: AppColors.primary,
+    ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
@@ -101,5 +215,6 @@ ThemeData buildAppTheme() {
     ),
     progressIndicatorTheme:
         const ProgressIndicatorThemeData(color: AppColors.primary),
+    extensions: const [CareColors.light],
   );
 }

@@ -646,12 +646,26 @@ class PageHeading extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 16, color: AppColors.textSecondary, height: 1.6))
         : null;
+
+    if (mobile) {
+      if (subtitle != null && onSubtitleTap != null) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Tappable(
+            onTap: onSubtitleTap,
+            child: subText!,
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title,
-            style: TextStyle(
-                fontSize: mobile ? 28 : 38,
+            style: const TextStyle(
+                fontSize: 38,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -1,
                 color: AppColors.textPrimary)),
@@ -667,6 +681,66 @@ class PageHeading extends StatelessWidget {
         ],
         const SizedBox(height: 28),
       ],
+    );
+  }
+}
+
+/// Compact coin balance pill displaying user avatar, balance, and 'cc'.
+class CoinBalancePill extends StatelessWidget {
+  final String alias;
+  final String balance;
+  final VoidCallback? onTap;
+
+  const CoinBalancePill({
+    super.key,
+    required this.alias,
+    required this.balance,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+      decoration: BoxDecoration(
+        color: AppColors.warningSoft,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AvatarCircle(
+            name: alias,
+            size: 24,
+            background: AppColors.warning,
+            foreground: Colors.white,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            balance,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.warningInk,
+            ),
+          ),
+          const SizedBox(width: 3),
+          const Text(
+            'cc',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.warningInk,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return pill;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+      child: pill,
     );
   }
 }

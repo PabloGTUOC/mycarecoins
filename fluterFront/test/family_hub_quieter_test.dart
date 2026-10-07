@@ -209,7 +209,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Navigated to Today tab (tab 0 selected)
-      final todaySemantics = tester.getSemantics(find.bySemanticsLabel('Today'));
+      final todaySemantics = tester.getSemantics(find.bySemanticsLabel(RegExp('^Today')));
       expect(todaySemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
     });
   });
@@ -347,6 +347,8 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -80));
+      await tester.pumpAndSettle();
 
       // "See all stats" link is present
       expect(find.text('See all stats'), findsOneWidget);

@@ -35,8 +35,9 @@ const kLanguageNativeNames = {
 class ProfileScreen extends StatefulWidget {
   /// Whether this is the visible tab; becoming active triggers a refetch.
   final bool active;
+  final int initialTab;
 
-  const ProfileScreen({super.key, this.active = true});
+  const ProfileScreen({super.key, this.active = true, this.initialTab = 0});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -82,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _tab = widget.initialTab;
     final app = context.read<AppState>();
     _displayName.text = app.profile?['display_name']?.toString() ?? '';
     _email.text = app.profile?['email']?.toString() ?? '';
@@ -96,6 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didUpdateWidget(covariant ProfileScreen old) {
     super.didUpdateWidget(old);
+    if (widget.initialTab != old.initialTab) {
+      setState(() => _tab = widget.initialTab);
+    }
     if (widget.active && !old.active) {
       _loadLedger();
       _loadDeletionRequests();

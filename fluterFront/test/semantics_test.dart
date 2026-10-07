@@ -148,33 +148,38 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      Finder tabFinder(String label) => find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.bySemanticsLabel(RegExp('^$label')),
+          );
+
       // Tab 0 ("Today") is selected initially
-      final todayTab = tester.getSemantics(find.bySemanticsLabel('Today'));
+      final todayTab = tester.getSemantics(tabFinder('Today'));
       expect(todayTab.flagsCollection.isSelected, ui.Tristate.isTrue);
       expect(todayTab.flagsCollection.isButton, isTrue);
 
-      final familyTab = tester.getSemantics(find.bySemanticsLabel('Family'));
+      final familyTab = tester.getSemantics(tabFinder('Family'));
       expect(familyTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
       expect(familyTab.flagsCollection.isButton, isTrue);
 
-      final tasksTab = tester.getSemantics(find.bySemanticsLabel('Tasks'));
+      final tasksTab = tester.getSemantics(tabFinder('Tasks'));
       expect(tasksTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
       expect(tasksTab.flagsCollection.isButton, isTrue);
 
-      final rewardsTab = tester.getSemantics(find.bySemanticsLabel('Rewards'));
+      final rewardsTab = tester.getSemantics(tabFinder('Rewards'));
       expect(rewardsTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final meTab = tester.getSemantics(find.bySemanticsLabel('Me'));
+      final meTab = tester.getSemantics(tabFinder('Me'));
       expect(meTab.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
       // Tap Tasks tab
-      await tester.tap(find.bySemanticsLabel('Tasks'));
+      await tester.tap(tabFinder('Tasks'));
       await tester.pumpAndSettle();
 
-      final todayTabAfter = tester.getSemantics(find.bySemanticsLabel('Today'));
+      final todayTabAfter = tester.getSemantics(tabFinder('Today'));
       expect(todayTabAfter.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final tasksTabAfter = tester.getSemantics(find.bySemanticsLabel('Tasks'));
+      final tasksTabAfter = tester.getSemantics(tabFinder('Tasks'));
       expect(tasksTabAfter.flagsCollection.isSelected, ui.Tristate.isTrue);
 
       semantics.dispose();
@@ -255,7 +260,7 @@ void main() {
 
   // Regression: a stretch-filled Row in the bottomNavigationBar slot once
   // grew the bar to fill the screen and hid every tab's content.
-  testWidgets('bottom bar stays 60 tall at the bottom, each tab fully tappable',
+  testWidgets('bottom bar is a NavigationBar with 5 destinations sitting at the bottom',
       (tester) async {
     // 600 wide is still the phone layout (< 768); narrower trips a header
     // overflow that only the monospace test font produces.
@@ -279,10 +284,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    final tab = tester.getRect(find
-        .ancestor(of: find.text('Tasks'), matching: find.byType(InkWell))
-        .last);
-    expect(tab.height, 60);
-    expect(tab.bottom, greaterThan(1000 - 100));
+    expect(find.byType(NavigationBar), findsOneWidget);
+    final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+    expect(navBar.destinations.length, 5);
+
+    final barRect = tester.getRect(find.byType(NavigationBar));
+    expect(barRect.bottom, 1000);
   });
 }

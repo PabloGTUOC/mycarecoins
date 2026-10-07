@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/json.dart';
 import '../widgets/absence_dialog.dart';
+import '../widgets/help_sheet.dart';
 import '../widgets/personal_time_dialog.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
@@ -22,6 +23,7 @@ class DailyScreen extends StatefulWidget {
   final bool isTab;
   final bool active;
   final ValueChanged<bool>? onNeedsYouChanged;
+  final VoidCallback? onOpenWallet;
 
   const DailyScreen({
     super.key,
@@ -29,6 +31,7 @@ class DailyScreen extends StatefulWidget {
     this.isTab = false,
     this.active = false,
     this.onNeedsYouChanged,
+    this.onOpenWallet,
   });
 
   @override
@@ -935,24 +938,32 @@ class _DailyScreenState extends State<DailyScreen> {
     final items = _scheduledToday;
     final done = _completedToday.length;
 
+    final app = context.watch<AppState>();
+    final family = app.family;
+    final alias =
+        (family?['alias'] ?? app.profile?['display_name'] ?? 'C').toString();
+    final balance = family?['coin_balance']?.toString() ?? '0';
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: wide ? AppColors.bg : null,
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: !widget.isTab,
         titleSpacing: 0,
         title: Row(
           children: [
-            const SizedBox(width: 4),
-            if (wide)
+            if (wide) ...[
+              const SizedBox(width: 4),
               Text(l.dailyTitle,
                   style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.w800)),
+            ],
             const Spacer(),
             IconButton(
                 onPressed: () => _changeDay(-1),
                 tooltip: l.prevDay,
+                visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.chevron_left_rounded)),
             Text(
                 DateFormat(wide ? 'EEEE, MMM d' : 'EEE, MMM d', loc)
@@ -963,23 +974,61 @@ class _DailyScreenState extends State<DailyScreen> {
             IconButton(
                 onPressed: () => _changeDay(1),
                 tooltip: l.nextDay,
+                visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.chevron_right_rounded)),
             const Spacer(),
           ],
         ),
         actions: [
-          TextButton.icon(
-            key: _tourAbsenceKey,
-            onPressed: _openAbsenceDialog,
-            icon: const Icon(Icons.flight_takeoff_rounded,
-                size: 17, color: AppColors.textSecondary),
-            label: Text(wide ? l.timeOffLong : l.timeOffShort,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary)),
-          ),
-          const SizedBox(width: 8),
+          if (!wide) ...[
+            IconButton(
+              onPressed: () => showHelpSheet(context),
+              tooltip: l.helpTooltip,
+              icon: const Icon(Icons.help_outline_rounded,
+                  size: 22, color: AppColors.textSecondary),
+            ),
+            if (app.hasFamilies)
+              CoinBalancePill(
+                alias: alias,
+                balance: balance,
+                onTap: widget.onOpenWallet,
+              ),
+            PopupMenuButton<String>(
+              key: _tourAbsenceKey,
+              tooltip: l.timeOffLong,
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (v) {
+                if (v == 'time_off') _openAbsenceDialog();
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'time_off',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.flight_takeoff_rounded,
+                          size: 20, color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(l.timeOffLong),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 4),
+          ] else ...[
+            TextButton.icon(
+              key: _tourAbsenceKey,
+              onPressed: _openAbsenceDialog,
+              icon: const Icon(Icons.flight_takeoff_rounded,
+                  size: 17, color: AppColors.textSecondary),
+              label: Text(wide ? l.timeOffLong : l.timeOffShort,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary)),
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       floatingActionButton: wide

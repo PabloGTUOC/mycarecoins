@@ -61,12 +61,25 @@ class _ShellState extends State<Shell> {
     super.dispose();
   }
 
+  int _profileTab = 0;
+
+  void _openWallet() {
+    setState(() {
+      _profileTab = 2;
+      _index = 4;
+      _visited.add(4);
+    });
+  }
+
   /// Navigate to a tab, marking it visited so it gets built.
   void _go(int i) => setState(() {
         _index = i;
         _visited.add(i);
         if (i == 0) {
           _needsAttention = false;
+        }
+        if (i == 4) {
+          _profileTab = 0;
         }
       });
 
@@ -131,7 +144,13 @@ class _ShellState extends State<Shell> {
 
     // Trigger the welcome check once the user actually has a family (the
     // onboarding wizard runs before this for brand-new users).
-    final hasFamilies = context.watch<AppState>().hasFamilies;
+    final app = context.watch<AppState>();
+    final hasFamilies = app.hasFamilies;
+    final family = app.family;
+    final alias =
+        (family?['alias'] ?? app.profile?['display_name'] ?? 'C').toString();
+    final balance = family?['coin_balance']?.toString() ?? '0';
+
     if (hasFamilies && !_welcomeChecked) {
       _welcomeChecked = true;
       WidgetsBinding.instance
@@ -146,6 +165,7 @@ class _ShellState extends State<Shell> {
         date: _dailyDate,
         isTab: true,
         active: _index == 0,
+        onOpenWallet: _openWallet,
         onNeedsYouChanged: (hasItems) {
           if (_hasNeedsYou != hasItems) {
             setState(() {
@@ -169,20 +189,46 @@ class _ShellState extends State<Shell> {
       ),
       ActivitiesScreen(active: _index == 2),
       MarketplaceScreen(active: _index == 3),
-      ProfileScreen(active: _index == 4),
+      ProfileScreen(active: _index == 4, initialTab: _profileTab),
     ];
+
+    final showDot = _hasNeedsYou && _needsAttention;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
+      appBar: wide || _index == 0
+          ? null
+          : AppBar(
+              title: Text(tabs[_index].label),
+              actions: [
+                IconButton(
+                  onPressed: () => showHelpSheet(context),
+                  tooltip: l.helpTooltip,
+                  icon: const Icon(Icons.help_outline_rounded,
+                      size: 22, color: AppColors.textSecondary),
+                ),
+                if (hasFamilies) ...[
+                  CoinBalancePill(
+                    alias: alias,
+                    balance: balance,
+                    onTap: _openWallet,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
       body: SafeArea(
         bottom: false,
+        top: wide,
         child: Column(
           children: [
-            _PillHeader(
-              wide: wide,
-              index: _index,
-              onNavigate: _go,
-            ),
+            if (wide)
+              _PillHeader(
+                wide: wide,
+                index: _index,
+                onNavigate: _go,
+                onOpenWallet: _openWallet,
+              ),
             Expanded(
               child: Center(
                 child: ConstrainedBox(
@@ -193,7 +239,8 @@ class _ShellState extends State<Shell> {
                       for (var i = 0; i < screens.length; i++)
                         if (_visited.contains(i))
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: (i == 0 && !wide) ? 0 : 16),
                             child: screens[i],
                           )
                         else
@@ -208,86 +255,44 @@ class _ShellState extends State<Shell> {
       ),
       bottomNavigationBar: wide
           ? null
-          : Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
-              ),
-              child: SafeArea(
-                top: false,
-                // Fixed height: a tab's Column fills it, so the whole bar
-                // is tappable. 12 pt labels fit with room up to the 1.3x
-                // text-scale clamp in main.dart.
-                child: SizedBox(
-                  height: 60,
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < tabs.length; i++) ...[
-                        () {
-                          final showDot =
-                              i == 0 && _hasNeedsYou && _needsAttention;
-                          final semanticsLabel = showDot
-                              ? '${tabs[i].label}${l.tabNeedsAttention}'
-                              : tabs[i].label;
-                          return Expanded(
-                            child: Semantics(
-                              button: true,
-                              selected: i == _index,
-                              label: semanticsLabel,
-                              child: InkWell(
-                                onTap: () => _go(i),
-                                child: ExcludeSemantics(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          Icon(tabs[i].icon,
-                                              size: 22,
-                                              color: i == _index
-                                                  ? AppColors.primary
-                                                  : AppColors.textSecondary),
-                                          if (showDot)
-                                            Positioned(
-                                              top: -1,
-                                              right: -3,
-                                              child: Container(
-                                                key: const Key(
-                                                    'today_tab_dot'),
-                                                width: 7,
-                                                height: 7,
-                                                decoration:
-                                                    const BoxDecoration(
-                                                  color: AppColors.primary,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(tabs[i].label,
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                              color: i == _index
-                                                  ? AppColors.primary
-                                                  : AppColors.textSecondary)),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }(),
-                      ],
-                    ],
-                  ),
+          : NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _go,
+              destinations: [
+                NavigationDestination(
+                  icon: showDot
+                      ? Semantics(
+                          label: l.tabNeedsAttention,
+                          // No label: Material draws the small dot (D2, never
+                          // a count). isLabelVisible: false would hide it.
+                          child: const Badge(
+                            key: Key('today_tab_dot'),
+                            child: Icon(Icons.today_rounded),
+                          ),
+                        )
+                      : const Icon(Icons.today_rounded),
+                  label: tabs[0].label,
+                  tooltip: showDot
+                      ? '${tabs[0].label}${l.tabNeedsAttention}'
+                      : tabs[0].label,
                 ),
-              ),
+                NavigationDestination(
+                  icon: const Icon(Icons.home_rounded),
+                  label: tabs[1].label,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.checklist_rounded),
+                  label: tabs[2].label,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.shopping_bag_rounded),
+                  label: tabs[3].label,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.person_rounded),
+                  label: tabs[4].label,
+                ),
+              ],
             ),
     );
   }
@@ -297,9 +302,13 @@ class _PillHeader extends StatelessWidget {
   final bool wide;
   final int index;
   final ValueChanged<int> onNavigate;
+  final VoidCallback onOpenWallet;
 
   const _PillHeader(
-      {required this.wide, required this.index, required this.onNavigate});
+      {required this.wide,
+      required this.index,
+      required this.onNavigate,
+      required this.onOpenWallet});
 
   @override
   Widget build(BuildContext context) {
@@ -392,36 +401,10 @@ class _PillHeader extends StatelessWidget {
           const SizedBox(width: 2),
           // Coin counter
           if (app.hasFamilies)
-            InkWell(
-              onTap: () => onNavigate(4),
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                decoration: BoxDecoration(
-                  color: AppColors.warningSoft,
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                ),
-                child: Row(
-                  children: [
-                    AvatarCircle(
-                        name: alias,
-                        size: 24,
-                        background: AppColors.warning,
-                        foreground: Colors.white),
-                    const SizedBox(width: 8),
-                    Text(balance,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.warningInk)),
-                    const SizedBox(width: 3),
-                    const Text('cc',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.warningInk)),
-                  ],
-                ),
-              ),
+            CoinBalancePill(
+              alias: alias,
+              balance: balance,
+              onTap: onOpenWallet,
             ),
           if (wide) ...[
             const SizedBox(width: 10),

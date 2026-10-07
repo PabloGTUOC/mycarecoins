@@ -99,20 +99,25 @@ void main() {
       await tester.pumpWidget(_wrap(const Shell(), app));
       await tester.pumpAndSettle();
 
+      Finder tabFinder(String label) => find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.bySemanticsLabel(RegExp('^$label')),
+          );
+
       // Today tab is selected initially
-      final todaySemantics = tester.getSemantics(find.bySemanticsLabel('Today'));
+      final todaySemantics = tester.getSemantics(tabFinder('Today'));
       expect(todaySemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
 
-      final familySemantics = tester.getSemantics(find.bySemanticsLabel('Family'));
+      final familySemantics = tester.getSemantics(tabFinder('Family'));
       expect(familySemantics.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final tasksSemantics = tester.getSemantics(find.bySemanticsLabel('Tasks'));
+      final tasksSemantics = tester.getSemantics(tabFinder('Tasks'));
       expect(tasksSemantics.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final rewardsSemantics = tester.getSemantics(find.bySemanticsLabel('Rewards'));
+      final rewardsSemantics = tester.getSemantics(tabFinder('Rewards'));
       expect(rewardsSemantics.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
-      final meSemantics = tester.getSemantics(find.bySemanticsLabel('Me'));
+      final meSemantics = tester.getSemantics(tabFinder('Me'));
       expect(meSemantics.flagsCollection.isSelected, isNot(ui.Tristate.isTrue));
 
       // DailyScreen is visible as the initial screen (shows Time Off action in AppBar)
@@ -259,12 +264,14 @@ void main() {
       await tester.pumpWidget(_wrap(const Shell(initialIndex: 1), app));
       await tester.pumpAndSettle();
 
-      // Dot appears on Today tab (no number, just a dot)
-      expect(find.byKey(const Key('today_tab_dot')), findsOneWidget);
+      // Dot appears on Today tab (Badge)
+      expect(find.byType(Badge), findsOneWidget);
 
       // Semantics label gains ", needs your attention"
-      final todaySemanticsBefore =
-          tester.getSemantics(find.bySemanticsLabel('Today, needs your attention'));
+      final todaySemanticsBefore = tester.getSemantics(find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.bySemanticsLabel(RegExp('needs your attention')),
+      ));
       expect(todaySemanticsBefore.label, contains('needs your attention'));
 
       // Tap Today tab to view Today
@@ -272,12 +279,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Dot is cleared when Today is viewed
-      expect(find.byKey(const Key('today_tab_dot')), findsNothing);
+      expect(find.byType(Badge), findsNothing);
 
       // Semantics label no longer contains ", needs your attention"
-      final todaySemanticsAfter =
-          tester.getSemantics(find.bySemanticsLabel('Today'));
-      expect(todaySemanticsAfter.label, 'Today');
+      final todaySemanticsAfter = tester.getSemantics(find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.bySemanticsLabel(RegExp('^Today')),
+      ));
+      expect(todaySemanticsAfter.label, isNot(contains('needs your attention')));
       expect(todaySemanticsAfter.flagsCollection.isSelected, ui.Tristate.isTrue);
     });
   });
@@ -309,7 +318,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Switches to Today tab (tab 0 selected)
-      final todaySemantics = tester.getSemantics(find.bySemanticsLabel('Today'));
+      final todaySemantics = tester.getSemantics(find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.bySemanticsLabel(RegExp('^Today')),
+      ));
       expect(todaySemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
     });
   });
