@@ -11,7 +11,7 @@
 
 > **Status (2026-10-08, evening):** P2-1 through P2-10 done on branch `mobile-ux-phase1`
 > (worktree `../mycarecoins-phase1`), not merged. Second critique 29/40 (was 22). P2-11, the
-> critique's P1, is ticketed and waiting on Antigravity's quota. Phase 3 is proposed in
+> critique's P1, is done. Phase 3 is proposed in
 > `docs/mobile-ux-phase3-brief.md`. See **Handoff** at the end.
 
 Decisions this brief rests on (Today redesign confirmed 2026-10-07): tabs **Today · Family · Tasks · Rewards · Me** (D1);
@@ -189,10 +189,10 @@ Backend changes are Claude's.
 reschedule endpoint `0bd64fe`; P2-2 `1f64a44`; P2-3a `48fe2d9`; P2-3b `4652281`; coverage/self
 bounty refusal `62d46ac`; P2-7 `7720a9d`; P2-8 `56f974b`; docs `4b1f2d1`, `1b14f14`;
 P2-9 `1fc8c64`; P2-10 `c417c05`; P2-4 `f7a79b1`; P2-5 `71f1237` (also fixes the P2-1 Stats
-route with no Scaffold); P2-6 `c5376b8`. Backend 223 tests, Flutter 183 tests, all passing.
+route with no Scaffold); P2-6 `c5376b8`; docs `40e5c8e`; P2-11 (see git log). Backend 223 tests, Flutter 192 tests,
+all passing. When Antigravity's model hits its quota, switch with `/model` (per-model limit).
 
-**Next, in order:** P2-11 (sent once; Antigravity hit its quota before editing, resend the
-pointer) → user's device checklist `docs/mobile-ux-phase2-test-checklist.md` → user answers
+**Next, in order:** user's device checklist `docs/mobile-ux-phase2-test-checklist.md` → user answers
 the two open questions in `docs/mobile-ux-phase3-brief.md` and approves Phase 3 → ask the
 user before merging into `main`, pushing or deploying.
 
