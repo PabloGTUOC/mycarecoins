@@ -30,6 +30,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
   String _inviteLink = '';
   bool _generatingLink = false;
   bool _linkCopied = false;
+  bool _editing = false;
 
   Map<String, (String, Color)> _badges(AppLocalizations l) => {
         'child': (l.badgeJuniorExplorer, const Color(0xFF6366F1)),
@@ -295,9 +296,18 @@ class _FamilyCircleState extends State<FamilyCircle> {
     final app = context.watch<AppState>();
     final l = AppLocalizations.of(context);
     final badges = _badges(l);
+    final hasDependents = app.actors.isNotEmpty;
+    final canEdit = app.isCaregiver && hasDependents;
+    final isEditing = _editing && canEdit;
 
     return VCard(
       title: l.familyCircleTitle,
+      action: canEdit
+          ? TextButton(
+              onPressed: () => setState(() => _editing = !_editing),
+              child: Text(isEditing ? l.actionDone : l.actionEdit),
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -314,7 +324,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
                         item['type'].toString().replaceAll('_', ' '),
                         const Color(0xFF94A3B8)
                       ),
-                  onRemove: item['isActor'] == true && app.isCaregiver
+                  onRemove: item['isActor'] == true && app.isCaregiver && isEditing
                       ? () => _removeActor(item['id'], item['name'].toString())
                       : null,
                   onAvatarTap: item['isActor'] == true && app.isCaregiver

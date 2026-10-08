@@ -529,17 +529,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      color: a['type'] == 'care'
-                          ? AppColors.successSoft
-                          : AppColors.warningSoft,
-                      shape: BoxShape.circle),
-                  child: Text(a['type'] == 'care' ? '❤️' : '🍽️',
-                      style: const TextStyle(fontSize: 17)),
+                ActivityTypeIcon(
+                  type: a['type']?.toString(),
+                  category: a['category']?.toString(),
+                  size: 38,
+                  iconSize: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -557,13 +551,20 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800)),
                           ),
-                          if (a['status'] == 'approved') ...[
+                          if (a['status'] == 'pending') ...[
                             const SizedBox(width: 6),
                             PillBadge(
-                                text: l.badgeApproved,
+                                text: l.badgePending,
                                 fontSize: 12,
-                                color: Colors.white,
-                                background: AppColors.success),
+                                color: AppColors.warningInk,
+                                background: AppColors.warningSoft),
+                          ] else if (a['status'] == 'rejected') ...[
+                            const SizedBox(width: 6),
+                            PillBadge(
+                                text: l.badgeRejected,
+                                fontSize: 12,
+                                color: AppColors.dangerInk,
+                                background: AppColors.dangerSoft),
                           ],
                         ],
                       ),
@@ -582,11 +583,28 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                         onPressed: () => _approve(a['id']),
                         child: Text(l.approve)),
                   ),
-                IconButton(
-                  onPressed: () => _delete(a['id']),
-                  tooltip: l.deleteAction,
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      size: 20, color: AppColors.danger),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded,
+                      size: 20, color: AppColors.textSecondary),
+                  onSelected: (val) {
+                    if (val == 'delete') {
+                      _delete(a['id']);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline_rounded,
+                              size: 18, color: AppColors.danger),
+                          const SizedBox(width: 8),
+                          Text(l.deleteAction,
+                              style: const TextStyle(color: AppColors.danger)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -614,42 +632,32 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       );
     }
     final monthly = toNum(b['monthlyBudget']);
-    final remaining = toNum(b['remainingBudget']);
     final used = toNum(b['usedThisMonth']);
     final rate = toNum(b['baseRatePerHour']);
     final fraction =
-        monthly > 0 ? (remaining / monthly).clamp(0.0, 1.0) : 0.0;
+        monthly > 0 ? (used / monthly).clamp(0.0, 1.0) : 0.0;
 
     return VCard(
       title: l.budgetTitle,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.remainingThisMonth,
-              style: const TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: 220,
-            height: 130,
-            child: CustomPaint(
-              painter: _GaugePainter(fraction: fraction.toDouble()),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: '$remaining'),
-                    const TextSpan(
-                        text: ' cc',
-                        style: TextStyle(
-                            fontSize: 18, color: AppColors.primary)),
-                  ]),
-                  style: const TextStyle(
-                      fontSize: 40, fontWeight: FontWeight.w800, height: 1),
-                ),
-              ),
+          Text(
+            l.budgetScheduledProgress('$used', '$monthly'),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            child: LinearProgressIndicator(
+              value: fraction.toDouble(),
+              minHeight: 10,
+              backgroundColor: AppColors.bg,
+              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
             ),
           ),
           const SizedBox(height: 24),
@@ -688,37 +696,4 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       ),
     );
   }
-}
-
-/// Semicircular budget gauge.
-class _GaugePainter extends CustomPainter {
-  final double fraction;
-
-  _GaugePainter({required this.fraction});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height - 10);
-    final radius = math.min(size.width / 2 - 14, size.height - 24);
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 14
-      ..strokeCap = StrokeCap.round
-      ..color = AppColors.border;
-    canvas.drawArc(rect, math.pi, math.pi, false, track);
-
-    if (fraction > 0) {
-      final arc = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 14
-        ..strokeCap = StrokeCap.round
-        ..color = AppColors.primary;
-      canvas.drawArc(rect, math.pi, math.pi * fraction, false, arc);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GaugePainter old) => old.fraction != fraction;
 }

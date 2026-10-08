@@ -961,9 +961,23 @@ class _DailyScreenState extends State<DailyScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.lg)),
-        title: Text(
-            '${personalTimeTypeGlyph(r['type']?.toString() ?? '')} ${r['title']}',
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Row(
+          children: [
+            ActivityTypeIcon(
+              type: r['type']?.toString(),
+              category: 'self',
+              size: 28,
+              iconSize: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                (r['title'] ?? '').toString(),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2106,18 +2120,6 @@ class _ActivityAction extends StatelessWidget {
   }
 }
 
-/// Timeline glyph for an activity, by subclass and type. Coverage is care work
-/// but reads differently — it is time held for someone else — so it gets its
-/// own mark rather than sharing the care heart.
-String _activityEmoji(Map<String, dynamic> item) {
-  if (isSelfActivity(item)) return '🧘';
-  return switch (item['type']) {
-    'coverage' => '🏠',
-    'care' => '❤️',
-    _ => '🍽️',
-  };
-}
-
 String _activityTypeName(AppLocalizations l, Map<String, dynamic> item) {
   if (isSelfActivity(item)) {
     return personalTimeTypeLabel(l, item['type']?.toString() ?? '');
@@ -2308,17 +2310,11 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-                color: cat == 'care'
-                    ? AppColors.successSoft
-                    : AppColors.warningSoft,
-                shape: BoxShape.circle),
-            child: Text(cat == 'care' ? '❤️' : '🧹',
-                style: const TextStyle(fontSize: 15)),
+          ActivityTypeIcon(
+            type: t['type']?.toString() ?? cat,
+            category: t['category']?.toString(),
+            size: 34,
+            iconSize: 18,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2439,7 +2435,7 @@ class _TaskSheetState extends State<_TaskSheet> {
                         ),
                         child: Row(
                           children: [
-                            const Text('🧘', style: TextStyle(fontSize: 18)),
+                            const ActivityTypeIcon(type: 'rest', category: 'self', size: 28, iconSize: 16),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -2477,8 +2473,12 @@ class _TaskSheetState extends State<_TaskSheet> {
                       ListTile(
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadii.md)),
-                        leading: Text(t['type'] == 'care' ? '❤️' : '🍽️',
-                            style: const TextStyle(fontSize: 20)),
+                        leading: ActivityTypeIcon(
+                          type: t['type']?.toString(),
+                          category: t['category']?.toString(),
+                          size: 32,
+                          iconSize: 18,
+                        ),
                         title: Text(displayTitle(AppLocalizations.of(context), t),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
@@ -2563,7 +2563,6 @@ class _TaskTrayState extends State<_TaskTray> {
 
   Widget _buildTrayChip(Map<String, dynamic> t, AppLocalizations l) {
     final title = displayTitle(l, t);
-    final isCare = t['type'] == 'care';
     final coins = toNum(t['coin_value']).toInt();
 
     final chipWidget = Container(
@@ -2576,7 +2575,12 @@ class _TaskTrayState extends State<_TaskTray> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(isCare ? '❤️' : '🍽️', style: const TextStyle(fontSize: 13)),
+          ActivityTypeIcon(
+            type: t['type']?.toString(),
+            category: t['category']?.toString(),
+            size: 20,
+            iconSize: 12,
+          ),
           const SizedBox(width: 6),
           Text(
             title,
@@ -2651,15 +2655,11 @@ class _TaskTrayState extends State<_TaskTray> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isCare ? AppColors.successSoft : AppColors.warningSoft,
-              shape: BoxShape.circle,
-            ),
-            child: Text(isCare ? '❤️' : '🍽️', style: const TextStyle(fontSize: 16)),
+          ActivityTypeIcon(
+            type: t['type']?.toString(),
+            category: t['category']?.toString(),
+            size: 34,
+            iconSize: 18,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -2887,8 +2887,11 @@ class _TaskTrayState extends State<_TaskTray> {
                               ),
                               child: Row(
                                 children: [
-                                  const Text('🧘',
-                                      style: TextStyle(fontSize: 18)),
+                                  const ActivityTypeIcon(
+                                      type: 'rest',
+                                      category: 'self',
+                                      size: 28,
+                                      iconSize: 16),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
@@ -3831,7 +3834,12 @@ class _DayHourGridState extends State<_DayHourGrid> {
               ),
               child: Row(
                 children: [
-                  Text(glyph, style: const TextStyle(fontSize: 15)),
+                  ActivityTypeIcon(
+                    type: req['type']?.toString(),
+                    category: 'self',
+                    size: 24,
+                    iconSize: 14,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -4102,9 +4110,11 @@ class DayActivityBlock extends StatelessWidget {
             children: [
               if (showEmoji) ...[
                 ExcludeSemantics(
-                  child: Text(
-                    _activityEmoji(a),
-                    style: const TextStyle(fontSize: 14),
+                  child: ActivityTypeIcon(
+                    type: a['type']?.toString(),
+                    category: a['category']?.toString(),
+                    size: 18,
+                    iconSize: 11,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -4576,7 +4586,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                     ),
                     child: Row(
                       children: [
-                        const Text('🧘', style: TextStyle(fontSize: 18)),
+                        const ActivityTypeIcon(type: 'rest', category: 'self', size: 28, iconSize: 16),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -4614,18 +4624,11 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                           padding: const EdgeInsets.all(12),
                           child: Row(
                             children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: isCare
-                                      ? AppColors.successSoft
-                                      : AppColors.warningSoft,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(isCare ? '❤️' : '🍽️',
-                                    style: const TextStyle(fontSize: 16)),
+                              ActivityTypeIcon(
+                                type: t['type']?.toString(),
+                                category: t['category']?.toString(),
+                                size: 34,
+                                iconSize: 18,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -4731,7 +4734,6 @@ class _ActivityDetailsSheet extends StatelessWidget {
     final title = rawTitle.isNotEmpty
         ? rawTitle
         : (isSelf ? l.personalTimeEntry : '');
-    final emoji = _activityEmoji(a);
 
     final start = DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
     final durMin = toNum(a['duration_minutes']).toInt();
@@ -4765,11 +4767,16 @@ class _ActivityDetailsSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Title & Emoji
+              // Title & Type icon
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(emoji, style: const TextStyle(fontSize: 22)),
+                  ActivityTypeIcon(
+                    type: a['type']?.toString(),
+                    category: a['category']?.toString(),
+                    size: 36,
+                    iconSize: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

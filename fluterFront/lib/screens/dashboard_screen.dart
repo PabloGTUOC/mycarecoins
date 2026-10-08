@@ -10,7 +10,6 @@ import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
 import '../utils/json.dart';
 import '../widgets/absence_dialog.dart';
-import '../widgets/personal_time_dialog.dart';
 import '../widgets/activation_checklist.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
@@ -755,14 +754,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                            color: AppColors.bg, shape: BoxShape.circle),
-                        child: Text(offer['type'] == 'care' ? '❤️' : '🍽️',
-                            style: const TextStyle(fontSize: 18)),
+                      ActivityTypeIcon(
+                        type: offer['type']?.toString(),
+                        category: offer['category']?.toString(),
+                        size: 40,
+                        iconSize: 20,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1526,8 +1522,12 @@ class _CoverRequestCardState extends State<_CoverRequestCard> {
         children: [
           Row(
             children: [
-              Text(personalTimeTypeGlyph(r['type']?.toString() ?? ''),
-                  style: const TextStyle(fontSize: 20)),
+              ActivityTypeIcon(
+                type: r['type']?.toString(),
+                category: 'self',
+                size: 32,
+                iconSize: 18,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

@@ -69,6 +69,9 @@ void main() {
     // FAQ answers expand on tap.
     final question = find.text('Where do coins come from?');
     await tester.scrollUntilVisible(question, 200);
+    // Bring it clear of the sheet's bottom edge before tapping.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -150));
+    await tester.pumpAndSettle();
     await tester.tap(question);
     await tester.pumpAndSettle();
     expect(find.textContaining('monthly budget'), findsWidgets);

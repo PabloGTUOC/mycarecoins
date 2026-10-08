@@ -286,8 +286,13 @@ class _PersonalTimeSheetState extends State<_PersonalTimeSheet> {
                   ChoiceChip(
                     selected: _type == t,
                     onSelected: (_) => setState(() => _type = t),
-                    label: Text(
-                        '${personalTimeTypeGlyph(t)} ${personalTimeTypeLabel(l, t)}'),
+                    avatar: ActivityTypeIcon(
+                      type: t,
+                      category: 'self',
+                      size: 20,
+                      iconSize: 13,
+                    ),
+                    label: Text(personalTimeTypeLabel(l, t)),
                     labelStyle: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: _type == t

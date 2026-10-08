@@ -121,6 +121,14 @@
   "@actionUndo": {
     "description": "Undo action label in the SnackBar"
   },
+  "actionEdit": "Edit",
+  "@actionEdit": {
+    "description": "Text button to enter edit mode in a section"
+  },
+  "actionDone": "Done",
+  "@actionDone": {
+    "description": "Text button to exit edit mode in a section"
+  },
   "dayHasPassed": "This day has passed",
   "@dayHasPassed": {
     "description": "Message shown when tapping a task chip on a past day"
@@ -987,6 +995,8 @@
   "@filterEmptyBody": { "description": "Catalogue filtered-empty body" },
   "badgeApproved": "approved",
   "@badgeApproved": { "description": "Badge on approved templates (lowercase)" },
+  "badgeRejected": "rejected",
+  "@badgeRejected": { "description": "Badge on rejected templates (lowercase)" },
   "newActivityBtn": "+ New Activity",
   "@newActivityBtn": { "description": "Shortcut button below the catalogue" },
   "newActivityIntro": "Define a reusable activity template. Once approved, it can be scheduled from the Daily view any number of times.",
@@ -1017,8 +1027,16 @@
   "@remainingThisMonth": { "description": "Gauge caption (uppercase)" },
   "totalMonthlyPool": "Total Monthly Pool",
   "@totalMonthlyPool": { "description": "Budget row label" },
-  "scheduledUsed": "Scheduled/Used",
+  "scheduledUsed": "Scheduled or used",
   "@scheduledUsed": { "description": "Budget row label" },
+  "budgetScheduledProgress": "{used} of {pool} cc scheduled this month",
+  "@budgetScheduledProgress": {
+    "description": "Budget progress indicator label",
+    "placeholders": {
+      "used": {},
+      "pool": {}
+    }
+  },
   "estimatedRate": "Estimated Rate",
   "@estimatedRate": { "description": "Budget row label" },
   "ratePerHour": "~{rate} cc / hr",
@@ -1617,7 +1635,7 @@
   "@glossCoinDef": { "description": "Glossary definition" },
   "glossBudgetTerm": "Monthly budget",
   "@glossBudgetTerm": { "description": "Glossary term" },
-  "glossBudgetDef": "Each month the family pool (1,000 cc by default) is allocated. Task coin values draw from it. The Budget gauge in Activities shows what's left.",
+  "glossBudgetDef": "Each month the family pool (1,000 cc by default) is allocated. Task coin values draw from it. The Budget bar in Activities shows how much of it is already scheduled.",
   "@glossBudgetDef": { "description": "Glossary definition" },
   "glossTemplateTerm": "Template vs. scheduled task",
   "@glossTemplateTerm": { "description": "Glossary term" },

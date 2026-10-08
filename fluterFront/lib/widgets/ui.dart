@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 class VCard extends StatelessWidget {
   final String? title;
   final String? subtitle;
+  final Widget? action;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
@@ -18,6 +19,7 @@ class VCard extends StatelessWidget {
     super.key,
     this.title,
     this.subtitle,
+    this.action,
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.margin = const EdgeInsets.only(bottom: 24),
@@ -33,14 +35,21 @@ class VCard extends StatelessWidget {
           if (title != null)
             Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, subtitle != null ? 4 : 8),
-              child: Text(
-                title!,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: AppColors.textPrimary,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title!,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  if (action != null) action!,
+                ],
               ),
             ),
           if (subtitle != null)
@@ -58,6 +67,84 @@ class VCard extends StatelessWidget {
           Padding(padding: padding, child: child),
         ],
       ),
+    );
+  }
+}
+
+/// ── Activity structural icons ─────────────────────────────────────
+
+/// Material Rounded icon for an activity by its subclass and type.
+IconData activityTypeIcon(String? type, {String? category}) {
+  if (category == 'self') {
+    return personalTimeTypeIcon(type);
+  }
+  return switch (type) {
+    'care' => Icons.favorite_rounded,
+    'household' => Icons.restaurant_rounded,
+    'coverage' => Icons.home_rounded,
+    'sport' => Icons.fitness_center_rounded,
+    'social' => Icons.groups_rounded,
+    'rest' => Icons.self_improvement_rounded,
+    'appointment' => Icons.event_rounded,
+    'other' => Icons.auto_awesome_rounded,
+    _ => Icons.restaurant_rounded,
+  };
+}
+
+/// Material Rounded icon for a personal-time activity type.
+IconData personalTimeTypeIcon(String? type) => switch (type) {
+      'sport' => Icons.fitness_center_rounded,
+      'social' => Icons.groups_rounded,
+      'rest' => Icons.self_improvement_rounded,
+      'appointment' => Icons.event_rounded,
+      _ => Icons.auto_awesome_rounded,
+    };
+
+/// Tinted background and foreground colors for an activity icon.
+(Color bg, Color fg) activityTypeColors(String? type, {String? category}) {
+  if (category == 'self' ||
+      type == 'sport' ||
+      type == 'social' ||
+      type == 'rest' ||
+      type == 'appointment' ||
+      type == 'other') {
+    return (AppColors.primarySoft, AppColors.primaryInk);
+  }
+  return switch (type) {
+    'care' => (AppColors.successSoft, AppColors.successInk),
+    'coverage' => (AppColors.primarySoft, AppColors.primaryInk),
+    _ => (AppColors.warningSoft, AppColors.warningInk), // household
+  };
+}
+
+/// Structural activity icon rendered inside a tinted circle.
+class ActivityTypeIcon extends StatelessWidget {
+  final String? type;
+  final String? category;
+  final double size;
+  final double iconSize;
+
+  const ActivityTypeIcon({
+    super.key,
+    this.type,
+    this.category,
+    this.size = 34,
+    this.iconSize = 18,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = activityTypeColors(type, category: category);
+    final icon = activityTypeIcon(type, category: category);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: iconSize, color: fg),
     );
   }
 }
