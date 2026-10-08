@@ -6,6 +6,29 @@ import '../theme/app_theme.dart';
 /// Minimal chart widgets for the Stats screen.
 /// Kept dependency-free: a smooth area line chart and a stacked bar chart.
 
+/// Left edge for an x-axis label of [labelWidth] centred on [x], kept inside
+/// a chart [chartWidth] wide so the first and last labels are not clipped.
+@visibleForTesting
+double xLabelLeft(double x, double labelWidth, double chartWidth) {
+  final maxLeft = chartWidth - labelWidth;
+  if (maxLeft <= 0) return 0;
+  return (x - labelWidth / 2).clamp(0.0, maxLeft);
+}
+
+void _paintXLabel(
+    Canvas canvas, String s, double x, double y, double chartWidth) {
+  final tp = TextPainter(
+    text: TextSpan(
+        text: s,
+        style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  tp.paint(canvas, Offset(xLabelLeft(x, tp.width, chartWidth), y));
+}
+
 class LineAreaChart extends StatelessWidget {
   final List<String> labels;
   final List<double> values;
@@ -101,8 +124,7 @@ class _LinePainter extends CustomPainter {
     // x labels (skip to avoid crowding)
     final step = (labels.length / 5).ceil().clamp(1, 100);
     for (var i = 0; i < labels.length; i += step) {
-      _text(canvas, labels[i], Offset(pt(i).dx - 16, plot.bottom + 6), 12,
-          AppColors.textSecondary);
+      _paintXLabel(canvas, labels[i], pt(i).dx, plot.bottom + 6, size.width);
     }
   }
 
@@ -245,8 +267,7 @@ class _MultiLinePainter extends CustomPainter {
       final x = labels.length == 1
           ? plot.center.dx
           : plot.left + plot.width * i / (labels.length - 1);
-      _text(canvas, labels[i], Offset(x - 16, plot.bottom + 6), 12,
-          AppColors.textSecondary);
+      _paintXLabel(canvas, labels[i], x, plot.bottom + 6, size.width);
     }
   }
 
@@ -499,8 +520,7 @@ class _StackedBarPainter extends CustomPainter {
       }
       final step = (labels.length / 5).ceil().clamp(1, 100);
       if (i % step == 0) {
-        _text(canvas, labels[i], Offset(cx - 18, plot.bottom + 6), 12,
-            AppColors.textSecondary);
+        _paintXLabel(canvas, labels[i], cx, plot.bottom + 6, size.width);
       }
     }
   }
