@@ -59,7 +59,7 @@ void main() {
       expect(l.chartIncomeTrend, 'Coins earned per month');
       expect(l.kpiLifetimeCoins, 'Coins from tasks');
       expect(l.chartFairness, 'Time given and taken');
-      expect(l.compareCaregivers, 'Compare caregivers');
+      expect(l.statsByCaregiver, 'By caregiver');
     });
 
     test('Spanish titles', () {
@@ -68,7 +68,7 @@ void main() {
       expect(l.chartIncomeTrend, 'Monedas ganadas al mes');
       expect(l.kpiLifetimeCoins, 'Monedas de tareas');
       expect(l.chartFairness, 'Tiempo dado y tomado');
-      expect(l.compareCaregivers, 'Comparar cuidadores');
+      expect(l.statsByCaregiver, 'Por cuidador');
     });
 
     test('French titles', () {
@@ -77,7 +77,7 @@ void main() {
       expect(l.chartIncomeTrend, 'Pièces gagnées par mois');
       expect(l.kpiLifetimeCoins, 'Pièces issues des tâches');
       expect(l.chartFairness, 'Temps donné et pris');
-      expect(l.compareCaregivers, 'Comparer les aidants');
+      expect(l.statsByCaregiver, 'Par aidant');
     });
 
     test('German titles', () {
@@ -86,7 +86,7 @@ void main() {
       expect(l.chartIncomeTrend, 'Verdiente Münzen pro Monat');
       expect(l.kpiLifetimeCoins, 'Münzen aus Aufgaben');
       expect(l.chartFairness, 'Gegebene und genommene Zeit');
-      expect(l.compareCaregivers, 'Betreuende vergleichen');
+      expect(l.statsByCaregiver, 'Nach Betreuenden');
     });
   });
 
@@ -176,8 +176,8 @@ void main() {
       // Trend chart title has new name
       expect(find.text('Coins earned per month'), findsOneWidget);
 
-      // Compare toggle has sentence case
-      expect(find.text('Compare caregivers'), findsOneWidget);
+      // Compare chips have sentence case and are present on the charts
+      expect(find.text('By caregiver'), findsWidgets);
     });
 
     testWidgets('Pushed from Family, Stats has its own Scaffold and back button',
@@ -188,8 +188,7 @@ void main() {
         ]
         ..profile = {'id': 1, 'display_name': 'Pablo'};
 
-      // No Scaffold around the pusher: the route must bring its own (the
-      // compare Switch needs Material, and the page needs a way back).
+      // No Scaffold around the pusher: the route must bring its own (and the page needs a way back).
       await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(
         value: app,
         child: MaterialApp(
@@ -209,7 +208,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.byType(Switch), findsNothing);
+      expect(find.descendant(of: find.byType(AppBar), matching: find.text('Family stats')), findsOneWidget);
       expect(find.byType(BackButton), findsOneWidget);
     });
 

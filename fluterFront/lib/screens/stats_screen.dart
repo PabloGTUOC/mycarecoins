@@ -12,10 +12,9 @@ import '../widgets/charts.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 
-/// Stats — ten panels rendered as dependency-free charts: KPI row, income trend (with the
-/// compare-caregivers toggle), category balance, task frequency,
-/// leaderboard, completion rates, bounty stats, coin flow, rewards by
-/// member, top rewards and status distribution.
+/// Stats — ten panels rendered as dependency-free charts: KPI row, income trend,
+/// category balance, task frequency, leaderboard, completion rates, bounty stats,
+/// coin flow, rewards by member, top rewards and status distribution.
 class StatsScreen extends StatefulWidget {
   /// Whether this is the visible tab; becoming active triggers a refetch.
   final bool active;
@@ -29,17 +28,27 @@ class StatsScreen extends StatefulWidget {
 /// Stats as a pushed page (it is reached from Family, not a tab): its own
 /// Scaffold gives it Material and a back button.
 Route<void> statsRoute() => MaterialPageRoute(
-      builder: (_) => Scaffold(
-        appBar: AppBar(),
-        body: const StatsScreen(),
-      ),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(l.statsTitle),
+          ),
+          body: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: StatsScreen(),
+          ),
+        );
+      },
     );
 
 class _StatsScreenState extends State<StatsScreen> {
   Map<String, dynamic>? _stats;
   bool _loading = true;
   bool _error = false;
-  bool _compare = false;
+  bool _compareIncome = false;
+  bool _compareCategory = false;
+  bool _compareTasks = false;
   int _tab = 0; // mobile: 0 overview, 1 members, 2 economy
 
   static const _caregiverColors = [
@@ -78,18 +87,20 @@ class _StatsScreenState extends State<StatsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !widget.active || _loading) return;
       final l = AppLocalizations.of(context);
-      maybeShowTour(context, 'stats', [
+      final marks = [
         CoachMark(
           targetKey: _tourHeadingKey,
           title: l.tourStatsTitle,
           body: l.tourStatsBody,
         ),
-        CoachMark(
-          targetKey: _tourCompareKey,
-          title: l.tourCompareTitle,
-          body: l.tourCompareBody,
-        ),
-      ]);
+        if (_caregivers.length > 1)
+          CoachMark(
+            targetKey: _tourCompareKey,
+            title: l.tourCompareTitle,
+            body: l.tourCompareBody,
+          ),
+      ];
+      maybeShowTour(context, 'stats', marks);
     });
   }
 
@@ -126,7 +137,26 @@ class _StatsScreenState extends State<StatsScreen> {
           .map((e) => e.toString())
           .toList();
 
-  bool get _comparing => _compare && _caregivers.length > 1;
+  bool get _comparingIncome => _compareIncome && _caregivers.length > 1;
+  bool get _comparingCategory => _compareCategory && _caregivers.length > 1;
+  bool get _comparingTasks => _compareTasks && _caregivers.length > 1;
+
+  Widget? _compareChip({
+    Key? key,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) {
+    if (_caregivers.length <= 1) return null;
+    final l = AppLocalizations.of(context);
+    return FilterChip(
+      key: key,
+      label: Text(l.statsByCaregiver),
+      selected: selected,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onSelected: onSelected,
+    );
+  }
 
   Color _cgColor(int i) => _caregiverColors[i % _caregiverColors.length];
 
@@ -157,35 +187,9 @@ class _StatsScreenState extends State<StatsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(top: 16, bottom: 40),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: PageHeading(
-                    key: _tourHeadingKey,
-                    title: l.statsTitle),
-              ),
-              if (_caregivers.length > 1)
-                Column(
-                  key: _tourCompareKey,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(l.compareCaregivers,
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary)),
-                    ),
-                    Switch(
-                      value: _compare,
-                      activeThumbColor: AppColors.primary,
-                      onChanged: (v) => setState(() => _compare = v),
-                    ),
-                  ],
-                ),
-            ],
+          PageHeading(
+            key: _tourHeadingKey,
+            title: l.statsTitle,
           ),
           const SizedBox(height: 8),
           if (wide) ...[
@@ -382,7 +386,12 @@ class _StatsScreenState extends State<StatsScreen> {
           return VCard(
             title: l.chartIncomeTrend,
             subtitle: l.summaryCoinsPerMonth(monthLabel, maxCoins.toInt()),
-            child: _comparing
+            action: _compareChip(
+              key: _tourCompareKey,
+              selected: _compareIncome,
+              onSelected: (v) => setState(() => _compareIncome = v),
+            ),
+            child: _comparingIncome
                 ? MultiLineChart(
                     labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
                     series: [
@@ -436,7 +445,11 @@ class _StatsScreenState extends State<StatsScreen> {
       VCard(
         title: l.chartCategoryBalance,
         subtitle: l.summaryCategoryBalance(topCat, topPct),
-        child: _comparing
+        action: _compareChip(
+          selected: _compareCategory,
+          onSelected: (v) => setState(() => _compareCategory = v),
+        ),
+        child: _comparingCategory
             ? Column(
                 children: [
                   for (final (label, category) in [
@@ -502,9 +515,13 @@ class _StatsScreenState extends State<StatsScreen> {
         subtitle: topTask.isNotEmpty
             ? l.summaryTaskFrequency(topTask, topCount)
             : null,
+        action: _compareChip(
+          selected: _compareTasks,
+          onSelected: (v) => setState(() => _compareTasks = v),
+        ),
         child: Column(
           children: [
-            if (_comparing)
+            if (_comparingTasks)
               for (final t in top6) ...[
                 Align(
                   alignment: Alignment.centerLeft,
