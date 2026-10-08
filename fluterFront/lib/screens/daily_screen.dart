@@ -135,15 +135,15 @@ class _DailyScreenState extends State<DailyScreen> {
   bool _needsYouExpanded = false;
   bool _loading = true;
   bool _error = false;
+  bool _hasLoadedData = false;
   late DateTime _day;
   bool _draggingScheduled = false;
   final _gridScroll = ScrollController();
   final _trayController = DraggableScrollableController();
   final _gridStateKey = GlobalKey<_DayHourGridState>();
 
-  final _tourDateKey = GlobalKey();
-  final _tourAddKey = GlobalKey();
-  final _tourAbsenceKey = GlobalKey();
+  final _tourTrayHandleKey = GlobalKey();
+  final _tourEmptyHourKey = GlobalKey();
 
   @override
   void initState() {
@@ -184,19 +184,14 @@ class _DailyScreenState extends State<DailyScreen> {
       final l = AppLocalizations.of(context);
       maybeShowTour(context, 'daily', [
         CoachMark(
-          targetKey: _tourDateKey,
-          title: l.tourDayTitle,
-          body: l.tourDayBody,
+          targetKey: _tourTrayHandleKey,
+          title: l.tourTrayTitle,
+          body: l.tourTrayBody,
         ),
         CoachMark(
-          targetKey: _tourAddKey,
-          title: l.tourAddTitle,
-          body: l.tourAddBody,
-        ),
-        CoachMark(
-          targetKey: _tourAbsenceKey,
-          title: l.tourAwayTitle,
-          body: l.tourAwayBody,
+          targetKey: _tourEmptyHourKey,
+          title: l.tourEmptyHourTitle,
+          body: l.tourEmptyHourBody,
         ),
       ]);
     });
@@ -248,6 +243,7 @@ class _DailyScreenState extends State<DailyScreen> {
           _pendingMembers = pendingMems;
           _loading = false;
           _error = false;
+          _hasLoadedData = true;
         });
         final items = _getNeedsItems(app);
         widget.onNeedsYouChanged?.call(items.isNotEmpty);
@@ -260,6 +256,14 @@ class _DailyScreenState extends State<DailyScreen> {
           _loading = false;
           _error = true;
         });
+        if (_hasLoadedData || _activities.isNotEmpty) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).loadErrorMessage),
+            ),
+          );
+        }
       }
     }
   }
@@ -591,11 +595,13 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 
   bool _canRemoveActivity(Map<String, dynamic> a, {AppState? appState}) {
+    if (_isPastDay) return false;
     final app = appState ?? context.read<AppState>();
     return canRemoveActivity(a, app);
   }
 
   bool _canMoveActivity(Map<String, dynamic> a, {AppState? appState}) {
+    if (_isPastDay) return false;
     final app = appState ?? context.read<AppState>();
     return canMoveActivity(a, app);
   }
@@ -926,6 +932,7 @@ class _DailyScreenState extends State<DailyScreen> {
   /// same dy → 30-minute-slot maths as a drag drop, so both gestures land on the
   /// same times.
   Future<void> _openPersonalTime([double? localDy, DateTime? at]) async {
+    if (_isPastDay) return;
     var start = at;
     if (start == null) {
       final pct = ((localDy ?? 0) / kGridHeight).clamp(0.0, 1.0);
@@ -1153,6 +1160,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
   /// Drop on the hour grid: snapped to 15 minutes.
   void _onGridDrop(Map<String, dynamic> payload, double localDy) {
+    if (_isPastDay) return;
     final pct = (localDy / kGridHeight).clamp(0.0, 1.0);
     var h = kStartHour + pct * kTotalHours;
     h = ((h * 4).round() / 4.0).clamp(kStartHour.toDouble(), 23.75);
@@ -1247,11 +1255,8 @@ class _DailyScreenState extends State<DailyScreen> {
   }
 
   void _handleGridTap(double localDy) {
+    if (_isPastDay) return;
     final now = widget.now ?? DateTime.now();
-    final isPastDay = _day.year < now.year ||
-        (_day.year == now.year && _day.month < now.month) ||
-        (_day.year == now.year && _day.month == now.month && _day.day < now.day);
-    if (isPastDay) return;
 
     final pct = (localDy / kGridHeight).clamp(0.0, 1.0);
     var h = kStartHour + pct * kTotalHours;
@@ -1266,6 +1271,17 @@ class _DailyScreenState extends State<DailyScreen> {
         _day.day == now.day;
     if (isToday && slotStart.isBefore(now)) return;
 
+    _openQuickAddSheet(slotStart);
+  }
+
+  void _handleHourTap(int hour) {
+    if (_isPastDay) return;
+    final now = widget.now ?? DateTime.now();
+    final isToday = _day.year == now.year &&
+        _day.month == now.month &&
+        _day.day == now.day;
+    final slotStart = DateTime(_day.year, _day.month, _day.day, hour, 0);
+    if (isToday && slotStart.isBefore(now)) return;
     _openQuickAddSheet(slotStart);
   }
 
@@ -1296,6 +1312,7 @@ class _DailyScreenState extends State<DailyScreen> {
       showDragHandle: true,
       builder: (ctx) => _ActivityDetailsSheet(
         activity: a,
+        isPastDay: _isPastDay,
         onValidate: () {
           Navigator.pop(ctx);
           _validate(a['id']);
@@ -1333,6 +1350,31 @@ class _DailyScreenState extends State<DailyScreen> {
         curve: Curves.easeOutCubic,
       );
     }
+  }
+
+  Widget _buildPastDayBanner(AppLocalizations l) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          top: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+          bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: Center(
+        child: Text(
+          l.dayHasPassed,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
   }
 
   // ── Build ────────────────────────────────────────────────────────
@@ -1375,7 +1417,6 @@ class _DailyScreenState extends State<DailyScreen> {
             Text(
                 DateFormat(wide ? 'EEEE, MMM d' : 'EEE, MMM d', loc)
                     .format(_day),
-                key: _tourDateKey,
                 style:
                     const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             IconButton(
@@ -1401,7 +1442,6 @@ class _DailyScreenState extends State<DailyScreen> {
                 onTap: widget.onOpenWallet,
               ),
             PopupMenuButton<String>(
-              key: _tourAbsenceKey,
               tooltip: l.timeOffLong,
               icon: const Icon(Icons.more_vert_rounded),
               onSelected: (v) {
@@ -1424,7 +1464,6 @@ class _DailyScreenState extends State<DailyScreen> {
             const SizedBox(width: 4),
           ] else ...[
             TextButton.icon(
-              key: _tourAbsenceKey,
               onPressed: _openAbsenceDialog,
               icon: const Icon(Icons.flight_takeoff_rounded,
                   size: 17, color: AppColors.textSecondary),
@@ -1440,54 +1479,57 @@ class _DailyScreenState extends State<DailyScreen> {
       ),
       // No FAB on phones: the tray is the way to add, and a floating button
       // sat on top of its chips. "All tasks" in the tray header expands it.
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error && _activities.isEmpty
-              ? LoadErrorState(onRetry: () {
-                  setState(() => _loading = true);
-                  _load();
-                })
-              : Column(
-                  children: [
-                    if (!wide)
-                      WeekStrip(
-                        selectedDay: _day,
-                        onSelectDay: _selectDay,
-                        onWeekChange: _changeWeek,
-                        today: widget.now,
-                      ),
-                    // Day progress: "X / Y done · 🪙 Zcc"
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadii.pill),
-                              child: LinearProgressIndicator(
-                                value: items.isEmpty ? 0 : done / items.length,
-                                minHeight: 6,
-                                backgroundColor: AppColors.border,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '${l.doneProgress('$done', '${items.length}')}'
-                            '${_todayCoins > 0 ? ' · 🪙 ${_todayCoins}cc' : ''}',
-                            style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textSecondary),
-                          ),
-                        ],
+      body: Column(
+        children: [
+          if (!wide)
+            WeekStrip(
+              selectedDay: _day,
+              onSelectDay: _selectDay,
+              onWeekChange: _changeWeek,
+              today: widget.now,
+            ),
+          if (_isPastDay) _buildPastDayBanner(l),
+          // Day progress: "X / Y done · 🪙 Zcc"
+          if (items.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppRadii.pill),
+                      child: LinearProgressIndicator(
+                        value: done / items.length,
+                        minHeight: 6,
+                        backgroundColor: AppColors.border,
                       ),
                     ),
-                    Expanded(
-                        child: wide ? _buildWide(items) : _buildNarrow(items)),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${l.doneProgress('$done', '${items.length}')}'
+                    '${_todayCoins > 0 ? ' · 🪙 ${_todayCoins}cc' : ''}',
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: (_loading && !_hasLoadedData)
+                ? const _DayHourGridSkeleton()
+                : (_error && !_hasLoadedData && _activities.isEmpty)
+                    ? LoadErrorState(onRetry: () {
+                        setState(() => _loading = true);
+                        _load();
+                      })
+                    : (wide ? _buildWide(items) : _buildNarrow(items)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1838,6 +1880,7 @@ class _DailyScreenState extends State<DailyScreen> {
                       day: _day,
                       now: widget.now,
                       isToday: _isToday,
+                      isPastDay: _isPastDay,
                       nowLineTop: _nowLineTop,
                       isNarrow: false,
                       scrollController: _gridScroll,
@@ -1854,7 +1897,9 @@ class _DailyScreenState extends State<DailyScreen> {
                       canRemove: (a) => _canRemoveActivity(a),
                       canMove: (a) => _canMoveActivity(a),
                       onGridTap: _handleGridTap,
+                      onHourTap: _handleHourTap,
                       onActivityTap: _openActivitySheet,
+                      emptyHourTourKey: _tourEmptyHourKey,
                       onDragStarted: () =>
                           setState(() => _draggingScheduled = true),
                       onDragEnd: () =>
@@ -1892,6 +1937,7 @@ class _DailyScreenState extends State<DailyScreen> {
                 day: _day,
                 now: widget.now,
                 isToday: _isToday,
+                isPastDay: _isPastDay,
                 nowLineTop: _nowLineTop,
                 isNarrow: true,
                 scrollController: _gridScroll,
@@ -1899,6 +1945,7 @@ class _DailyScreenState extends State<DailyScreen> {
                 onGridDrop: _onGridDrop,
                 onDoubleTap: (dy) => _openPersonalTime(dy),
                 onGridTap: _handleGridTap,
+                onHourTap: _handleHourTap,
                 onActivityTap: _openActivitySheet,
                 onAbsenceTap: _absenceDetail,
                 onRequestTap: _openRequest,
@@ -1909,6 +1956,7 @@ class _DailyScreenState extends State<DailyScreen> {
                 onCompletedInfo: _showCompletedLockedDialog,
                 canRemove: (a) => _canRemoveActivity(a),
                 canMove: (a) => _canMoveActivity(a),
+                emptyHourTourKey: _tourEmptyHourKey,
                 onDragStarted: () {
                   HapticFeedback.selectionClick();
                   if (_trayController.isAttached) {
@@ -1938,7 +1986,7 @@ class _DailyScreenState extends State<DailyScreen> {
           onTapChip: _onTapTrayChip,
           onTapTimeForMe: _onTapTimeForMe,
           onExpand: _openScheduleSheet,
-          expandKey: _tourAddKey,
+          handleKey: _tourTrayHandleKey,
           onDragStarted: () {
             HapticFeedback.selectionClick();
             if (_trayController.isAttached) {
@@ -2466,7 +2514,7 @@ class _TaskTray extends StatefulWidget {
   final VoidCallback onDragStarted;
   final VoidCallback onDragEnd;
   final VoidCallback onExpand;
-  final Key? expandKey;
+  final Key? handleKey;
 
   const _TaskTray({
     required this.controller,
@@ -2477,7 +2525,7 @@ class _TaskTray extends StatefulWidget {
     required this.onDragStarted,
     required this.onDragEnd,
     required this.onExpand,
-    this.expandKey,
+    this.handleKey,
   });
 
   @override
@@ -2557,9 +2605,10 @@ class _TaskTrayState extends State<_TaskTray> {
     final interactive = Semantics(
       button: true,
       label: semanticsLabel,
+      hint: l.trayChipSemanticsHint,
       child: Tappable(
         onTap: () => widget.onTapChip(t),
-        child: chipWidget,
+        child: ExcludeSemantics(child: chipWidget),
       ),
     );
 
@@ -2640,9 +2689,10 @@ class _TaskTrayState extends State<_TaskTray> {
     final interactive = Semantics(
       button: true,
       label: semanticsLabel,
+      hint: l.trayChipSemanticsHint,
       child: Tappable(
         onTap: () => widget.onTapChip(t),
-        child: rowWidget,
+        child: ExcludeSemantics(child: rowWidget),
       ),
     );
 
@@ -2738,6 +2788,7 @@ class _TaskTrayState extends State<_TaskTray> {
                       // Centered drag handle
                       Center(
                         child: Container(
+                          key: widget.handleKey,
                           width: 36,
                           height: 4,
                           decoration: BoxDecoration(
@@ -2761,7 +2812,6 @@ class _TaskTrayState extends State<_TaskTray> {
                               ),
                             ),
                             TextButton.icon(
-                              key: widget.expandKey,
                               onPressed: widget.onExpand,
                               icon: const Icon(Icons.expand_less_rounded,
                                   size: 18),
@@ -2819,6 +2869,7 @@ class _TaskTrayState extends State<_TaskTray> {
                         Semantics(
                           button: true,
                           label: l.timeForMe,
+                          hint: l.trayChipSemanticsHint,
                           child: Tappable(
                             onTap: widget.onTapTimeForMe,
                             child: Container(
@@ -2929,6 +2980,133 @@ class _DashedBorderPainter extends CustomPainter {
       color != oldDelegate.color || radius != oldDelegate.radius;
 }
 
+class _DayHourGridSkeleton extends StatefulWidget {
+  const _DayHourGridSkeleton();
+
+  @override
+  State<_DayHourGridSkeleton> createState() => _DayHourGridSkeletonState();
+}
+
+class _DayHourGridSkeletonState extends State<_DayHourGridSkeleton>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _controller;
+  Animation<double>? _shimmer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disable = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (disable) {
+      _controller?.stop();
+      _controller?.dispose();
+      _controller = null;
+      _shimmer = null;
+    } else if (_controller == null) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 900),
+      )..repeat(reverse: true);
+      _shimmer = Tween<double>(begin: 0.35, end: 0.70).animate(_controller!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        const leftHourWidth = 44.0;
+        final availableWidth =
+            (constraints.maxWidth - leftHourWidth - 10.0).clamp(100.0, 5000.0);
+
+        Widget buildPlaceholderBlock(double hourStart, double durHours, Key key,
+            {double widthFactor = 0.85}) {
+          final top = (hourStart - kStartHour) / kTotalHours * kGridHeight;
+          final height = durHours / kTotalHours * kGridHeight;
+          return Positioned(
+            top: top,
+            left: leftHourWidth + 4,
+            width: availableWidth * widthFactor,
+            height: height.clamp(44.0, kGridHeight),
+            child: Container(
+              key: key,
+              decoration: BoxDecoration(
+                color: AppColors.border.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+              ),
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            // Hour lines
+            for (var h = 0; h <= kTotalHours; h++)
+              Positioned(
+                top: h / kTotalHours * kGridHeight,
+                left: 0,
+                right: 0,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: leftHourWidth,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Text(
+                          '${((kStartHour + h) % 24).toString().padLeft(2, '0')}:00',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Expanded(
+                      child: Divider(
+                        height: 1,
+                        color: AppColors.border,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // 2-3 grey placeholder blocks
+            buildPlaceholderBlock(8.5, 1.0, const ValueKey('skeleton-block-0'), widthFactor: 0.8),
+            buildPlaceholderBlock(11.0, 1.5, const ValueKey('skeleton-block-1'), widthFactor: 0.9),
+            buildPlaceholderBlock(14.0, 0.75, const ValueKey('skeleton-block-2'), widthFactor: 0.7),
+          ],
+        );
+      },
+    );
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: SizedBox(
+        height: kGridHeight,
+        child: _shimmer != null
+            ? AnimatedBuilder(
+                animation: _shimmer!,
+                builder: (context, child) => Opacity(
+                  opacity: _shimmer!.value,
+                  child: child,
+                ),
+                child: body,
+              )
+            : Opacity(
+                opacity: 0.5,
+                child: body,
+              ),
+      ),
+    );
+  }
+}
+
 class _DayHourGrid extends StatefulWidget {
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> absences;
@@ -2936,6 +3114,7 @@ class _DayHourGrid extends StatefulWidget {
   final DateTime day;
   final DateTime? now;
   final bool isToday;
+  final bool isPastDay;
   final double? nowLineTop;
   final bool isNarrow;
   final ScrollController scrollController;
@@ -2943,6 +3122,7 @@ class _DayHourGrid extends StatefulWidget {
   final void Function(Map<String, dynamic> data, double dy) onGridDrop;
   final void Function(double dy) onDoubleTap;
   final void Function(double dy)? onGridTap;
+  final void Function(int hour)? onHourTap;
   final void Function(Map<String, dynamic> a)? onActivityTap;
   final void Function(Map<String, dynamic> abs) onAbsenceTap;
   final void Function(Map<String, dynamic> req) onRequestTap;
@@ -2955,6 +3135,7 @@ class _DayHourGrid extends StatefulWidget {
   final bool Function(Map<String, dynamic> a)? canMove;
   final VoidCallback onDragStarted;
   final VoidCallback onDragEnd;
+  final Key? emptyHourTourKey;
 
   const _DayHourGrid({
     super.key,
@@ -2964,6 +3145,7 @@ class _DayHourGrid extends StatefulWidget {
     required this.day,
     this.now,
     required this.isToday,
+    this.isPastDay = false,
     required this.nowLineTop,
     required this.isNarrow,
     required this.scrollController,
@@ -2971,6 +3153,7 @@ class _DayHourGrid extends StatefulWidget {
     required this.onGridDrop,
     required this.onDoubleTap,
     this.onGridTap,
+    this.onHourTap,
     this.onActivityTap,
     required this.onAbsenceTap,
     required this.onRequestTap,
@@ -2983,6 +3166,7 @@ class _DayHourGrid extends StatefulWidget {
     this.canMove,
     required this.onDragStarted,
     required this.onDragEnd,
+    this.emptyHourTourKey,
   });
 
   @override
@@ -3081,6 +3265,14 @@ class _DayHourGridState extends State<_DayHourGrid> {
     }
 
     return null;
+  }
+
+  /// The hour the empty-day line and the tour's "tap an hour" mark sit on: the
+  /// next whole hour today (the grid opens scrolled to now), 10:00 otherwise.
+  int get _anchorHour {
+    if (!widget.isToday) return 10;
+    final next = (widget.now ?? DateTime.now()).hour + 1;
+    return next.clamp(kStartHour, kStartHour + kTotalHours - 1);
   }
 
   /// A scheduled block lands on the grid only if it may be moved; on wide
@@ -3287,7 +3479,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
         padding: EdgeInsets.only(bottom: widget.isNarrow ? 180.0 : 0.0),
         child: DragTarget<Map<String, dynamic>>(
           onWillAcceptWithDetails: (details) {
-            if (!_canMoveHere(details.data)) return false;
+            if (widget.isPastDay || !_canMoveHere(details.data)) return false;
             if (details.data['type'] == 'template' ||
                 details.data['type'] == 'scheduled') {
               _updateHover(details.data, details.offset);
@@ -3296,7 +3488,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
             return true;
           },
           onMove: (details) {
-            if (!_canMoveHere(details.data)) return;
+            if (widget.isPastDay || !_canMoveHere(details.data)) return;
             if (details.data['type'] == 'template' ||
                 details.data['type'] == 'scheduled') {
               _updateHover(details.data, details.offset);
@@ -3309,7 +3501,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
           onAcceptWithDetails: (details) {
             _stopAutoScroll();
             _clearHover();
-            if (!_canMoveHere(details.data)) return;
+            if (widget.isPastDay || !_canMoveHere(details.data)) return;
             final box =
                 _gridKey.currentContext?.findRenderObject() as RenderBox?;
             if (box == null) return;
@@ -3341,9 +3533,9 @@ class _DayHourGridState extends State<_DayHourGrid> {
             return GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTapDown: (d) => _tapDy = d.localPosition.dy,
-            onTap: () => widget.onGridTap?.call(_tapDy),
+            onTap: widget.isPastDay ? null : () => widget.onGridTap?.call(_tapDy),
             onDoubleTapDown: (d) => _doubleTapDy = d.localPosition.dy,
-            onDoubleTap: () => widget.onDoubleTap(_doubleTapDy),
+            onDoubleTap: widget.isPastDay ? null : () => widget.onDoubleTap(_doubleTapDy),
             child: Container(
               key: _gridKey,
               height: kGridHeight,
@@ -3361,34 +3553,85 @@ class _DayHourGridState extends State<_DayHourGrid> {
                     children: [
                       // 1. Hour lines + labels
                       for (var h = 0; h <= kTotalHours; h++)
-                        Positioned(
-                          top: h / kTotalHours * kGridHeight,
-                          left: 0,
-                          right: 0,
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: leftHourWidth,
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                      left: widget.isNarrow ? 4 : 8),
-                                  child: Text(
-                                    _hourLabel(kStartHour + h),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textSecondary,
+                        Builder(
+                          builder: (context) {
+                            final hourInt = kStartHour + h;
+                            final hourStr = _hourLabel(hourInt);
+                            final isTourHour = hourInt == _anchorHour;
+                            final isPast = widget.isPastDay ||
+                                (widget.isToday &&
+                                    hourInt <= (widget.now ?? DateTime.now()).hour);
+                            final canAddThisHour = !widget.isPastDay && h < kTotalHours && !isPast;
+
+                            Widget hourRow = Row(
+                              children: [
+                                SizedBox(
+                                  width: leftHourWidth,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(
+                                        left: widget.isNarrow ? 4 : 8),
+                                    child: Text(
+                                      hourStr,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
                                   ),
                                 ),
+                                const Expanded(
+                                  child: Divider(
+                                    height: 1,
+                                    color: AppColors.border,
+                                  ),
+                                ),
+                              ],
+                            );
+
+                            Widget rowWithSemantics = h < kTotalHours
+                                ? Semantics(
+                                    container: true,
+                                    button: true,
+                                    enabled: canAddThisHour,
+                                    label: l.quickAddTitle(hourStr),
+                                    onTap: canAddThisHour
+                                        ? () => widget.onHourTap?.call(hourInt)
+                                        : null,
+                                    child: ExcludeSemantics(child: hourRow),
+                                  )
+                                : ExcludeSemantics(child: hourRow);
+
+                            return Positioned(
+                              top: h / kTotalHours * kGridHeight,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                key: isTourHour ? widget.emptyHourTourKey : null,
+                                child: rowWithSemantics,
                               ),
-                              const Expanded(
-                                child: Divider(
-                                  height: 1,
-                                  color: AppColors.border,
+                            );
+                          },
+                        ),
+
+                      // Empty day line (not on past days: they are read-only)
+                      if (widget.items.isEmpty && !widget.isPastDay)
+                        Positioned(
+                          top: (_anchorHour - kStartHour + 0.2) / kTotalHours * kGridHeight,
+                          left: leftHourWidth + 16,
+                          right: 24,
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Text(
+                                l.emptyDayGridLine,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
 
@@ -3825,6 +4068,7 @@ class DayActivityBlock extends StatelessWidget {
     return Semantics(
       container: true,
       label: semanticsLabel,
+      hint: l.blockSemanticsHint,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final blockW = constraints.hasBoundedWidth
@@ -4438,6 +4682,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
 
 class _ActivityDetailsSheet extends StatelessWidget {
   final Map<String, dynamic> activity;
+  final bool isPastDay;
   final VoidCallback? onValidate;
   final VoidCallback? onDelegate;
   final VoidCallback? onTakeOver;
@@ -4447,6 +4692,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
 
   const _ActivityDetailsSheet({
     required this.activity,
+    this.isPastDay = false,
     this.onValidate,
     this.onDelegate,
     this.onTakeOver,
@@ -4474,11 +4720,11 @@ class _ActivityDetailsSheet extends StatelessWidget {
     final coins = toNum(a['coin_value']).toInt();
 
     final canValidate = !isCoverage && !completed && isPendingValidation && !mine && isCaregiver;
-    final canTakeOver = isOrdinary && !completed && !isPendingValidation && !mine && bounty > 0;
-    final canDelegate = isOrdinary && isApproved && mine && bounty == 0;
-    final canRepeat = isOrdinary && !completed && a['is_recurrent'] == true;
-    final canMove = canMoveActivity(a, app);
-    final canRemove = !completed && canRemoveActivity(a, app);
+    final canTakeOver = !isPastDay && isOrdinary && !completed && !isPendingValidation && !mine && bounty > 0;
+    final canDelegate = !isPastDay && isOrdinary && isApproved && mine && bounty == 0;
+    final canRepeat = !isPastDay && isOrdinary && !completed && a['is_recurrent'] == true;
+    final canMove = !isPastDay && canMoveActivity(a, app);
+    final canRemove = !isPastDay && !completed && canRemoveActivity(a, app);
 
     final rawTitle = (a['title'] ?? '').toString();
     final title = rawTitle.isNotEmpty

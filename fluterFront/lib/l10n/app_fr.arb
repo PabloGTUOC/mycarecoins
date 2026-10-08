@@ -39,6 +39,13 @@
   "actionTakeOver": "Reprendre (+{coins} cc)",
   "actionRepeat": "Répéter",
   "actionMove": "Déplacer",
+  "emptyDayGridLine": "Rien de prévu. Glissez une tâche ici ou appuyez sur une heure.",
+  "tourTrayTitle": "Glissez une tâche sur la journée",
+  "tourTrayBody": "Glissez une tâche sur la journée pour la planifier à cette heure.",
+  "tourEmptyHourTitle": "Appuyez sur une heure",
+  "tourEmptyHourBody": "Ou appuyez sur une heure pour ajouter quelque chose.",
+  "trayChipSemanticsHint": "Appuyez deux fois pour choisir une heure",
+  "blockSemanticsHint": "Appuyez deux fois pour les actions",
 
   "navMarketplace": "Boutique",
   "navPersonal": "Personnel",

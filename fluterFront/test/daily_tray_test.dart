@@ -533,7 +533,11 @@ void main() {
       await tester.tap(chip);
       await tester.pumpAndSettle();
 
-      expect(find.text('This day has passed'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byType(SnackBar),
+              matching: find.text('This day has passed')),
+          findsOneWidget);
       expect(find.byType(TimePickerDialog), findsNothing);
       expect(api.postCalls.isEmpty, isTrue);
     });

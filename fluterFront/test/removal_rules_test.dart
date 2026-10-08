@@ -173,7 +173,7 @@ void main() {
         ]
         ..profile = {'id': 1, 'display_name': 'Me'};
 
-      await tester.pumpWidget(_wrap(const DailyScreen(date: '2026-10-06'), app));
+      await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-06', now: DateTime(2026, 10, 6, 8, 0)), app));
       await tester.pumpAndSettle();
 
       // All 4 activities are rendered on the timeline
@@ -280,7 +280,7 @@ void main() {
         ]
         ..profile = {'id': 1, 'display_name': 'Me'};
 
-      await tester.pumpWidget(_wrap(const DailyScreen(date: '2026-10-06'), app));
+      await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-06', now: DateTime(2026, 10, 6, 8, 0)), app));
       await tester.pumpAndSettle();
 
       // Coverage chip: no Draggable ancestor
@@ -354,7 +354,7 @@ void main() {
         ]
         ..profile = {'id': 1, 'display_name': 'Me'};
 
-      await tester.pumpWidget(_wrap(const DailyScreen(date: '2026-10-06'), app));
+      await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-06', now: DateTime(2026, 10, 6, 8, 0)), app));
       await tester.pumpAndSettle();
 
       // Drag chip to the unschedule drop target on the left panel

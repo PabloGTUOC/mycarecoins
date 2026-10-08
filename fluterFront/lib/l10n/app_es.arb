@@ -39,6 +39,13 @@
   "actionTakeOver": "Asumir (+{coins} cc)",
   "actionRepeat": "Repetir",
   "actionMove": "Mover",
+  "emptyDayGridLine": "Nada planificado. Arrastra una tarea aquí o toca una hora.",
+  "tourTrayTitle": "Arrastra una tarea al día",
+  "tourTrayBody": "Arrastra una tarea al día para programarla a esa hora.",
+  "tourEmptyHourTitle": "Toca una hora",
+  "tourEmptyHourBody": "O toca una hora para añadir algo allí.",
+  "trayChipSemanticsHint": "Toca dos veces para elegir una hora",
+  "blockSemanticsHint": "Toca dos veces para ver las acciones",
 
   "navMarketplace": "Mercado",
   "navPersonal": "Personal",

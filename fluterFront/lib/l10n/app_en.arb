@@ -193,6 +193,34 @@
   "@actionMove": {
     "description": "Full-width move button in the activity details sheet"
   },
+  "emptyDayGridLine": "Nothing planned. Drag a task here, or tap an hour.",
+  "@emptyDayGridLine": {
+    "description": "Centered muted line shown on the grid when the day has no activities"
+  },
+  "tourTrayTitle": "Drag a task onto the day",
+  "@tourTrayTitle": {
+    "description": "Today coach mark title pointing to the task tray"
+  },
+  "tourTrayBody": "Drag a task onto the day to schedule it at that time.",
+  "@tourTrayBody": {
+    "description": "Today coach mark body pointing to the task tray"
+  },
+  "tourEmptyHourTitle": "Tap an hour",
+  "@tourEmptyHourTitle": {
+    "description": "Today coach mark title pointing to an empty hour slot"
+  },
+  "tourEmptyHourBody": "Or tap an hour to add something there.",
+  "@tourEmptyHourBody": {
+    "description": "Today coach mark body pointing to an empty hour slot"
+  },
+  "trayChipSemanticsHint": "Double-tap to choose a time",
+  "@trayChipSemanticsHint": {
+    "description": "Screen reader hint on task tray chips"
+  },
+  "blockSemanticsHint": "Double-tap for actions",
+  "@blockSemanticsHint": {
+    "description": "Screen reader hint on scheduled activity blocks"
+  },
 
   "navMarketplace": "Marketplace",
   "@navMarketplace": {

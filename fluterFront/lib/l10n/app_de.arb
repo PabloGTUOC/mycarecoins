@@ -39,6 +39,13 @@
   "actionTakeOver": "Übernehmen (+{coins} cc)",
   "actionRepeat": "Wiederholen",
   "actionMove": "Verschieben",
+  "emptyDayGridLine": "Nichts geplant. Ziehe eine Aufgabe hierher oder tippe auf eine Stunde.",
+  "tourTrayTitle": "Ziehe eine Aufgabe auf den Tag",
+  "tourTrayBody": "Ziehe eine Aufgabe auf den Tag, um sie zu dieser Zeit zu planen.",
+  "tourEmptyHourTitle": "Tippe auf eine Stunde",
+  "tourEmptyHourBody": "Oder tippe auf eine Stunde, um dort etwas hinzuzufügen.",
+  "trayChipSemanticsHint": "Doppeltippen, um eine Zeit zu wählen",
+  "blockSemanticsHint": "Doppeltippen für Aktionen",
 
   "navMarketplace": "Marktplatz",
   "navPersonal": "Persönlich",
