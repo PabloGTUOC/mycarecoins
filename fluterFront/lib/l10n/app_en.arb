@@ -1314,12 +1314,10 @@
   "@tourCompareBody": { "description": "Stats coach-mark body on the compare toggle" },
   "noStatsYet": "No stats available yet.",
   "@noStatsYet": { "description": "Stats screen when the endpoint returns nothing" },
-  "statsTitle": "Performance Analytics",
+  "statsTitle": "Family stats",
   "@statsTitle": { "description": "Stats page heading" },
-  "statsSubtitle": "How care work and coins flow across the family.",
-  "@statsSubtitle": { "description": "Stats page subtitle" },
-  "compareCaregivers": "COMPARE CAREGIVERS",
-  "@compareCaregivers": { "description": "Compare toggle caption (uppercase)" },
+  "compareCaregivers": "Compare caregivers",
+  "@compareCaregivers": { "description": "Compare toggle caption" },
   "sectionMembers": "Members",
   "@sectionMembers": { "description": "Stats section divider / mobile tab" },
   "sectionEconomy": "Coin Economy",
@@ -1328,7 +1326,7 @@
   "@tabOverview": { "description": "Stats mobile tab" },
   "tabEconomy": "Economy",
   "@tabEconomy": { "description": "Stats mobile tab" },
-  "kpiLifetimeCoins": "Lifetime Coins",
+  "kpiLifetimeCoins": "Coins from tasks",
   "@kpiLifetimeCoins": { "description": "Stats KPI label" },
   "kpiTasksCompleted": "Tasks Completed",
   "@kpiTasksCompleted": { "description": "Stats KPI label" },
@@ -1336,7 +1334,7 @@
   "@kpiBountiesOffered": { "description": "Stats KPI label" },
   "kpiRewardsClaimed": "Rewards Claimed",
   "@kpiRewardsClaimed": { "description": "Stats KPI label" },
-  "chartIncomeTrend": "Income Generation Trend",
+  "chartIncomeTrend": "Coins earned per month",
   "@chartIncomeTrend": { "description": "Chart title" },
   "chartCategoryBalance": "Category Balance",
   "@chartCategoryBalance": { "description": "Chart title" },
@@ -1354,14 +1352,100 @@
   "@chartCompletionRate": { "description": "Chart title" },
   "chartBounties": "Bounties: Offered vs Earned vs Refunded",
   "@chartBounties": { "description": "Chart title" },
-  "chartFairness": "Personal time & coverage",
+  "chartFairness": "Time given and taken",
+  "fairnessNoDeclines": "Saying no is never counted. Not here, not anywhere.",
+  "@fairnessNoDeclines": { "description": "Footnote making explicit that declined requests are never tallied (PRODUCT.md §15)" },
   "@chartFairness": { "description": "Title of the stats card setting personal time taken against coverage given" },
   "fairnessTaken": "Personal time taken",
   "@fairnessTaken": { "description": "Bar label: hours this member spent on themselves" },
   "fairnessGiven": "Coverage given",
   "@fairnessGiven": { "description": "Bar label: hours this member covered so someone else could" },
-  "fairnessNoDeclines": "Saying no is never counted. Not here, not anywhere.",
-  "@fairnessNoDeclines": { "description": "Footnote making explicit that declined requests are never tallied" },
+  "fairnessSummary": "You covered {covered} for {other} and took {taken} for yourself.",
+  "@fairnessSummary": {
+    "description": "Summary sentence under the fairness block",
+    "placeholders": {
+      "covered": {},
+      "other": {},
+      "taken": {}
+    }
+  },
+  "summaryCoinsPerMonth": "Most coins in {month}: {coins} cc",
+  "@summaryCoinsPerMonth": {
+    "description": "Summary line under coins per month chart",
+    "placeholders": {
+      "month": {},
+      "coins": {}
+    }
+  },
+  "summaryCategoryBalance": "Most work in {category}: {percent}",
+  "@summaryCategoryBalance": {
+    "description": "Summary line under category balance chart",
+    "placeholders": {
+      "category": {},
+      "percent": {}
+    }
+  },
+  "summaryTaskFrequency": "Most frequent: {task} ({count}×)",
+  "@summaryTaskFrequency": {
+    "description": "Summary line under task frequency chart",
+    "placeholders": {
+      "task": {},
+      "count": {}
+    }
+  },
+  "summaryLeaderboard": "Highest balance: {name} ({coins} cc)",
+  "@summaryLeaderboard": {
+    "description": "Summary line under leaderboard chart",
+    "placeholders": {
+      "name": {},
+      "coins": {}
+    }
+  },
+  "summaryCompletionRate": "Overall completion rate: {rate}",
+  "@summaryCompletionRate": {
+    "description": "Summary line under completion rate chart",
+    "placeholders": {
+      "rate": {}
+    }
+  },
+  "summaryBounties": "Total bounties offered: {coins} cc",
+  "@summaryBounties": {
+    "description": "Summary line under bounties chart",
+    "placeholders": {
+      "coins": {}
+    }
+  },
+  "summaryCoinFlow": "Most active month: {month} ({coins} cc)",
+  "@summaryCoinFlow": {
+    "description": "Summary line under coin flow chart",
+    "placeholders": {
+      "month": {},
+      "coins": {}
+    }
+  },
+  "summaryRewardsByMember": "Most rewards claimed: {name} ({count})",
+  "@summaryRewardsByMember": {
+    "description": "Summary line under rewards by member chart",
+    "placeholders": {
+      "name": {},
+      "count": {}
+    }
+  },
+  "summaryTopRewards": "Top reward: {reward} ({count} claimed)",
+  "@summaryTopRewards": {
+    "description": "Summary line under top rewards chart",
+    "placeholders": {
+      "reward": {},
+      "count": {}
+    }
+  },
+  "summaryStatusDistribution": "Activities completed: {percent}",
+  "@summaryStatusDistribution": {
+    "description": "Summary line under status distribution chart",
+    "placeholders": {
+      "percent": {}
+    }
+  },
   "offered": "Offered",
   "@offered": { "description": "Bounty chart series label" },
   "earned": "Earned",

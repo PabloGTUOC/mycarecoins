@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 /// ── VCard ─────────────────────────────────────────────────────────
 class VCard extends StatelessWidget {
   final String? title;
+  final String? subtitle;
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
@@ -16,6 +17,7 @@ class VCard extends StatelessWidget {
   const VCard({
     super.key,
     this.title,
+    this.subtitle,
     required this.child,
     this.padding = const EdgeInsets.all(24),
     this.margin = const EdgeInsets.only(bottom: 24),
@@ -30,7 +32,7 @@ class VCard extends StatelessWidget {
         children: [
           if (title != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              padding: EdgeInsets.fromLTRB(24, 24, 24, subtitle != null ? 4 : 8),
               child: Text(
                 title!,
                 style: const TextStyle(
@@ -38,6 +40,18 @@ class VCard extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                   color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          if (subtitle != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Text(
+                subtitle!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),

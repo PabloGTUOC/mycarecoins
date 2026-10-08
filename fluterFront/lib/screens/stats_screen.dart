@@ -26,6 +26,15 @@ class StatsScreen extends StatefulWidget {
   State<StatsScreen> createState() => _StatsScreenState();
 }
 
+/// Stats as a pushed page (it is reached from Family, not a tab): its own
+/// Scaffold gives it Material and a back button.
+Route<void> statsRoute() => MaterialPageRoute(
+      builder: (_) => Scaffold(
+        appBar: AppBar(),
+        body: const StatsScreen(),
+      ),
+    );
+
 class _StatsScreenState extends State<StatsScreen> {
   Map<String, dynamic>? _stats;
   bool _loading = true;
@@ -154,8 +163,7 @@ class _StatsScreenState extends State<StatsScreen> {
               Expanded(
                 child: PageHeading(
                     key: _tourHeadingKey,
-                    title: l.statsTitle,
-                    subtitle: l.statsSubtitle),
+                    title: l.statsTitle),
               ),
               if (_caregivers.length > 1)
                 Column(
@@ -167,8 +175,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       child: Text(l.compareCaregivers,
                           style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textSecondary)),
                     ),
                     Switch(
@@ -205,6 +212,112 @@ class _StatsScreenState extends State<StatsScreen> {
 
   // ── Overview: KPIs, trend, category balance, task frequency ─────
 
+  Widget? _buildFairnessCard() {
+    final l = AppLocalizations.of(context);
+    final loc = l.localeName;
+    final app = context.read<AppState>();
+    final fairness = _listOf('fairnessByMonth');
+    if (fairness.isEmpty) return null;
+
+    final fairMonth = fairness
+        .map((f) => f['month'].toString())
+        .fold<String?>(null, (a, b) => a == null || b.compareTo(a) > 0 ? b : a);
+    final fair = fairness.where((f) => f['month'] == fairMonth).toList();
+    if (fair.isEmpty) return null;
+
+    final fairScale = [
+      for (final f in fair) ...[
+        toNum(f['personal_minutes']),
+        toNum(f['coverage_minutes']),
+      ]
+    ];
+
+    final myName = (app.family?['alias'] ??
+            app.profile?['display_name'] ??
+            '')
+        .toString();
+
+    Map<String, dynamic> myRow = const {};
+    if (myName.isNotEmpty) {
+      myRow = fair.firstWhere(
+        (f) =>
+            (f['caregiver'] ?? '').toString().toLowerCase() ==
+            myName.toLowerCase(),
+        orElse: () => const {},
+      );
+    }
+    if (myRow.isEmpty && fair.length == 1) {
+      myRow = fair.first;
+    }
+
+    final others = fair
+        .where((f) =>
+            (f['caregiver'] ?? '').toString().toLowerCase() !=
+            (myRow['caregiver'] ?? myName).toString().toLowerCase())
+        .toList();
+    final otherName = others
+        .map((o) => (o['caregiver'] ?? '').toString())
+        .where((s) => s.isNotEmpty)
+        .join(', ');
+
+    // Coverage needs someone to cover for; with nobody else there is no
+    // sentence to say.
+    final covered = _hoursLabel(toNum(myRow['coverage_minutes']).toInt());
+    final taken = _hoursLabel(toNum(myRow['personal_minutes']).toInt());
+    final summarySentence = otherName.isEmpty
+        ? null
+        : l.fairnessSummary(covered, otherName, taken);
+
+    return VCard(
+      title: l.chartFairness,
+      subtitle: summarySentence,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (fairMonth != null) ...[
+            Text(
+              DateFormat('MMMM y', loc).format(DateTime.parse('$fairMonth-01')),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          for (final f in fair) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8, top: 4),
+                child: Text(
+                  (f['caregiver'] ?? '').toString(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+            for (final (label, key, color) in [
+              (l.fairnessTaken, 'personal_minutes', AppColors.accentSecondary),
+              (l.fairnessGiven, 'coverage_minutes', AppColors.success),
+            ])
+              _BarRow(
+                label: label,
+                valueLabel: _hoursLabel(toNum(f[key]).toInt()),
+                fraction: _fractionOfMax(toNum(f[key]), fairScale),
+                color: color,
+              ),
+          ],
+          const SizedBox(height: 8),
+          Text(l.fairnessNoDeclines,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildOverview() {
     final l = AppLocalizations.of(context);
     final loc = l.localeName;
@@ -213,8 +326,10 @@ class _StatsScreenState extends State<StatsScreen> {
     final trendMonths = trend.map((t) => t['month'].toString()).toSet().toList()
       ..sort();
     final fmt = NumberFormat.decimalPattern(loc);
+    final fairnessCard = _buildFairnessCard();
 
     return [
+      if (fairnessCard != null) fairnessCard,
       LayoutBuilder(builder: (context, c) {
         final perRow = c.maxWidth > kMobileBreakpoint ? 4 : 2;
         final w = (c.maxWidth - (perRow - 1) * 14) / perRow;
@@ -249,34 +364,51 @@ class _StatsScreenState extends State<StatsScreen> {
       }),
       const SizedBox(height: 20),
       if (trendMonths.isNotEmpty)
-        VCard(
-          title: l.chartIncomeTrend,
-          child: _comparing
-              ? MultiLineChart(
-                  labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
-                  series: [
-                    for (final (i, cg) in _caregivers.indexed)
-                      LineSeries(cg, _cgColor(i), [
-                        for (final m in trendMonths)
-                          toNum(trend.firstWhere(
-                            (t) =>
-                                t['caregiver'] == cg &&
-                                t['month'].toString() == m,
-                            orElse: () => const {'coins': 0},
-                          )['coins'])
-                              .toDouble(),
-                      ]),
-                  ],
-                )
-              : LineAreaChart(
-                  labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
-                  values: [
-                    for (final m in trendMonths)
-                      trend
-                          .where((t) => t['month'].toString() == m)
-                          .fold<double>(0, (sum, t) => sum + toNum(t['coins'])),
-                  ]),
-        ),
+        Builder(builder: (_) {
+          String bestMonth = '';
+          num maxCoins = 0;
+          for (final m in trendMonths) {
+            final coins = trend
+                .where((t) => t['month'].toString() == m)
+                .fold<num>(0, (sum, t) => sum + toNum(t['coins']));
+            if (coins >= maxCoins) {
+              maxCoins = coins;
+              bestMonth = m;
+            }
+          }
+          final monthLabel = bestMonth.isNotEmpty
+              ? DateFormat.MMMM(loc).format(DateTime.parse('$bestMonth-01'))
+              : '';
+          return VCard(
+            title: l.chartIncomeTrend,
+            subtitle: l.summaryCoinsPerMonth(monthLabel, maxCoins.toInt()),
+            child: _comparing
+                ? MultiLineChart(
+                    labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
+                    series: [
+                      for (final (i, cg) in _caregivers.indexed)
+                        LineSeries(cg, _cgColor(i), [
+                          for (final m in trendMonths)
+                            toNum(trend.firstWhere(
+                              (t) =>
+                                  t['caregiver'] == cg &&
+                                  t['month'].toString() == m,
+                              orElse: () => const {'coins': 0},
+                            )['coins'])
+                                .toDouble(),
+                        ]),
+                    ],
+                  )
+                : LineAreaChart(
+                    labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
+                    values: [
+                      for (final m in trendMonths)
+                        trend
+                            .where((t) => t['month'].toString() == m)
+                            .fold<double>(0, (sum, t) => sum + toNum(t['coins'])),
+                    ]),
+          );
+        }),
       ..._buildCategoryBalance(),
       ..._buildTaskFrequency(),
     ];
@@ -292,9 +424,18 @@ class _StatsScreenState extends State<StatsScreen> {
             (caregiver == null || x['caregiver'] == caregiver))
         .fold<num>(0, (acc, x) => acc + toNum(x['value']));
 
+    final careVal = sumFor('care');
+    final householdVal = sumFor('household');
+    final totalVal = careVal + householdVal;
+    final topCat = careVal >= householdVal ? l.filterCare : l.filterHousehold;
+    final topPct = totalVal > 0
+        ? '${(100 * (careVal >= householdVal ? careVal : householdVal) / totalVal).round()}%'
+        : '0%';
+
     return [
       VCard(
         title: l.chartCategoryBalance,
+        subtitle: l.summaryCategoryBalance(topCat, topPct),
         child: _comparing
             ? Column(
                 children: [
@@ -352,9 +493,15 @@ class _StatsScreenState extends State<StatsScreen> {
           orElse: () => const {'value': 0},
         )['value']);
 
+    final topTask = top6.isNotEmpty ? top6.first : '';
+    final topCount = topTask.isNotEmpty ? (totals[topTask] ?? 0) : 0;
+
     return [
       VCard(
         title: l.chartTaskFrequency,
+        subtitle: topTask.isNotEmpty
+            ? l.summaryTaskFrequency(topTask, topCount)
+            : null,
         child: Column(
           children: [
             if (_comparing)
@@ -397,29 +544,18 @@ class _StatsScreenState extends State<StatsScreen> {
 
   List<Widget> _buildMembers() {
     final l = AppLocalizations.of(context);
-    final loc = l.localeName;
     final balances = _listOf('memberBalances');
     final completion = _listOf('completionRates');
     final bounties = _listOf('bountyStats');
-
-    // Fairness reads the latest month there is data for, rather than "now":
-    // an empty card in the first days of a month would say nothing true.
-    final fairness = _listOf('fairnessByMonth');
-    final fairMonth = fairness
-        .map((f) => f['month'].toString())
-        .fold<String?>(null, (a, b) => a == null || b.compareTo(a) > 0 ? b : a);
-    final fair = fairness.where((f) => f['month'] == fairMonth).toList();
-    final fairScale = [
-      for (final f in fair) ...[
-        toNum(f['personal_minutes']),
-        toNum(f['coverage_minutes'])
-      ]
-    ];
 
     return [
       if (balances.isNotEmpty)
         VCard(
           title: l.chartLeaderboard,
+          subtitle: l.summaryLeaderboard(
+            (balances.first['name'] ?? '').toString(),
+            balances.first['coin_balance'] ?? 0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -441,37 +577,46 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
         ),
       if (completion.isNotEmpty)
-        VCard(
-          title: l.chartCompletionRate,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('🟢 ≥80% · 🟡 50–79% · 🔴 <50%',
-                  style: TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(height: 12),
-              for (final r in completion)
-                Builder(builder: (_) {
-                  final total = toNum(r['total']);
-                  final done = toNum(r['completed']);
-                  final rate = total > 0 ? (100 * done / total).round() : 0;
-                  return _BarRow(
-                    label: (r['caregiver'] ?? '').toString(),
-                    valueLabel: '$rate% ($done/$total)',
-                    fraction: rate / 100,
-                    color: rate >= 80
-                        ? AppColors.success
-                        : rate >= 50
-                            ? AppColors.warning
-                            : AppColors.danger,
-                  );
-                }),
-            ],
-          ),
-        ),
+        Builder(builder: (_) {
+          final total = completion.fold<num>(0, (s, r) => s + toNum(r['total']));
+          final done = completion.fold<num>(0, (s, r) => s + toNum(r['completed']));
+          final rate = total > 0 ? '${(100 * done / total).round()}%' : '0%';
+          return VCard(
+            title: l.chartCompletionRate,
+            subtitle: l.summaryCompletionRate(rate),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('🟢 ≥80% · 🟡 50–79% · 🔴 <50%',
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 12),
+                for (final r in completion)
+                  Builder(builder: (_) {
+                    final rTotal = toNum(r['total']);
+                    final rDone = toNum(r['completed']);
+                    final rRate = rTotal > 0 ? (100 * rDone / rTotal).round() : 0;
+                    return _BarRow(
+                      label: (r['caregiver'] ?? '').toString(),
+                      valueLabel: '$rRate% ($rDone/$rTotal)',
+                      fraction: rRate / 100,
+                      color: rRate >= 80
+                          ? AppColors.success
+                          : rRate >= 50
+                              ? AppColors.warning
+                              : AppColors.danger,
+                    );
+                  }),
+              ],
+            ),
+          );
+        }),
       if (bounties.isNotEmpty)
         VCard(
           title: l.chartBounties,
+          subtitle: l.summaryBounties(
+            bounties.fold<num>(0, (s, b) => s + toNum(b['offered'])).toInt(),
+          ),
           child: Column(
             children: [
               for (final b in bounties) ...[
@@ -502,47 +647,6 @@ class _StatsScreenState extends State<StatsScreen> {
                     color: color,
                   ),
               ],
-            ],
-          ),
-        ),
-      // Taking time for yourself should be as visible as the care you give;
-      // otherwise the app offers a way to take without a way to see it.
-      if (fair.isNotEmpty)
-        VCard(
-          title: l.chartFairness,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                  DateFormat('MMMM y', loc)
-                      .format(DateTime.parse('$fairMonth-01')),
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(height: 12),
-              for (final f in fair) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8, top: 4),
-                    child: Text((f['caregiver'] ?? '').toString(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 14)),
-                  ),
-                ),
-                for (final (label, key, color) in [
-                  (l.fairnessTaken, 'personal_minutes', AppColors.accentSecondary),
-                  (l.fairnessGiven, 'coverage_minutes', AppColors.success),
-                ])
-                  _BarRow(
-                    label: label,
-                    valueLabel: _hoursLabel(toNum(f[key]).toInt()),
-                    fraction: _fractionOfMax(toNum(f[key]), fairScale),
-                    color: color,
-                  ),
-              ],
-              Text(l.fairnessNoDeclines,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
         ),
@@ -592,16 +696,37 @@ class _StatsScreenState extends State<StatsScreen> {
 
     return [
       if (flowSeries.isNotEmpty)
-        VCard(
-          title: l.chartCoinFlow,
-          child: StackedBarChart(
-            labels: [for (final m in flowMonths) formatChartMonth(m, loc)],
-            series: flowSeries,
-          ),
-        ),
+        Builder(builder: (_) {
+          String bestFlowMonth = '';
+          num maxFlowCoins = 0;
+          for (final m in flowMonths) {
+            final total = coinFlow
+                .where((d) => d['month'].toString() == m)
+                .fold<num>(0, (s, d) => s + toNum(d['total']));
+            if (total >= maxFlowCoins) {
+              maxFlowCoins = total;
+              bestFlowMonth = m;
+            }
+          }
+          final mLabel = bestFlowMonth.isNotEmpty
+              ? DateFormat.MMMM(loc).format(DateTime.parse('$bestFlowMonth-01'))
+              : '';
+          return VCard(
+            title: l.chartCoinFlow,
+            subtitle: l.summaryCoinFlow(mLabel, maxFlowCoins.toInt()),
+            child: StackedBarChart(
+              labels: [for (final m in flowMonths) formatChartMonth(m, loc)],
+              series: flowSeries,
+            ),
+          );
+        }),
       if (rewardsByUser.isNotEmpty)
         VCard(
           title: l.chartRewardsByMember,
+          subtitle: l.summaryRewardsByMember(
+            (rewardsByUser.first['name'] ?? '').toString(),
+            toNum(rewardsByUser.first['redemptions']).toInt(),
+          ),
           child: Column(
             children: [
               for (final r in rewardsByUser)
@@ -619,6 +744,10 @@ class _StatsScreenState extends State<StatsScreen> {
       if (topRewards.isNotEmpty)
         VCard(
           title: l.chartTopRewards,
+          subtitle: l.summaryTopRewards(
+            (topRewards.first['title'] ?? '').toString(),
+            toNum(topRewards.first['redemptions']).toInt(),
+          ),
           child: Column(
             children: [
               for (final r in topRewards)
@@ -633,17 +762,26 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
         ),
       if (statuses.isNotEmpty)
-        VCard(
-          title: l.chartStatusDist,
-          child: DonutChart(segments: [
-            for (final s in statuses)
-              DonutSegment(
-                (statusMeta[s['status']]?.$1 ?? s['status'].toString()),
-                toNum(s['count']).toDouble(),
-                statusMeta[s['status']]?.$2 ?? const Color(0xFF94A3B8),
-              ),
-          ]),
-        ),
+        Builder(builder: (_) {
+          final tot = statuses.fold<num>(0, (s, x) => s + toNum(x['count']));
+          final comp = toNum(statuses.firstWhere(
+            (x) => x['status'] == 'completed',
+            orElse: () => const {'count': 0},
+          )['count']);
+          final pct = tot > 0 ? '${(100 * comp / tot).round()}%' : '0%';
+          return VCard(
+            title: l.chartStatusDist,
+            subtitle: l.summaryStatusDistribution(pct),
+            child: DonutChart(segments: [
+              for (final s in statuses)
+                DonutSegment(
+                  (statusMeta[s['status']]?.$1 ?? s['status'].toString()),
+                  toNum(s['count']).toDouble(),
+                  statusMeta[s['status']]?.$2 ?? const Color(0xFF94A3B8),
+                ),
+            ]),
+          );
+        }),
     ];
   }
 
@@ -677,14 +815,16 @@ class _SectionDivider extends StatelessWidget {
   }
 }
 
-/// Minutes as hours and minutes. Follows the duration picker's convention in
-/// personal_time_dialog.dart rather than inventing a second one.
-String _hoursLabel(int minutes) {
-  if (minutes < 60) return '${minutes}m';
+/// Formats minutes into hours and minutes, e.g. "3 h", "1 h 30", "45 min", "0 h".
+String hoursLabel(int minutes) {
+  if (minutes == 0) return '0 h';
+  if (minutes < 60) return '$minutes min';
   final h = minutes ~/ 60;
   final m = minutes % 60;
-  return m == 0 ? '${h}h' : '${h}h ${m}m';
+  return m == 0 ? '$h h' : '$h h $m';
 }
+
+String _hoursLabel(int minutes) => hoursLabel(minutes);
 
 class _BarRow extends StatelessWidget {
   final String label;

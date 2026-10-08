@@ -182,8 +182,7 @@ class _ShellState extends State<Shell> {
       DashboardScreen(
         active: _index == 1,
         onOpenDaily: _openDailyTab,
-        onOpenStats: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const StatsScreen())),
+        onOpenStats: () => Navigator.of(context).push(statsRoute()),
         onOpenActivities: () => _go(2),
         onOpenMarketplace: () => _go(3),
       ),
