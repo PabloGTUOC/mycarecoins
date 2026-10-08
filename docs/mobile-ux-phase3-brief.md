@@ -93,3 +93,13 @@ before layout work), P3-1, P3-2, P3-4. Third critique after P3-4.
 Same as Phase 2: files changed, new ARB keys, `flutter analyze` and `flutter test`
 results, and anything in the ticket that conflicted with existing behaviour (keep the
 existing behaviour and say so; do not remove copy the ticket does not name).
+
+## Second round, after the third critique (2026-10-08, 30/40)
+
+User chose all four critique issues, the KPI grid as one sentence on phones, and a
+distinct icon per task. Built and committed: P3-5 Me's You section (one filled button,
+Delete account as red text last, Log out outlined, no empty subscription band); P3-6
+Family's KPI cards → one sentence on phones, chevron week buttons; P3-7 Tasks catalogue
+as one divided list, repeat icon only in mixed lists; P3-8 per-task icons from the title
+(`lib/utils/task_icon.dart`, four languages, category icon as fallback). A per-family icon
+picker would need a backend column; not built.
