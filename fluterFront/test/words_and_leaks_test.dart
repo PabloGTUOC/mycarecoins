@@ -288,7 +288,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Banner shows family name and member alias
-      expect(find.text('The Henderson Family'), findsOneWidget);
+      expect(find.text('The Henderson Family · Dad'), findsOneWidget);
 
       // Must NOT find "FAMILY ID" or the raw family id number
       expect(find.text('FAMILY ID'), findsNothing);

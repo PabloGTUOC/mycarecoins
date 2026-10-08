@@ -270,8 +270,9 @@ void main() {
       expect(l.repeatsLabel, 'Repeats');
       expect(l.dashTitle, 'Family hub');
       expect(l.dashActiveMembers, 'Active family members');
-      expect(l.totalBalance, 'Total balance');
-      expect(l.coinsUnit, 'Coins');
+      expect(l.yourBalance, 'Your balance');
+      expect(l.seeFamilyStats, 'See family stats');
+      expect(l.sectionYou, 'You');
       expect(l.pendingInvitations, 'Pending invitations');
       expect(l.createAccountTitle, 'Create CareCoins account');
       expect(l.step1Title, '1. Family details');
@@ -285,8 +286,9 @@ void main() {
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Se repite');
       expect(l.dashTitle, 'Centro familiar');
-      expect(l.totalBalance, 'Saldo total');
-      expect(l.coinsUnit, 'Monedas');
+      expect(l.yourBalance, 'Tu saldo');
+      expect(l.seeFamilyStats, 'Ver estadísticas de la familia');
+      expect(l.sectionYou, 'Tú');
       expect(l.pendingInvitations, 'Invitaciones pendientes');
       expect(l.goToToday, 'Ir a Hoy');
     });
@@ -297,8 +299,9 @@ void main() {
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Se répète');
       expect(l.dashTitle, 'Espace famille');
-      expect(l.totalBalance, 'Solde total');
-      expect(l.coinsUnit, 'Pièces');
+      expect(l.yourBalance, 'Votre solde');
+      expect(l.seeFamilyStats, 'Voir les statistiques de la famille');
+      expect(l.sectionYou, 'Vous');
       expect(l.pendingInvitations, 'Invitations en attente');
       expect(l.goToToday, "Aller à Aujourd'hui");
     });
@@ -308,8 +311,9 @@ void main() {
       expect(l.recurringCheckbox, 'Dies ist eine wiederkehrende Aufgabe');
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Wiederholt sich');
-      expect(l.totalBalance, 'Gesamtsaldo');
-      expect(l.coinsUnit, 'Münzen');
+      expect(l.yourBalance, 'Dein Guthaben');
+      expect(l.seeFamilyStats, 'Familienstatistiken ansehen');
+      expect(l.sectionYou, 'Du');
       expect(l.pendingInvitations, 'Ausstehende Einladungen');
       expect(l.goToToday, 'Zu Heute gehen');
     });

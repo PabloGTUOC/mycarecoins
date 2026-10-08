@@ -11,6 +11,7 @@ import '../utils/avatar_upload.dart';
 import '../utils/json.dart';
 import '../services/tour_service.dart';
 import 'admin_screen.dart';
+import 'stats_screen.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/family_circle.dart';
 import '../widgets/help_sheet.dart';
@@ -28,11 +29,11 @@ const kLanguageNativeNames = {
   'de': 'Deutsch',
 };
 
-/// Personal Area: family banner, deletion-request banner,
+/// Personal Area: identity line, deletion-request banner,
 /// account settings (name/email/alias, notification prefs, delete account),
 /// Family Circle with delete-family, and the wallet panel with humanised
-/// ledger, un-check revert and insights. Mobile shows Profile/Family/Wallet
-/// tabs.
+/// ledger and un-check revert. Mobile is one scrolling page with Wallet,
+/// Family, and You sections.
 class ProfileScreen extends StatefulWidget {
   /// Whether this is the visible tab; becoming active triggers a refetch.
   final bool active;
@@ -49,10 +50,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final _scrollController = ScrollController();
   List<Map<String, dynamic>> _ledger = [];
   List<Map<String, dynamic>> _deletionRequests = [];
   DateTime _month = DateTime.now();
-  int _tab = 0; // mobile: 0 profile, 1 family, 2 wallet
   bool _showFullLedger = false;
 
   final _displayName = TextEditingController();
@@ -88,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _tab = widget.initialTab;
+    _maybeScrollToWallet();
     final app = context.read<AppState>();
     _displayName.text = app.profile?['display_name']?.toString() ?? '';
     _email.text = app.profile?['email']?.toString() ?? '';
@@ -103,13 +104,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void didUpdateWidget(covariant ProfileScreen old) {
     super.didUpdateWidget(old);
-    if (widget.initialTab != old.initialTab) {
-      setState(() => _tab = widget.initialTab);
+    // Only when the coin pill opens Me, not on every rebuild while the
+    // shell still passes 2, or scrolling Me would keep jumping to the top.
+    if (widget.initialTab != old.initialTab ||
+        (widget.active && !old.active)) {
+      _maybeScrollToWallet();
     }
     if (widget.active && !old.active) {
       _loadLedger();
       _loadDeletionRequests();
       _maybeTour();
+    }
+  }
+
+  void _maybeScrollToWallet() {
+    if (widget.initialTab == 2) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
     }
   }
 
@@ -151,6 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     TourService.I.removeListener(_maybeTour);
     _displayName.dispose();
     _email.dispose();
@@ -312,6 +328,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }, l.toastUnchecked);
   }
 
+  Widget _sectionTitle(String title) => Padding(
+        padding: const EdgeInsets.only(top: 16, bottom: 8),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -355,62 +383,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _loadDeletionRequests();
       },
       child: ListView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(top: 16, bottom: 40),
         children: [
           PageHeading(title: l.profileTitle, subtitle: l.profileSubtitle),
-
-          // Family banner (gradient indigo → violet)
-          if (family != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 24),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.indigo, AppColors.violet]),
-                borderRadius: BorderRadius.circular(AppRadii.md),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Color(0x4D6366F1),
-                      blurRadius: 20,
-                      offset: Offset(0, 6)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Text('🏡', style: TextStyle(fontSize: 28)),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                            (family['name'] ??
-                                    family['family_name'] ??
-                                    l.fallbackMyFamily)
-                                .toString(),
-                            style: const TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
-                                color: Colors.white)),
-                        Text(
-                            l.asAlias((family['alias'] ??
-                                    app.profile?['display_name'] ??
-                                    l.fallbackMember)
-                                .toString()),
-                            style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xD9FFFFFF))),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
           // ── Deletion requests banner ──
           for (final req in _deletionRequests)
@@ -469,6 +446,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
+          if (family != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l.meIdentityLine(
+                  (family['name'] ??
+                          family['family_name'] ??
+                          l.fallbackMyFamily)
+                      .toString(),
+                  (family['alias'] ??
+                          app.profile?['display_name'] ??
+                          l.fallbackMember)
+                      .toString(),
+                ),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+
           if (wide)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,15 +484,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             )
           else ...[
-            SegmentedTabs(
-              tabs: [l.tabMyProfile, l.tabFamily, l.tabWallet],
-              selected: _tab,
-              onChanged: (i) => setState(() => _tab = i),
-            ),
-            const SizedBox(height: 20),
-            if (_tab == 0) account,
-            if (_tab == 1) familySection,
-            if (_tab == 2) wallet,
+            _sectionTitle(l.tabWallet),
+            wallet,
+            _sectionTitle(l.tabFamily),
+            familySection,
+            _sectionTitle(l.sectionYou),
+            account,
           ],
         ],
       ),
@@ -901,82 +896,58 @@ class _WalletPanel extends StatelessWidget {
       (item['activity_id'] != null &&
           revertedIds.contains(item['activity_id']));
 
-  ({String label, String icon}) _coinTier(AppLocalizations l) {
-    if (balance >= 1000) return (label: l.tierPlatinum, icon: '🏆');
-    if (balance >= 500) return (label: l.tierGold, icon: '🥇');
-    if (balance >= 200) return (label: l.tierSilver, icon: '🥈');
-    return (label: l.tierBronze, icon: '🥉');
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final loc = l.localeName;
     final preview = ledger.take(3).toList();
     final revertedIds = _revertedActivityIds;
-    final tasksThisMonth = ledger
-        .where((i) =>
-            i['reason'] == 'activity_completed' &&
-            !revertedIds.contains(i['activity_id']))
-        .length;
-    final tier = _coinTier(l);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ── Balance widget ──
         Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.ink,
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
             borderRadius: BorderRadius.circular(AppRadii.lg),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l.totalBalance,
+              Text(l.yourBalance,
                   style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary)),
+              const SizedBox(height: 6),
+              Text('${NumberFormat.decimalPattern(loc).format(balance)} cc',
+                  style: const TextStyle(
+                      fontSize: 32,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.inkMuted)),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(NumberFormat.decimalPattern(loc).format(balance),
-                      style: const TextStyle(
-                          fontSize: 44.8,
-                          fontWeight: FontWeight.w800,
-                          height: 1,
-                          color: Colors.white)),
-                  const SizedBox(width: 6),
-                  Text(l.coinsUnit,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.gold)),
-                ],
-              ),
-              const SizedBox(height: 20),
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 16),
               if (preview.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Center(
                     child: Text(l.noActivityThisMonth,
                         style: const TextStyle(
-                            fontSize: 13.6, color: Color(0xFF475569))),
+                            fontSize: 13.5, color: AppColors.textSecondary)),
                   ),
                 )
               else
-                for (final row in preview)
+                for (final (i, row) in preview.indexed)
+                  // Plain rows with hairlines, not boxes inside the card.
                   Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0x0FFFFFFF),
-                      borderRadius: BorderRadius.circular(12),
+                      border: i == 0
+                          ? null
+                          : const Border(
+                              top: BorderSide(color: AppColors.border)),
                     ),
                     child: Row(
                       children: [
@@ -990,41 +961,36 @@ class _WalletPanel extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFF1F5F9)
+                                      color: AppColors.textPrimary
                                           .withValues(
                                               alpha: _isReverted(row, revertedIds)
                                                   ? 0.6
                                                   : 1),
                                       decoration: _isReverted(row, revertedIds)
                                           ? TextDecoration.lineThrough
-                                          : null,
-                                      decorationColor:
-                                          const Color(0xFFF1F5F9))),
+                                          : null)),
                               Text(ledgerDate(l, loc, row['created_at']),
                                   style: const TextStyle(
-                                      fontSize: 12, color: Color(0xFF64748B))),
+                                      fontSize: 12, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
-                        _AmountText(amount: toNum(row['amount'])),
+                        _AmountText(
+                            amount: toNum(row['amount']),
+                            suffix: ' cc',
+                            dark: false),
                       ],
                     ),
                   ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
+                child: TextButton(
                   onPressed: onToggleLedger,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFE2E8F0),
-                    side: const BorderSide(color: Color(0x1FFFFFFF)),
-                    backgroundColor: const Color(0x14FFFFFF),
-                    shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppRadii.pill)),
-                  ),
                   child: Text(showFullLedger ? l.hideLedger : l.viewFullLedger,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary)),
                 ),
               ),
             ],
@@ -1154,66 +1120,21 @@ class _WalletPanel extends StatelessWidget {
         ],
 
         // ── Insights ──
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            color: AppColors.primarySoft,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l.activityInsights,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
-              for (final (icon, bg, label, sub) in [
-                (
-                  '✅',
-                  AppColors.successSoft,
-                  l.tasksMastered,
-                  l.nThisMonth('$tasksThisMonth')
-                ),
-                (
-                  tier.icon,
-                  AppColors.warningSoft,
-                  l.rankLabel(tier.label),
-                  l.ccTotal(NumberFormat.decimalPattern(loc).format(balance))
-                ),
-              ])
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        alignment: Alignment.center,
-                        decoration:
-                            BoxDecoration(color: bg, shape: BoxShape.circle),
-                        child:
-                            Text(icon, style: const TextStyle(fontSize: 20)),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(label,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700, fontSize: 14)),
-                            Text(sub,
-                                style: const TextStyle(
-                                    fontSize: 12.5,
-                                    color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+        // ── See family stats ──
+        Card(
+          margin: const EdgeInsets.only(top: 16),
+          child: ListTile(
+            title: Text(l.seeFamilyStats,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary)),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textSecondary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+            ),
+            onTap: () => Navigator.of(context).push(statsRoute()),
           ),
         ),
       ],
@@ -1226,7 +1147,7 @@ class _AmountText extends StatelessWidget {
   final String suffix;
   final bool dark;
 
-  const _AmountText({required this.amount, this.suffix = '', this.dark = true});
+  const _AmountText({required this.amount, this.suffix = '', this.dark = false});
 
   @override
   Widget build(BuildContext context) {
