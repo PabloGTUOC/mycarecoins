@@ -93,7 +93,9 @@
   "checklistValidate": "Bestätigen: die Münzen kommen an",
   "checklistStockStore": "Prämienshop befüllen",
 
-  "dashActiveMembers": "Aktive Familienmitglieder",
+  "dashMembers": "Mitglieder",
+  "roleCaregiver": "Betreuende Person",
+  "roleMember": "Mitglied",
   "dashPendingApproval": "Warten auf Freigabe",
   "approve": "Freigeben",
   "dashThisWeek": "Diese Woche",
@@ -101,9 +103,6 @@
   "logTimeOff": "+ Abwesenheit eintragen",
   "prevWeek": "Vorherige Woche",
   "nextWeek": "Nächste Woche",
-
-  "dashOffersTitle": "Aufgaben-Angebote & Boni",
-  "offersOpenCount": "{count} offen",
 
   "kpiFamilyBalance": "Familiensaldo",
   "kpiMembersCount": "{count, plural, one{über {count} Mitglied} other{über {count} Mitglieder}}",
@@ -128,7 +127,7 @@
   "timeAgoHours": "{count, plural, one{vor {count} Stunde} other{vor {count} Stunden}}",
   "timeAgoMins": "{count, plural, one{vor {count} Min.} other{vor {count} Min.}}",
 
-  "caredFor": "umsorgt",
+  "caredFor": "Umsorgt",
   "dayToday": "HEUTE",
   "freeDay": "Freier Tag",
   "moreCount": "+{count} weitere",
@@ -196,7 +195,6 @@
   "absenceWholeDaysNote": "Abwesenheiten umfassen ganze Tage – wähle einen Tag oder mehr.",
   "absenceCostNote": "Während du weg bist, geht dein Anteil an den Monatsmünzen an die Person, die zu Hause bleibt.",
 
-  "dashCoverTitle": "Du wurdest gebeten zu übernehmen",
   "personalTimeSheetTitle": "Persönliche Zeit eintragen",
   "personalTimeNameHint": "z. B. Sport",
   "personalTimeNoteLabel": "Notiz",

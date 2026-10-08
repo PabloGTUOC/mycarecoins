@@ -93,7 +93,9 @@
   "checklistValidate": "Validez-la : les pièces arrivent",
   "checklistStockStore": "Garnissez la boutique de récompenses",
 
-  "dashActiveMembers": "Membres actifs de la famille",
+  "dashMembers": "Membres",
+  "roleCaregiver": "Aidant",
+  "roleMember": "Membre",
   "dashPendingApproval": "En attente d'approbation",
   "approve": "Approuver",
   "dashThisWeek": "Cette semaine",
@@ -101,9 +103,6 @@
   "logTimeOff": "+ Déclarer une absence",
   "prevWeek": "Semaine précédente",
   "nextWeek": "Semaine suivante",
-
-  "dashOffersTitle": "Offres de tâches et primes",
-  "offersOpenCount": "{count} ouvertes",
 
   "kpiFamilyBalance": "Solde familial",
   "kpiMembersCount": "{count, plural, one{sur {count} membre} other{sur {count} membres}}",
@@ -128,7 +127,7 @@
   "timeAgoHours": "{count, plural, one{il y a {count} heure} other{il y a {count} heures}}",
   "timeAgoMins": "{count, plural, one{il y a {count} min} other{il y a {count} min}}",
 
-  "caredFor": "pris en charge",
+  "caredFor": "Pris en charge",
   "dayToday": "AUJ.",
   "freeDay": "Jour libre",
   "moreCount": "+{count} autres",
@@ -196,7 +195,6 @@
   "absenceWholeDaysNote": "Les absences couvrent des journées entières : choisissez un jour ou plus.",
   "absenceCostNote": "Pendant votre absence, votre part des pièces du mois revient à la personne restée à la maison.",
 
-  "dashCoverTitle": "On vous demande un relais",
   "personalTimeSheetTitle": "Réserver du temps personnel",
   "personalTimeNameHint": "ex. Sport",
   "personalTimeNoteLabel": "Note",

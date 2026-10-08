@@ -352,8 +352,12 @@
   "checklistStockStore": "Stock the reward store",
   "@checklistStockStore": { "description": "Activation checklist step 5" },
 
-  "dashActiveMembers": "Active family members",
-  "@dashActiveMembers": { "description": "Dashboard section title: member cards" },
+  "dashMembers": "Members",
+  "@dashMembers": { "description": "Dashboard section title: member list" },
+  "roleCaregiver": "Caregiver",
+  "@roleCaregiver": { "description": "Role label for family caregiver" },
+  "roleMember": "Member",
+  "@roleMember": { "description": "Role label for standard family member" },
   "dashPendingApproval": "Pending approval",
   "@dashPendingApproval": { "description": "Dashboard section title: members awaiting approval" },
   "approve": "Approve",
@@ -368,14 +372,6 @@
   "@prevWeek": { "description": "Tooltip on the week-back pagination button" },
   "nextWeek": "Next week",
   "@nextWeek": { "description": "Tooltip on the week-forward pagination button" },
-
-  "dashOffersTitle": "Task offers & bribes",
-  "@dashOffersTitle": { "description": "Dashboard section title: open bounty offers" },
-  "offersOpenCount": "{count} open",
-  "@offersOpenCount": {
-    "description": "Badge next to the offers section title",
-    "placeholders": { "count": {} }
-  },
 
   "kpiFamilyBalance": "Family balance",
   "@kpiFamilyBalance": { "description": "KPI card label: sum of all member balances" },
@@ -438,7 +434,7 @@
     "placeholders": { "count": { "type": "num" } }
   },
 
-  "caredFor": "cared for",
+  "caredFor": "Cared for",
   "@caredFor": { "description": "Badge on dependent cards (children/pets/elderly) instead of a balance" },
   "dayToday": "TODAY",
   "@dayToday": { "description": "Short uppercase label replacing the weekday for today in the agenda; must stay very short" },
@@ -591,8 +587,6 @@
   "absenceCostNote": "While you're away, your share of the monthly coins goes to whoever is home.",
   "@absenceCostNote": { "description": "Absence dialog: what logging time off costs the person leaving" },
 
-  "dashCoverTitle": "Asked you to cover",
-  "@dashCoverTitle": { "description": "Dashboard section for coverage requests awaiting this user" },
   "personalTimeSheetTitle": "Book personal time",
   "@personalTimeSheetTitle": { "description": "Title of the create-personal-time dialog" },
   "personalTimeNameHint": "e.g. Gym",

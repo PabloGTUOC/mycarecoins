@@ -492,14 +492,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
     final bountyTotal =
         offers.fold<num>(0, (acc, o) => acc + toNum(o['bounty_amount']));
-    // Requests waiting on this user specifically — the only ones they can act
-    // on, and the reason the card is worth interrupting the dashboard for.
-    final toCover = _requests.where((r) {
-      if (r['status'] != 'pending') return false;
-      if (r['requester_id']?.toString() == app.userId?.toString()) return false;
-      final target = r['requested_of'];
-      return target == null || target.toString() == app.userId?.toString();
-    }).toList();
     final recent = _recentActivity;
     final greetName = (app.family?['alias'] ??
             app.profile?['display_name'] ??
@@ -510,6 +502,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? l.dashEarned(_greeting(l), greetName, coinsEarnedToday)
         : l.dashNothingEarned(_greeting(l), greetName);
     final subtitle = needsYou ? '$firstSentence ${l.dashNeedsYou}' : firstSentence;
+
+    final sortedActive = [...active]..sort((a, b) {
+        final na = (a['name'] ?? l.fallbackUser(a['user_id'] ?? '')).toString();
+        final nb = (b['name'] ?? l.fallbackUser(b['user_id'] ?? '')).toString();
+        return na.toLowerCase().compareTo(nb.toLowerCase());
+      });
+    final sortedObjects = [...objects]..sort((a, b) {
+        final na = (a['name'] ?? l.fallbackDependent).toString();
+        final nb = (b['name'] ?? l.fallbackDependent).toString();
+        return na.toLowerCase().compareTo(nb.toLowerCase());
+      });
+    final memberRows = <Widget>[
+      for (var i = 0; i < sortedActive.length; i++)
+        _MemberRow(
+          name: (sortedActive[i]['name'] ??
+                  l.fallbackUser(sortedActive[i]['user_id'] ?? ''))
+              .toString(),
+          subtitle: sortedActive[i]['role'] == 'caregiver'
+              ? l.roleCaregiver
+              : l.roleMember,
+          balance: toNum(sortedActive[i]['coin_balance']),
+          colorIndex: i,
+          imageUrl: sortedActive[i]['avatar_url']?.toString(),
+        ),
+      for (var i = 0; i < sortedObjects.length; i++)
+        _MemberRow(
+          name: (sortedObjects[i]['name'] ?? l.fallbackDependent).toString(),
+          subtitle: l.caredFor,
+          balance: null,
+          colorIndex: sortedActive.length + i,
+          imageUrl: sortedObjects[i]['avatar_url']?.toString(),
+        ),
+    ];
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -546,30 +571,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // store are caregiver actions. Auto-hides once the loop ran.
           if (app.isCaregiver && !_checklistDismissed) ..._buildChecklist(),
 
-          // ── Active members ──
-          _SectionTitle(l.dashActiveMembers),
-          Wrap(
+          // ── Members ──
+          _SectionTitle(l.dashMembers),
+          Container(
             key: _tourMembersKey,
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              for (var i = 0; i < active.length; i++)
-                _MemberCard(
-                  name: (active[i]['name'] ??
-                          l.fallbackUser(active[i]['user_id'] ?? ''))
-                      .toString(),
-                  imageUrl: active[i]['avatar_url']?.toString(),
-                  balance: toNum(active[i]['coin_balance']),
-                  colorIndex: i,
-                ),
-              for (var i = 0; i < objects.length; i++)
-                _MemberCard(
-                  name: (objects[i]['name'] ?? l.fallbackDependent).toString(),
-                  imageUrl: objects[i]['avatar_url']?.toString(),
-                  balance: null,
-                  colorIndex: active.length + i,
-                ),
-            ],
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadii.md),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < memberRows.length; i++) ...[
+                  if (i > 0)
+                    const Divider(
+                        height: 1, thickness: 1, color: AppColors.border),
+                  memberRows[i],
+                ],
+              ],
+            ),
           ),
 
           if (pending.isNotEmpty) ...[
@@ -723,80 +743,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
 
           const SizedBox(height: 32),
-
-          // ── Someone asked you to cover ──
-          if (toCover.isNotEmpty) ...[
-            _SectionTitle(l.dashCoverTitle),
-            for (final r in toCover)
-              _CoverRequestCard(
-                request: r,
-                onAnswered: _load,
-              ),
-            const SizedBox(height: 20),
-          ],
-
-          // ── Offers ──
-          if (offers.isNotEmpty) ...[
-            Row(
-              children: [
-                Expanded(child: _SectionTitle(l.dashOffersTitle)),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: PillBadge(text: l.offersOpenCount(offers.length)),
-                ),
-              ],
-            ),
-            for (final offer in offers)
-              InkWell(
-                borderRadius: BorderRadius.circular(AppRadii.md),
-                onTap: () {
-                  final ts =
-                      DateTime.tryParse(offer['starts_at']?.toString() ?? '');
-                  if (ts != null) _openDaily(ts);
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(AppRadii.md),
-                  ),
-                  child: Row(
-                    children: [
-                      ActivityTypeIcon(
-                        type: offer['type']?.toString(),
-                        category: offer['category']?.toString(),
-                        size: 40,
-                        iconSize: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(displayTitle(l, offer),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800)),
-                            if (offer['starts_at'] != null)
-                              Text(
-                                  DateFormat('EEE d MMM · HH:mm', loc).format(
-                                      DateTime.parse(
-                                              offer['starts_at'].toString())
-                                          .toLocal()),
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      PillBadge(text: '+${offer['bounty_amount']}cc'),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 20),
-          ],
 
           // ── KPIs ──
           LayoutBuilder(builder: (context, c) {
@@ -1055,51 +1001,69 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _MemberCard extends StatelessWidget {
+class _MemberRow extends StatelessWidget {
   final String name;
+  final String subtitle;
   final num? balance;
   final int colorIndex;
   final String? imageUrl;
 
-  const _MemberCard(
-      {required this.name,
-      required this.balance,
-      required this.colorIndex,
-      this.imageUrl});
+  const _MemberRow({
+    required this.name,
+    required this.subtitle,
+    required this.balance,
+    required this.colorIndex,
+    this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
     final soft = AppColors.softAccents[colorIndex % 4];
     final accent = AppColors.accents[colorIndex % 4];
-    return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
         children: [
           AvatarCircle(
-              name: name,
-              size: 56,
-              imageUrl: imageUrl,
-              background: soft,
-              foreground: accent),
-          const SizedBox(height: 10),
-          Text(name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          if (balance != null)
-            PillBadge(text: '$balance cc')
-          else
-            PillBadge(
-                text: AppLocalizations.of(context).caredFor,
-                color: AppColors.textSecondary,
-                background: AppColors.bg),
+            name: name,
+            size: 36,
+            imageUrl: imageUrl,
+            background: soft,
+            foreground: accent,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (balance != null) ...[
+            const SizedBox(width: 8),
+            PillBadge(text: '$balance cc'),
+          ],
         ],
       ),
     );
@@ -1472,120 +1436,3 @@ class _ActChip extends StatelessWidget {
   }
 }
 
-/// "X asked you to cover" — the one thing on the dashboard that needs an answer
-/// rather than a glance. Declining is deliberately as easy as accepting, and
-/// nothing anywhere counts how often someone says no.
-class _CoverRequestCard extends StatefulWidget {
-  final Map<String, dynamic> request;
-  final Future<void> Function() onAnswered;
-
-  const _CoverRequestCard({required this.request, required this.onAnswered});
-
-  @override
-  State<_CoverRequestCard> createState() => _CoverRequestCardState();
-}
-
-class _CoverRequestCardState extends State<_CoverRequestCard> {
-  bool _busy = false;
-
-  Future<void> _answer(bool accept) async {
-    final l = AppLocalizations.of(context);
-    final app = context.read<AppState>();
-    setState(() => _busy = true);
-    Map? answer;
-    final ok = await app.runAction(() async {
-      final res = await app.api.post(
-          '/api/personal-time/${widget.request['id']}/${accept ? 'accept' : 'decline'}');
-      if (res is Map) answer = res;
-      await widget.onAnswered();
-    });
-    if (ok) {
-      // A repeating request may be only partly coverable; say which it was.
-      final skipped = toNum(answer?['skipped'] ?? 0).toInt();
-      final created = toNum(answer?['created'] ?? 0).toInt();
-      app.setSuccess(skipped > 0
-          ? l.toastCoverageAcceptedSeries(created, created + skipped)
-          : (accept ? l.toastCoverageAccepted : l.toastCoverageDeclined));
-    }
-    if (mounted) setState(() => _busy = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final loc = l.localeName;
-    final r = widget.request;
-    final start = DateTime.parse(r['starts_at'].toString()).toLocal();
-    final end = DateTime.parse(r['ends_at'].toString()).toLocal();
-    final pays = toNum(r['baseline_coins']) + toNum(r['sweetener_coins']);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: AppColors.primary),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ActivityTypeIcon(
-                type: r['type']?.toString(),
-                category: 'self',
-                size: 32,
-                iconSize: 18,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l.ptCoverCardBody(
-                    (r['requester_name'] ?? '').toString(),
-                    '${DateFormat('EEE d MMM', loc).format(start)} '
-                    '${DateFormat('HH:mm').format(start)}\u2013${DateFormat('HH:mm').format(end)}',
-                    displayTitle(l, r),
-                  ),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-          if ((r['description'] ?? '').toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 30),
-              child: Text(r['description'].toString(),
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary)),
-            ),
-          const SizedBox(height: 10),
-          Text(l.ptCoverPays(pays),
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, color: AppColors.success)),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: VButton(
-                  type: VButtonType.outline,
-                  disabled: _busy,
-                  onPressed: _busy ? null : () => _answer(false),
-                  child: Text(l.declineAction),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: VButton(
-                  disabled: _busy,
-                  onPressed: _busy ? null : () => _answer(true),
-                  child: Text(l.acceptAction),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

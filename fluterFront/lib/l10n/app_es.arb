@@ -93,7 +93,9 @@
   "checklistValidate": "Valídala: llegan las monedas",
   "checklistStockStore": "Llena la tienda de premios",
 
-  "dashActiveMembers": "Miembros activos de la familia",
+  "dashMembers": "Miembros",
+  "roleCaregiver": "Cuidador",
+  "roleMember": "Miembro",
   "dashPendingApproval": "Pendientes de aprobación",
   "approve": "Aprobar",
   "dashThisWeek": "Esta semana",
@@ -101,9 +103,6 @@
   "logTimeOff": "+ Registrar ausencia",
   "prevWeek": "Semana anterior",
   "nextWeek": "Semana siguiente",
-
-  "dashOffersTitle": "Ofertas de tareas e incentivos",
-  "offersOpenCount": "{count} abiertas",
 
   "kpiFamilyBalance": "Saldo familiar",
   "kpiMembersCount": "{count, plural, one{entre {count} miembro} other{entre {count} miembros}}",
@@ -128,7 +127,7 @@
   "timeAgoHours": "{count, plural, one{hace {count} hora} other{hace {count} horas}}",
   "timeAgoMins": "{count, plural, one{hace {count} min} other{hace {count} min}}",
 
-  "caredFor": "bajo cuidado",
+  "caredFor": "Bajo cuidado",
   "dayToday": "HOY",
   "freeDay": "Día libre",
   "moreCount": "+{count} más",
@@ -196,7 +195,6 @@
   "absenceWholeDaysNote": "Las ausencias cubren días completos: elige uno o más.",
   "absenceCostNote": "Mientras estás fuera, tu parte de las monedas del mes va para quien se queda en casa.",
 
-  "dashCoverTitle": "Te han pedido cubrir",
   "personalTimeSheetTitle": "Reservar tiempo personal",
   "personalTimeNameHint": "p. ej. Gimnasio",
   "personalTimeNoteLabel": "Nota",

@@ -269,7 +269,9 @@ void main() {
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Repeats');
       expect(l.dashTitle, 'Family hub');
-      expect(l.dashActiveMembers, 'Active family members');
+      expect(l.dashMembers, 'Members');
+      expect(l.roleCaregiver, 'Caregiver');
+      expect(l.roleMember, 'Member');
       expect(l.yourBalance, 'Your balance');
       expect(l.seeFamilyStats, 'See family stats');
       expect(l.sectionYou, 'You');
@@ -286,6 +288,9 @@ void main() {
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Se repite');
       expect(l.dashTitle, 'Centro familiar');
+      expect(l.dashMembers, 'Miembros');
+      expect(l.roleCaregiver, 'Cuidador');
+      expect(l.roleMember, 'Miembro');
       expect(l.yourBalance, 'Tu saldo');
       expect(l.seeFamilyStats, 'Ver estadísticas de la familia');
       expect(l.sectionYou, 'Tú');
@@ -299,6 +304,9 @@ void main() {
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Se répète');
       expect(l.dashTitle, 'Espace famille');
+      expect(l.dashMembers, 'Membres');
+      expect(l.roleCaregiver, 'Aidant');
+      expect(l.roleMember, 'Membre');
       expect(l.yourBalance, 'Votre solde');
       expect(l.seeFamilyStats, 'Voir les statistiques de la famille');
       expect(l.sectionYou, 'Vous');
@@ -311,6 +319,9 @@ void main() {
       expect(l.recurringCheckbox, 'Dies ist eine wiederkehrende Aufgabe');
       expect(l.faqRepeatA, isNot(contains('🔁')));
       expect(l.repeatsLabel, 'Wiederholt sich');
+      expect(l.dashMembers, 'Mitglieder');
+      expect(l.roleCaregiver, 'Betreuende Person');
+      expect(l.roleMember, 'Mitglied');
       expect(l.yourBalance, 'Dein Guthaben');
       expect(l.seeFamilyStats, 'Familienstatistiken ansehen');
       expect(l.sectionYou, 'Du');
