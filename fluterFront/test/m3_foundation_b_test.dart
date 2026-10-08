@@ -419,8 +419,8 @@ void main() {
       expect(find.text('Catalogue'), findsOneWidget);
       expect(find.text('Budget'), findsOneWidget);
 
-      // New activity is a tonal button at the top of Catalogue
-      final newActBtn = find.widgetWithText(FilledButton, 'New activity');
+      // New activity is a filled tonal icon button in the filter row
+      final newActBtn = find.byTooltip('New activity');
       expect(newActBtn, findsOneWidget);
 
       // Tapping New activity opens modal bottom sheet

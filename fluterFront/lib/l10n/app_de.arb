@@ -359,7 +359,6 @@
   "filterEmptyBody": "Probiere oben eine andere Kategorie.",
   "badgeApproved": "freigegeben",
   "badgeRejected": "abgelehnt",
-  "newActivityBtn": "+ Neue Aufgabe",
   "newActivityIntro": "Definiere eine wiederverwendbare Aufgabenvorlage. Nach der Freigabe kann sie beliebig oft im Tagesplan eingeplant werden.",
   "activityTitleHint": "Parkbesuch, Abendroutine…",
   "categoryLabel": "Kategorie",

@@ -359,7 +359,6 @@
   "filterEmptyBody": "Prueba otra categoría arriba.",
   "badgeApproved": "aprobada",
   "badgeRejected": "rechazada",
-  "newActivityBtn": "+ Nueva actividad",
   "newActivityIntro": "Define una plantilla de actividad reutilizable. Una vez aprobada, se puede programar desde la agenda diaria tantas veces como quieras.",
   "activityTitleHint": "Visita al parque, Rutina de dormir…",
   "categoryLabel": "Categoría",

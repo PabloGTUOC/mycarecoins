@@ -359,7 +359,6 @@
   "filterEmptyBody": "Essayez une autre catégorie ci-dessus.",
   "badgeApproved": "approuvée",
   "badgeRejected": "rejetée",
-  "newActivityBtn": "+ Nouvelle activité",
   "newActivityIntro": "Définissez un modèle d'activité réutilisable. Une fois approuvé, il peut être programmé depuis le planning du jour autant de fois que nécessaire.",
   "activityTitleHint": "Sortie au parc, Rituel du coucher…",
   "categoryLabel": "Catégorie",

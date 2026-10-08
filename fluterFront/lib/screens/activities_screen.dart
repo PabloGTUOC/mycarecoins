@@ -469,36 +469,46 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     }).toList();
 
     return [
-      FilledButton.tonal(
-        onPressed: () => _openNewActivitySheet(context),
-        child: Text(l.tabNewActivity),
-      ),
-      const SizedBox(height: 12),
       Row(
         key: _tourFilterKey,
         children: [
-          for (final (i, label)
-              in [l.filterAll, l.filterCare, l.filterHousehold].indexed)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(label),
-                selected: _filter == i,
-                selectedColor: AppColors.primarySoft,
-                labelStyle: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: _filter == i
-                        ? AppColors.primaryInk
-                        : AppColors.textSecondary),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadii.pill),
-                    side: BorderSide(
-                        color: _filter == i
-                            ? AppColors.primary
-                            : AppColors.border)),
-                onSelected: (_) => setState(() => _filter = i),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (i, label)
+                      in [l.filterAll, l.filterCare, l.filterHousehold].indexed)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: _filter == i,
+                        selectedColor: AppColors.primarySoft,
+                        labelStyle: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: _filter == i
+                                ? AppColors.primaryInk
+                                : AppColors.textSecondary),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            side: BorderSide(
+                                color: _filter == i
+                                    ? AppColors.primary
+                                    : AppColors.border)),
+                        onSelected: (_) => setState(() => _filter = i),
+                      ),
+                    ),
+                ],
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
+            icon: const Icon(Icons.add_rounded),
+            tooltip: l.tabNewActivity,
+            onPressed: () => _openNewActivitySheet(context),
+          ),
         ],
       ),
       const SizedBox(height: 16),
@@ -620,12 +630,6 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               ],
             ),
           ),
-      const SizedBox(height: 12),
-      VButton(
-          type: VButtonType.secondary,
-          block: true,
-          onPressed: () => _openNewActivitySheet(context),
-          child: Text(l.newActivityBtn)),
     ];
   }
 

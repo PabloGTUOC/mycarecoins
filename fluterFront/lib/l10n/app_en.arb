@@ -988,8 +988,6 @@
   "@badgeApproved": { "description": "Badge on approved templates (lowercase)" },
   "badgeRejected": "rejected",
   "@badgeRejected": { "description": "Badge on rejected templates (lowercase)" },
-  "newActivityBtn": "+ New activity",
-  "@newActivityBtn": { "description": "Shortcut button below the catalogue" },
   "newActivityIntro": "Define a reusable activity template. Once approved, it can be scheduled from the Daily view any number of times.",
   "@newActivityIntro": { "description": "Intro text of the create-template form" },
   "activityTitleHint": "Park Visit, Bedtime routine…",
