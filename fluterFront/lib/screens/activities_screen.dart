@@ -551,6 +551,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                       ActivityTypeIcon(
                         type: filtered[i]['type']?.toString(),
                         category: filtered[i]['category']?.toString(),
+                        title: filtered[i]['title']?.toString(),
                         size: 38,
                         iconSize: 20,
                       ),

@@ -2256,6 +2256,7 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
           ActivityTypeIcon(
             type: t['type']?.toString() ?? cat,
             category: t['category']?.toString(),
+            title: t['title']?.toString(),
             size: 34,
             iconSize: 18,
           ),
@@ -2419,6 +2420,7 @@ class _TaskSheetState extends State<_TaskSheet> {
                         leading: ActivityTypeIcon(
                           type: t['type']?.toString(),
                           category: t['category']?.toString(),
+                          title: t['title']?.toString(),
                           size: 32,
                           iconSize: 18,
                         ),
@@ -2525,6 +2527,7 @@ class _TaskTrayState extends State<_TaskTray> {
           ActivityTypeIcon(
             type: t['type']?.toString(),
             category: t['category']?.toString(),
+            title: t['title']?.toString(),
             size: 20,
             iconSize: 12,
           ),
@@ -2605,6 +2608,7 @@ class _TaskTrayState extends State<_TaskTray> {
           ActivityTypeIcon(
             type: t['type']?.toString(),
             category: t['category']?.toString(),
+            title: t['title']?.toString(),
             size: 34,
             iconSize: 18,
           ),
@@ -4073,6 +4077,7 @@ class DayActivityBlock extends StatelessWidget {
                   child: ActivityTypeIcon(
                     type: a['type']?.toString(),
                     category: a['category']?.toString(),
+                    title: a['title']?.toString(),
                     size: 18,
                     iconSize: 11,
                   ),
@@ -4565,6 +4570,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                               ActivityTypeIcon(
                                 type: t['type']?.toString(),
                                 category: t['category']?.toString(),
+                                title: t['title']?.toString(),
                                 size: 34,
                                 iconSize: 18,
                               ),
@@ -4712,6 +4718,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
                   ActivityTypeIcon(
                     type: a['type']?.toString(),
                     category: a['category']?.toString(),
+                    title: a['title']?.toString(),
                     size: 36,
                     iconSize: 20,
                   ),

@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../services/api_client.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/task_icon.dart';
 
 /// ── VCard ─────────────────────────────────────────────────────────
 class VCard extends StatelessWidget {
@@ -74,9 +75,14 @@ class VCard extends StatelessWidget {
 /// ── Activity structural icons ─────────────────────────────────────
 
 /// Material Rounded icon for an activity by its subclass and type.
-IconData activityTypeIcon(String? type, {String? category}) {
+IconData activityTypeIcon(String? type, {String? category, String? title}) {
   if (category == 'self') {
     return personalTimeTypeIcon(type);
+  }
+  if ((category == null || category == 'care') &&
+      (type == 'care' || type == 'household')) {
+    final taskIcon = taskIconFor(title);
+    if (taskIcon != null) return taskIcon;
   }
   return switch (type) {
     'care' => Icons.favorite_rounded,
@@ -121,6 +127,7 @@ IconData personalTimeTypeIcon(String? type) => switch (type) {
 class ActivityTypeIcon extends StatelessWidget {
   final String? type;
   final String? category;
+  final String? title;
   final double size;
   final double iconSize;
 
@@ -128,6 +135,7 @@ class ActivityTypeIcon extends StatelessWidget {
     super.key,
     this.type,
     this.category,
+    this.title,
     this.size = 34,
     this.iconSize = 18,
   });
@@ -135,7 +143,7 @@ class ActivityTypeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = activityTypeColors(type, category: category);
-    final icon = activityTypeIcon(type, category: category);
+    final icon = activityTypeIcon(type, category: category, title: title);
     return Container(
       width: size,
       height: size,

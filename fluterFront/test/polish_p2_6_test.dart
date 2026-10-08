@@ -356,8 +356,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ActivityTypeIcon), findsNWidgets(2));
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.restaurant_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.child_care_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.cleaning_services_rounded), findsOneWidget);
       expect(find.text('❤️'), findsNothing);
       expect(find.text('🍽️'), findsNothing);
     });
