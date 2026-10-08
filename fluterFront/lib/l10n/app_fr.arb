@@ -32,6 +32,13 @@
   "refusalAlreadyBusy": "Déjà planifié",
   "freeDaysRange": "Libre : {start} au {end}",
   "freeDaySingle": "Libre : {date}",
+  "quickAddTitle": "Ajouter à {time}",
+  "coverageEndsWithPersonalTime": "Se termine avec le temps personnel couvert",
+  "actionValidate": "Valider",
+  "actionDelegate": "Déléguer",
+  "actionTakeOver": "Reprendre (+{coins} cc)",
+  "actionRepeat": "Répéter",
+  "actionMove": "Déplacer",
 
   "navMarketplace": "Boutique",
   "navPersonal": "Personnel",

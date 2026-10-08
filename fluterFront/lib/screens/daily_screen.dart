@@ -52,6 +52,9 @@ const double kGridHeight = 18 * 64.0;
 /// handle, the header row with "All tasks", and one row of chips.
 const double kTrayCollapsed = 0.21;
 
+/// Tray size while a block is dragged, so the grid is free to drop on.
+const double kTrayDragging = 0.04;
+
 /// Localized free-time gap between timeline cards. Reuses the duration keys so
 /// gaps read the same way as activity durations across the app.
 String formatGap(AppLocalizations l, int minutes) {
@@ -106,6 +109,21 @@ bool canRemoveActivity(Map<String, dynamic> a, AppState app) {
   if (isSelfActivity(a)) {
     return a['assigned_to']?.toString() == app.userId?.toString();
   }
+  return a['assigned_to']?.toString() == app.userId?.toString() ||
+      app.isCaregiver;
+}
+
+bool canMoveActivity(Map<String, dynamic> a, AppState app) {
+  if (a['type'] == 'coverage') return false;
+  final status = a['status']?.toString() ?? 'pending';
+  if (status != 'approved') return false;
+  final mine = a['assigned_to']?.toString() == app.userId?.toString();
+  if (isSelfActivity(a)) {
+    if (!mine) return false;
+    if (a['counterpart_activity_id'] != null) return false;
+    return true;
+  }
+  if (!mine && !app.isCaregiver) return false;
   return true;
 }
 
@@ -575,6 +593,11 @@ class _DailyScreenState extends State<DailyScreen> {
   bool _canRemoveActivity(Map<String, dynamic> a, {AppState? appState}) {
     final app = appState ?? context.read<AppState>();
     return canRemoveActivity(a, app);
+  }
+
+  bool _canMoveActivity(Map<String, dynamic> a, {AppState? appState}) {
+    final app = appState ?? context.read<AppState>();
+    return canMoveActivity(a, app);
   }
 
   /// Accepted personal time points at its coverage shift.
@@ -1144,9 +1167,161 @@ class _DailyScreenState extends State<DailyScreen> {
       } else {
         _scheduleImmediately(activity, startsAt);
       }
-    } else {
-      _openScheduleDialog(activity, hour: hour, minute: minute);
+    } else if (payload['type'] == 'scheduled') {
+      _moveActivity(activity, startsAt);
     }
+  }
+
+  Future<void> _moveActivity(
+      Map<String, dynamic> a, DateTime startsAt) async {
+    if (!mounted) return;
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    final actId = a['id'];
+    final rawTitle = (a['title'] ?? '').toString();
+    final title = rawTitle.isNotEmpty
+        ? rawTitle
+        : (isSelfActivity(a) ? l.personalTimeEntry : '');
+    final oldStart = _startsAt(a);
+
+    try {
+      await app.api.patch(
+        '/api/activities/$actId/time',
+        {'startsAt': startsAt.toUtc().toIso8601String()},
+      );
+      await _load();
+
+      final timeStr = DateFormat('HH:mm').format(startsAt);
+      final msg = l.scheduledAtTime(title, timeStr);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            action: oldStart != null
+                ? SnackBarAction(
+                    label: l.actionUndo,
+                    onPressed: () async {
+                      try {
+                        await app.api.patch(
+                          '/api/activities/$actId/time',
+                          {'startsAt': oldStart.toUtc().toIso8601String()},
+                        );
+                        await _load();
+                      } catch (e) {
+                        if (mounted) {
+                          final undoErr = app.errorTextFor(e);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(undoErr)),
+                          );
+                        }
+                      }
+                    },
+                  )
+                : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errMsg = app.errorTextFor(e);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errMsg)),
+        );
+      }
+    }
+  }
+
+  Future<void> _moveViaTimePicker(Map<String, dynamic> a) async {
+    final current = _startsAt(a) ?? DateTime.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: current.hour, minute: current.minute),
+    );
+    if (picked == null) return;
+    final newStart =
+        DateTime(_day.year, _day.month, _day.day, picked.hour, picked.minute);
+    await _moveActivity(a, newStart);
+  }
+
+  void _handleGridTap(double localDy) {
+    final now = widget.now ?? DateTime.now();
+    final isPastDay = _day.year < now.year ||
+        (_day.year == now.year && _day.month < now.month) ||
+        (_day.year == now.year && _day.month == now.month && _day.day < now.day);
+    if (isPastDay) return;
+
+    final pct = (localDy / kGridHeight).clamp(0.0, 1.0);
+    var h = kStartHour + pct * kTotalHours;
+    h = (h * 4).floor() / 4.0;
+    h = h.clamp(kStartHour.toDouble(), 23.75);
+    final hour = h.floor();
+    final minute = ((h - hour) * 60).round();
+    final slotStart = DateTime(_day.year, _day.month, _day.day, hour, minute);
+
+    final isToday = _day.year == now.year &&
+        _day.month == now.month &&
+        _day.day == now.day;
+    if (isToday && slotStart.isBefore(now)) return;
+
+    _openQuickAddSheet(slotStart);
+  }
+
+  Future<void> _openQuickAddSheet(DateTime slotStart) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _QuickAddSheet(
+        startsAt: slotStart,
+        templates: _sortedTemplates,
+        onTapTemplate: (template) {
+          Navigator.pop(ctx);
+          _scheduleImmediately(template, slotStart);
+        },
+        onTapTimeForMe: () {
+          Navigator.pop(ctx);
+          _openPersonalTime(null, slotStart);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openActivitySheet(Map<String, dynamic> a) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => _ActivityDetailsSheet(
+        activity: a,
+        onValidate: () {
+          Navigator.pop(ctx);
+          _validate(a['id']);
+        },
+        onDelegate: () {
+          Navigator.pop(ctx);
+          _openBountyDialog(a);
+        },
+        onTakeOver: () {
+          Navigator.pop(ctx);
+          _acceptBounty(a);
+        },
+        onRepeat: () {
+          Navigator.pop(ctx);
+          _openRecurrenceDialog(a);
+        },
+        onMove: () {
+          Navigator.pop(ctx);
+          _moveViaTimePicker(a);
+        },
+        onRemove: () {
+          Navigator.pop(ctx);
+          _removeFlow(a);
+        },
+      ),
+    );
   }
 
   Future<void> _openScheduleSheet() async {
@@ -1677,6 +1852,9 @@ class _DailyScreenState extends State<DailyScreen> {
                       onRecurrence: _openRecurrenceDialog,
                       onCompletedInfo: _showCompletedLockedDialog,
                       canRemove: (a) => _canRemoveActivity(a),
+                      canMove: (a) => _canMoveActivity(a),
+                      onGridTap: _handleGridTap,
+                      onActivityTap: _openActivitySheet,
                       onDragStarted: () =>
                           setState(() => _draggingScheduled = true),
                       onDragEnd: () =>
@@ -1696,7 +1874,6 @@ class _DailyScreenState extends State<DailyScreen> {
 
   Widget _buildNarrow(List<Map<String, dynamic>> items) {
     final l = AppLocalizations.of(context);
-    // TODO(P2-9): activity sheet with Remove (replaces phone swipe-to-remove).
     return Stack(
       children: [
         Column(
@@ -1721,6 +1898,8 @@ class _DailyScreenState extends State<DailyScreen> {
                 onRefresh: _load,
                 onGridDrop: _onGridDrop,
                 onDoubleTap: (dy) => _openPersonalTime(dy),
+                onGridTap: _handleGridTap,
+                onActivityTap: _openActivitySheet,
                 onAbsenceTap: _absenceDetail,
                 onRequestTap: _openRequest,
                 onValidate: _validate,
@@ -1729,10 +1908,25 @@ class _DailyScreenState extends State<DailyScreen> {
                 onRecurrence: _openRecurrenceDialog,
                 onCompletedInfo: _showCompletedLockedDialog,
                 canRemove: (a) => _canRemoveActivity(a),
-                onDragStarted: () =>
-                    setState(() => _draggingScheduled = true),
-                onDragEnd: () =>
-                    setState(() => _draggingScheduled = false),
+                canMove: (a) => _canMoveActivity(a),
+                onDragStarted: () {
+                  HapticFeedback.selectionClick();
+                  if (_trayController.isAttached) {
+                    _trayController.jumpTo(kTrayDragging);
+                  }
+                  setState(() => _draggingScheduled = true);
+                },
+                onDragEnd: () {
+                  _gridStateKey.currentState?.clearHover();
+                  if (_trayController.isAttached) {
+                    _trayController.animateTo(
+                      kTrayCollapsed,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                  setState(() => _draggingScheduled = false);
+                },
               ),
             ),
           ],
@@ -1748,7 +1942,7 @@ class _DailyScreenState extends State<DailyScreen> {
           onDragStarted: () {
             HapticFeedback.selectionClick();
             if (_trayController.isAttached) {
-              _trayController.jumpTo(0.04);
+              _trayController.jumpTo(kTrayDragging);
             }
           },
           onDragEnd: () {
@@ -2320,7 +2514,7 @@ class _TaskTrayState extends State<_TaskTray> {
 
   Widget _buildTrayChip(Map<String, dynamic> t, AppLocalizations l) {
     final title = (t['title'] ?? '').toString();
-    final isCare = t['type'] == 'care' || t['category'] == 'care';
+    final isCare = t['type'] == 'care';
     final coins = toNum(t['coin_value']).toInt();
 
     final chipWidget = Container(
@@ -2394,7 +2588,7 @@ class _TaskTrayState extends State<_TaskTray> {
 
   Widget _buildExpandedTaskRow(Map<String, dynamic> t, AppLocalizations l) {
     final title = (t['title'] ?? '').toString();
-    final isCare = t['type'] == 'care' || t['category'] == 'care';
+    final isCare = t['type'] == 'care';
     final coins = toNum(t['coin_value']).toInt();
 
     final rowWidget = Container(
@@ -2495,8 +2689,8 @@ class _TaskTrayState extends State<_TaskTray> {
 
             final q = _search.text.trim().toLowerCase();
             final filtered = widget.templates.where((t) {
-              if (_filter == 1 && t['type'] != 'care' && t['category'] != 'care') return false;
-              if (_filter == 2 && t['type'] != 'household' && t['category'] != 'household') return false;
+              if (_filter == 1 && t['type'] != 'care') return false;
+              if (_filter == 2 && t['type'] != 'household') return false;
               if (q.isNotEmpty &&
                   !(t['title']?.toString().toLowerCase().contains(q) ?? false)) {
                 return false;
@@ -2748,6 +2942,8 @@ class _DayHourGrid extends StatefulWidget {
   final RefreshCallback onRefresh;
   final void Function(Map<String, dynamic> data, double dy) onGridDrop;
   final void Function(double dy) onDoubleTap;
+  final void Function(double dy)? onGridTap;
+  final void Function(Map<String, dynamic> a)? onActivityTap;
   final void Function(Map<String, dynamic> abs) onAbsenceTap;
   final void Function(Map<String, dynamic> req) onRequestTap;
   final void Function(dynamic id) onValidate;
@@ -2756,6 +2952,7 @@ class _DayHourGrid extends StatefulWidget {
   final void Function(Map<String, dynamic> a) onRecurrence;
   final VoidCallback onCompletedInfo;
   final bool Function(Map<String, dynamic> a) canRemove;
+  final bool Function(Map<String, dynamic> a)? canMove;
   final VoidCallback onDragStarted;
   final VoidCallback onDragEnd;
 
@@ -2773,6 +2970,8 @@ class _DayHourGrid extends StatefulWidget {
     required this.onRefresh,
     required this.onGridDrop,
     required this.onDoubleTap,
+    this.onGridTap,
+    this.onActivityTap,
     required this.onAbsenceTap,
     required this.onRequestTap,
     required this.onValidate,
@@ -2781,6 +2980,7 @@ class _DayHourGrid extends StatefulWidget {
     required this.onRecurrence,
     required this.onCompletedInfo,
     required this.canRemove,
+    this.canMove,
     required this.onDragStarted,
     required this.onDragEnd,
   });
@@ -2792,6 +2992,7 @@ class _DayHourGrid extends StatefulWidget {
 class _DayHourGridState extends State<_DayHourGrid> {
   final _gridKey = GlobalKey();
   double _doubleTapDy = 0.0;
+  double _tapDy = 0.0;
   Map<String, dynamic>? _hoverTemplate;
   DateTime? _hoverSlotStart;
   DateTime? _hoverSlotEnd;
@@ -2823,7 +3024,8 @@ class _DayHourGridState extends State<_DayHourGrid> {
   }
 
   String? _checkRefusal(
-      Map<String, dynamic> template, DateTime start, DateTime end) {
+      Map<String, dynamic> candidate, DateTime start, DateTime end,
+      {bool isScheduled = false}) {
     final l = AppLocalizations.of(context);
     final app = context.read<AppState>();
     final now = (widget.now ?? DateTime.now()).toLocal();
@@ -2833,9 +3035,13 @@ class _DayHourGridState extends State<_DayHourGrid> {
       return l.refusalTimePassed;
     }
 
-    // 2. Current user has an absence then
+    final targetUserId = isScheduled
+        ? (candidate['assigned_to']?.toString() ?? app.userId?.toString())
+        : app.userId?.toString();
+
+    // 2. Target user has an absence then
     final hasAbsence = widget.absences.any((abs) {
-      if (abs['user_id']?.toString() != app.userId?.toString()) return false;
+      if (abs['user_id']?.toString() != targetUserId) return false;
       final s =
           DateTime.tryParse(abs['start_time']?.toString() ?? '')?.toLocal();
       final e = DateTime.tryParse(abs['end_time']?.toString() ?? '')?.toLocal();
@@ -2846,11 +3052,14 @@ class _DayHourGridState extends State<_DayHourGrid> {
       return l.refusalUserAbsent;
     }
 
-    // 3. Current user already has a non-coverage activity overlapping window
+    // 3. Target user already has a non-coverage activity overlapping window
     final hasOverlap = widget.items.any((act) {
       if (act['is_template'] == true) return false;
       if (act['type'] == 'coverage') return false;
-      if (act['assigned_to']?.toString() != app.userId?.toString()) {
+      if (isScheduled && act['id']?.toString() == candidate['id']?.toString()) {
+        return false;
+      }
+      if (act['assigned_to']?.toString() != targetUserId) {
         return false;
       }
       final status = act['status']?.toString();
@@ -2874,8 +3083,15 @@ class _DayHourGridState extends State<_DayHourGrid> {
     return null;
   }
 
+  /// A scheduled block lands on the grid only if it may be moved; on wide
+  /// layouts a remove-only block is still draggable, to the unschedule panel.
+  bool _canMoveHere(Map<String, dynamic> data) =>
+      data['type'] != 'scheduled' ||
+      canMoveActivity(
+          data['activity'] as Map<String, dynamic>, context.read<AppState>());
+
   void _updateHover(Map<String, dynamic> data, Offset globalOffset) {
-    if (data['type'] != 'template') {
+    if (data['type'] != 'template' && data['type'] != 'scheduled') {
       _clearHover();
       return;
     }
@@ -2897,7 +3113,9 @@ class _DayHourGridState extends State<_DayHourGrid> {
     final safeDur = durMin <= 0 ? 30 : durMin;
     final slotEnd = slotStart.add(Duration(minutes: safeDur));
 
-    final refusal = _checkRefusal(template, slotStart, slotEnd);
+    final isScheduled = data['type'] == 'scheduled';
+    final refusal = _checkRefusal(template, slotStart, slotEnd,
+        isScheduled: isScheduled);
 
     if (_hoverSlotStart != slotStart ||
         _hoverTemplate != template ||
@@ -3012,7 +3230,9 @@ class _DayHourGridState extends State<_DayHourGrid> {
                 children: [
                   Expanded(
                     child: Text(
-                      (_hoverTemplate!['title'] ?? '').toString(),
+                      ((_hoverTemplate!['title'] ?? '').toString().isNotEmpty
+                          ? (_hoverTemplate!['title'] ?? '').toString()
+                          : (isSelfActivity(_hoverTemplate!) ? l.timeForMe : '')),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -3067,14 +3287,18 @@ class _DayHourGridState extends State<_DayHourGrid> {
         padding: EdgeInsets.only(bottom: widget.isNarrow ? 180.0 : 0.0),
         child: DragTarget<Map<String, dynamic>>(
           onWillAcceptWithDetails: (details) {
-            if (details.data['type'] == 'template') {
+            if (!_canMoveHere(details.data)) return false;
+            if (details.data['type'] == 'template' ||
+                details.data['type'] == 'scheduled') {
               _updateHover(details.data, details.offset);
               return _refusalReason == null;
             }
             return true;
           },
           onMove: (details) {
-            if (details.data['type'] == 'template') {
+            if (!_canMoveHere(details.data)) return;
+            if (details.data['type'] == 'template' ||
+                details.data['type'] == 'scheduled') {
               _updateHover(details.data, details.offset);
             }
           },
@@ -3085,12 +3309,14 @@ class _DayHourGridState extends State<_DayHourGrid> {
           onAcceptWithDetails: (details) {
             _stopAutoScroll();
             _clearHover();
+            if (!_canMoveHere(details.data)) return;
             final box =
                 _gridKey.currentContext?.findRenderObject() as RenderBox?;
             if (box == null) return;
             final local = box.globalToLocal(details.offset);
-            if (details.data['type'] == 'template') {
-              final template = details.data['activity'] as Map<String, dynamic>;
+            if (details.data['type'] == 'template' ||
+                details.data['type'] == 'scheduled') {
+              final act = details.data['activity'] as Map<String, dynamic>;
               final pct = (local.dy / kGridHeight).clamp(0.0, 1.0);
               var h = kStartHour + pct * kTotalHours;
               h = ((h * 4).round() / 4.0).clamp(kStartHour.toDouble(), 23.75);
@@ -3098,10 +3324,12 @@ class _DayHourGridState extends State<_DayHourGrid> {
               final minute = ((h - hour) * 60).round();
               final slotStart = DateTime(widget.day.year, widget.day.month,
                   widget.day.day, hour, minute);
-              final durMin = toNum(template['duration_minutes']).toInt();
+              final durMin = toNum(act['duration_minutes']).toInt();
               final safeDur = durMin <= 0 ? 30 : durMin;
               final slotEnd = slotStart.add(Duration(minutes: safeDur));
-              final refusal = _checkRefusal(template, slotStart, slotEnd);
+              final isScheduled = details.data['type'] == 'scheduled';
+              final refusal = _checkRefusal(act, slotStart, slotEnd,
+                  isScheduled: isScheduled);
               if (refusal != null) {
                 return;
               }
@@ -3112,6 +3340,8 @@ class _DayHourGridState extends State<_DayHourGrid> {
             final hasDrag = candidates.isNotEmpty || rejected.isNotEmpty;
             return GestureDetector(
             behavior: HitTestBehavior.translucent,
+            onTapDown: (d) => _tapDy = d.localPosition.dy,
+            onTap: () => widget.onGridTap?.call(_tapDy),
             onDoubleTapDown: (d) => _doubleTapDy = d.localPosition.dy,
             onDoubleTap: () => widget.onDoubleTap(_doubleTapDy),
             child: Container(
@@ -3434,15 +3664,20 @@ class _DayHourGridState extends State<_DayHourGrid> {
     );
 
     final interactive = Tappable(
-      onTap: completed
-          ? widget.onCompletedInfo
-          : (a['is_recurrent'] == true
-              ? () => widget.onRecurrence(a)
-              : null),
+      onTap: () {
+        if (widget.onActivityTap != null) {
+          widget.onActivityTap!(a);
+        } else if (completed) {
+          widget.onCompletedInfo();
+        } else if (a['is_recurrent'] == true) {
+          widget.onRecurrence(a);
+        }
+      },
       child: chip,
     );
 
-    final isDraggable = !completed && widget.canRemove(a);
+    final canMove = widget.canMove?.call(a) ?? false;
+    final isDraggable = widget.isNarrow ? canMove : (canMove || widget.canRemove(a));
 
     return Positioned(
       top: top,
@@ -3973,6 +4208,502 @@ class _NeedsRow extends StatelessWidget {
               const SizedBox(width: 8),
               const Icon(Icons.chevron_right_rounded,
                   size: 20, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAddSheet extends StatefulWidget {
+  final DateTime startsAt;
+  final List<Map<String, dynamic>> templates;
+  final ValueChanged<Map<String, dynamic>> onTapTemplate;
+  final VoidCallback onTapTimeForMe;
+
+  const _QuickAddSheet({
+    required this.startsAt,
+    required this.templates,
+    required this.onTapTemplate,
+    required this.onTapTimeForMe,
+  });
+
+  @override
+  State<_QuickAddSheet> createState() => _QuickAddSheetState();
+}
+
+class _QuickAddSheetState extends State<_QuickAddSheet> {
+  final _search = TextEditingController();
+  int _filter = 0;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final timeStr = DateFormat('HH:mm').format(widget.startsAt);
+    final q = _search.text.trim().toLowerCase();
+
+    final filtered = widget.templates.where((t) {
+      if (_filter == 1 && t['type'] != 'care') return false;
+      if (_filter == 2 && t['type'] != 'household') return false;
+      if (q.isNotEmpty &&
+          !(t['title']?.toString().toLowerCase().contains(q) ?? false)) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l.quickAddTitle(timeStr),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: l.searchTasks,
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  suffixIcon: _search.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SegmentedTabs(
+                tabs: [l.filterAll, l.filterCare, l.filterHousehold],
+                selected: _filter,
+                onChanged: (i) => setState(() => _filter = i),
+              ),
+              const SizedBox(height: 12),
+              // "Time for me" as first row
+              Semantics(
+                button: true,
+                label: l.timeForMe,
+                child: Tappable(
+                  onTap: widget.onTapTimeForMe,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🧘', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l.timeForMe,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded,
+                            size: 20, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              for (final t in filtered) ...[
+                Builder(
+                  builder: (ctx) {
+                    final title = (t['title'] ?? '').toString();
+                    final isCare = t['type'] == 'care';
+                    final coins = toNum(t['coin_value']).toInt();
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: BorderRadius.circular(AppRadii.md),
+                      ),
+                      child: Tappable(
+                        onTap: () => widget.onTapTemplate(t),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isCare
+                                      ? AppColors.successSoft
+                                      : AppColors.warningSoft,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(isCare ? '❤️' : '🍽️',
+                                    style: const TextStyle(fontSize: 16)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800),
+                                    ),
+                                    Text(
+                                      '${isCare ? l.filterCare : l.filterHousehold}'
+                                      '${coins > 0 ? ' · 🪙 ${coins}cc' : ''}',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.add_circle_outline_rounded,
+                                  size: 20, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Text(
+                      l.noTasksFiltered,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityDetailsSheet extends StatelessWidget {
+  final Map<String, dynamic> activity;
+  final VoidCallback? onValidate;
+  final VoidCallback? onDelegate;
+  final VoidCallback? onTakeOver;
+  final VoidCallback? onRepeat;
+  final VoidCallback? onMove;
+  final VoidCallback? onRemove;
+
+  const _ActivityDetailsSheet({
+    required this.activity,
+    this.onValidate,
+    this.onDelegate,
+    this.onTakeOver,
+    this.onRepeat,
+    this.onMove,
+    this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final l = AppLocalizations.of(context);
+    final a = activity;
+
+    final isCoverage = a['type'] == 'coverage';
+    final isSelf = isSelfActivity(a);
+    final isOrdinary = !isCoverage && !isSelf;
+    final mine = a['assigned_to']?.toString() == app.userId?.toString();
+    final status = a['status']?.toString() ?? 'pending';
+    final completed = status == 'completed';
+    final isApproved = status == 'approved';
+    final isPendingValidation = status == 'pending_validation';
+    final isCaregiver = app.isCaregiver;
+    final bounty = toNum(a['bounty_amount']).toInt();
+    final coins = toNum(a['coin_value']).toInt();
+
+    final canValidate = !isCoverage && !completed && isPendingValidation && !mine && isCaregiver;
+    final canTakeOver = isOrdinary && !completed && !isPendingValidation && !mine && bounty > 0;
+    final canDelegate = isOrdinary && isApproved && mine && bounty == 0;
+    final canRepeat = isOrdinary && !completed && a['is_recurrent'] == true;
+    final canMove = canMoveActivity(a, app);
+    final canRemove = !completed && canRemoveActivity(a, app);
+
+    final rawTitle = (a['title'] ?? '').toString();
+    final title = rawTitle.isNotEmpty
+        ? rawTitle
+        : (isSelf ? l.personalTimeEntry : '');
+    final emoji = _activityEmoji(a);
+
+    final start = DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
+    final durMin = toNum(a['duration_minutes']).toInt();
+    final safeDur = durMin <= 0 ? 30 : durMin;
+    final end = a['ends_at'] != null
+        ? DateTime.tryParse(a['ends_at'].toString())?.toLocal() ??
+            (start?.add(Duration(minutes: safeDur)))
+        : (start?.add(Duration(minutes: safeDur)));
+
+    String? timeRange;
+    if (start != null && end != null) {
+      timeRange =
+          '${DateFormat('HH:mm').format(start)} – ${DateFormat('HH:mm').format(end)}';
+    }
+
+    final assigneeName = mine
+        ? l.assigneeYou
+        : (a['assigned_alias'] ?? a['assigned_to_name'] ?? '').toString().trim();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title & Emoji
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (timeRange != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            timeRange,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Assignee & Coins Row
+              Row(
+                children: [
+                  if (assigneeName.isNotEmpty) ...[
+                    _buildAvatarCircle(a, app, l),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        assigneeName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ] else
+                    const Spacer(),
+                  if (coins > 0 && !isSelf) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Text(
+                        '🪙 ${coins}cc',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primaryInk,
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (bounty > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningSoft,
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Text(
+                        '+${bounty}cc',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.warningInk,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Explanations / Notes
+              if (isCoverage) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                  ),
+                  child: Text(
+                    l.coverageEndsWithPersonalTime,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryInk,
+                    ),
+                  ),
+                ),
+              ] else if (completed) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                  ),
+                  child: Text(
+                    l.completedLockedBody,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+              // Action Buttons
+              if (canValidate) ...[
+                const SizedBox(height: 16),
+                VButton(
+                  type: VButtonType.primary,
+                  block: true,
+                  onPressed: onValidate,
+                  child: Text(l.actionValidate),
+                ),
+              ],
+              if (canTakeOver) ...[
+                const SizedBox(height: 16),
+                VButton(
+                  type: VButtonType.primary,
+                  block: true,
+                  onPressed: onTakeOver,
+                  child: Text(l.actionTakeOver('$bounty')),
+                ),
+              ],
+              if (canDelegate) ...[
+                const SizedBox(height: 12),
+                VButton(
+                  type: VButtonType.secondary,
+                  block: true,
+                  onPressed: onDelegate,
+                  child: Text(l.actionDelegate),
+                ),
+              ],
+              if (canRepeat) ...[
+                const SizedBox(height: 12),
+                VButton(
+                  type: VButtonType.secondary,
+                  block: true,
+                  onPressed: onRepeat,
+                  child: Text(l.actionRepeat),
+                ),
+              ],
+              if (canMove) ...[
+                const SizedBox(height: 12),
+                VButton(
+                  type: VButtonType.secondary,
+                  block: true,
+                  onPressed: onMove,
+                  child: Text(l.actionMove),
+                ),
+              ],
+              if (canRemove) ...[
+                const SizedBox(height: 12),
+                VButton(
+                  type: VButtonType.danger,
+                  block: true,
+                  onPressed: onRemove,
+                  child: Text(l.remove),
+                ),
+              ],
             ],
           ),
         ),

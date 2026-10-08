@@ -159,6 +159,40 @@
       "date": { "type": "String" }
     }
   },
+  "quickAddTitle": "Add at {time}",
+  "@quickAddTitle": {
+    "description": "Title of the quick add modal sheet",
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "coverageEndsWithPersonalTime": "Ends with the personal time it covers",
+  "@coverageEndsWithPersonalTime": {
+    "description": "Explanation shown for a coverage shift in the activity details sheet"
+  },
+  "actionValidate": "Validate",
+  "@actionValidate": {
+    "description": "Full-width validate button in the activity details sheet"
+  },
+  "actionDelegate": "Delegate",
+  "@actionDelegate": {
+    "description": "Full-width delegate button in the activity details sheet"
+  },
+  "actionTakeOver": "Take over (+{coins} cc)",
+  "@actionTakeOver": {
+    "description": "Full-width take over button in the activity details sheet",
+    "placeholders": {
+      "coins": { "type": "String" }
+    }
+  },
+  "actionRepeat": "Repeat",
+  "@actionRepeat": {
+    "description": "Full-width repeat button in the activity details sheet"
+  },
+  "actionMove": "Move",
+  "@actionMove": {
+    "description": "Full-width move button in the activity details sheet"
+  },
 
   "navMarketplace": "Marketplace",
   "@navMarketplace": {
