@@ -387,8 +387,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Sheet is open with create form
-      expect(find.text('Create a Reward'), findsOneWidget);
-      expect(find.widgetWithText(VButton, 'Create Reward'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Create a reward'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(VButton, 'Create reward'), findsOneWidget);
     });
   });
 
@@ -414,7 +420,7 @@ void main() {
       expect(find.text('Budget'), findsOneWidget);
 
       // New activity is a tonal button at the top of Catalogue
-      final newActBtn = find.widgetWithText(FilledButton, 'New Activity');
+      final newActBtn = find.widgetWithText(FilledButton, 'New activity');
       expect(newActBtn, findsOneWidget);
 
       // Tapping New activity opens modal bottom sheet
@@ -432,7 +438,7 @@ void main() {
       await tester.tap(find.text('Budget'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Family Budget Health'), findsOneWidget);
+      expect(find.text('Family budget health'), findsOneWidget);
     });
   });
 }

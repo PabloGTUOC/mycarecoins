@@ -359,7 +359,6 @@ class _FamilyCircleState extends State<FamilyCircle> {
                   style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
                       color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               for (final inv in _invitations)

@@ -1493,7 +1493,7 @@ class _DailyScreenState extends State<DailyScreen> {
               today: widget.now,
             ),
           if (_isPastDay) _buildPastDayBanner(l),
-          // Day progress: "X / Y done · 🪙 Zcc"
+          // Day progress: "X / Y done · Z cc"
           if (items.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -1513,7 +1513,7 @@ class _DailyScreenState extends State<DailyScreen> {
                   const SizedBox(width: 12),
                   Text(
                     '${l.doneProgress('$done', '${items.length}')}'
-                    '${_todayCoins > 0 ? ' · 🪙 ${_todayCoins}cc' : ''}',
+                    '${_todayCoins > 0 ? ' · $_todayCoins cc' : ''}',
                     style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
@@ -2221,7 +2221,6 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
                             style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
                                 color: AppColors.textSecondary)),
                       ],
                     ),
@@ -2271,7 +2270,7 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
                     style: const TextStyle(
                         fontSize: 13.5, fontWeight: FontWeight.w800)),
                 Text(
-                    '${cat == 'care' ? AppLocalizations.of(context).filterCare : AppLocalizations.of(context).categoryCleaning} · 🪙 ${t['coin_value'] ?? 0}cc',
+                    '${cat == 'care' ? AppLocalizations.of(context).filterCare : AppLocalizations.of(context).categoryCleaning} · ${t['coin_value'] ?? 0} cc',
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary)),
               ],
@@ -2541,7 +2540,7 @@ class _TaskTrayState extends State<_TaskTray> {
           if (coins > 0) ...[
             const SizedBox(width: 6),
             Text(
-              '🪙 ${coins}cc',
+              '$coins cc',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -2622,7 +2621,7 @@ class _TaskTrayState extends State<_TaskTray> {
                 ),
                 Text(
                   '${isCare ? l.filterCare : l.filterHousehold}'
-                  '${coins > 0 ? ' · 🪙 ${coins}cc' : ''}',
+                  '${coins > 0 ? ' · $coins cc' : ''}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
@@ -4042,7 +4041,20 @@ class DayActivityBlock extends StatelessWidget {
             TextSpan(children: [
               if (status == 'rejected') const TextSpan(text: '⚠️ '),
               TextSpan(text: displayTitle(l, a)),
-              if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
+              if (a['is_recurrent'] == true) ...[
+                const TextSpan(text: ' '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Semantics(
+                    label: l.repeatsLabel,
+                    child: const Icon(
+                      Icons.repeat_rounded,
+                      size: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
             ]),
             maxLines: titleMaxLines,
             overflow: TextOverflow.ellipsis,
@@ -4087,7 +4099,7 @@ class DayActivityBlock extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadii.pill),
                 ),
                 child: Text(
-                  '🪙 ${coins}cc',
+                  '$coins cc',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -4571,7 +4583,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                                     ),
                                     Text(
                                       '${isCare ? l.filterCare : l.filterHousehold}'
-                                      '${coins > 0 ? ' · 🪙 ${coins}cc' : ''}',
+                                      '${coins > 0 ? ' · $coins cc' : ''}',
                                       style: const TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textSecondary),
@@ -4762,7 +4774,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                       child: Text(
-                        '🪙 ${coins}cc',
+                        '$coins cc',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,

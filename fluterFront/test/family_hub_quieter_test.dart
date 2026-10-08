@@ -309,13 +309,13 @@ void main() {
 
       // Scroll down to the KPI cards section
       await tester.scrollUntilVisible(
-        find.text('Tasks Today'),
+        find.text('Tasks today'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
 
       // Tap "Tasks Today" KPI card
-      await tester.tap(find.text('Tasks Today'));
+      await tester.tap(find.text('Tasks today'));
       await tester.pumpAndSettle();
 
       // StatsScreen was pushed

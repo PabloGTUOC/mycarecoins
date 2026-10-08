@@ -480,7 +480,7 @@ void main() {
       expect(tester.getSize(badgeTextFinder).width, greaterThan(0.0));
 
       // Coin pill is present and text width is > 0
-      final coinFinder = find.text('🪙 20cc');
+      final coinFinder = find.text('20 cc');
       expect(coinFinder, findsOneWidget);
       expect(tester.getSize(coinFinder).width, greaterThan(0.0));
 
@@ -535,7 +535,7 @@ void main() {
       expect(find.textContaining('Bath time'), findsOneWidget);
       // Meta row (badge, coins) and action pill do NOT render
       expect(find.byType(AssigneeBadge), findsNothing);
-      expect(find.text('🪙 20cc'), findsNothing);
+      expect(find.text('20 cc'), findsNothing);
       expect(find.text('Validate'), findsNothing);
       expect(find.byType(AvatarCircle), findsNothing);
     });

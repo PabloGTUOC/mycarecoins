@@ -818,11 +818,10 @@ class _SectionDivider extends StatelessWidget {
       padding: const EdgeInsets.only(top: 24, bottom: 16),
       child: Row(
         children: [
-          Text(label.toUpperCase(),
+          Text(label,
               style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 1.5,
                   color: AppColors.textSecondary)),
           const SizedBox(width: 12),
           const Expanded(child: Divider(height: 1)),

@@ -544,13 +544,24 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                         children: [
                           Flexible(
                             child: Text(
-                                '${a['title'] ?? ''}${a['is_recurrent'] == true ? ' 🔁' : ''}',
+                                a['title']?.toString() ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800)),
                           ),
+                          if (a['is_recurrent'] == true) ...[
+                            const SizedBox(width: 4),
+                            Semantics(
+                              label: l.repeatsLabel,
+                              child: const Icon(
+                                Icons.repeat_rounded,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                           if (a['status'] == 'pending') ...[
                             const SizedBox(width: 6),
                             PillBadge(
@@ -569,7 +580,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                         ],
                       ),
                       Text(
-                          '${a['type'] == 'care' ? l.filterCare : l.filterHousehold} · ${_durationLabel(l, toNum(a['duration_minutes'] ?? a['durationMinutes']).toInt())} · 🪙 ${a['coin_value'] ?? a['coinValue'] ?? 0}cc',
+                          '${a['type'] == 'care' ? l.filterCare : l.filterHousehold} · ${_durationLabel(l, toNum(a['duration_minutes'] ?? a['durationMinutes']).toInt())} · ${a['coin_value'] ?? a['coinValue'] ?? 0} cc',
                           style: const TextStyle(
                               fontSize: 12, color: AppColors.textSecondary)),
                     ],

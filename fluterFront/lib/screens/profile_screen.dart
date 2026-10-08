@@ -938,7 +938,6 @@ class _WalletPanel extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
                       color: AppColors.inkMuted)),
               const SizedBox(height: 8),
               Row(
