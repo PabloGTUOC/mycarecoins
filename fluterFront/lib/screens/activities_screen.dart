@@ -467,6 +467,9 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
       if (_filter == 2) return a['type'] == 'household';
       return true;
     }).toList();
+    final hasRecurrent = filtered.any((a) => a['is_recurrent'] == true);
+    final hasNonRecurrent = filtered.any((a) => a['is_recurrent'] != true);
+    final showRepeatIcon = hasRecurrent && hasNonRecurrent;
 
     return [
       Row(
@@ -528,108 +531,121 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                 body: l.filterEmptyBody,
               )
       else
-        for (final a in filtered)
-          Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadii.md),
-            ),
-            child: Row(
-              children: [
-                ActivityTypeIcon(
-                  type: a['type']?.toString(),
-                  category: a['category']?.toString(),
-                  size: 38,
-                  iconSize: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(AppRadii.md),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < filtered.length; i++) ...[
+                if (i > 0)
+                  const Divider(
+                      height: 1, thickness: 1, color: AppColors.border),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                                a['title']?.toString() ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                          if (a['is_recurrent'] == true) ...[
-                            const SizedBox(width: 4),
-                            Semantics(
-                              label: l.repeatsLabel,
-                              child: const Icon(
-                                Icons.repeat_rounded,
-                                size: 16,
-                                color: AppColors.textSecondary,
-                              ),
+                      ActivityTypeIcon(
+                        type: filtered[i]['type']?.toString(),
+                        category: filtered[i]['category']?.toString(),
+                        size: 38,
+                        iconSize: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                      filtered[i]['title']?.toString() ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800)),
+                                ),
+                                if (showRepeatIcon &&
+                                    filtered[i]['is_recurrent'] == true) ...[
+                                  const SizedBox(width: 4),
+                                  Semantics(
+                                    label: l.repeatsLabel,
+                                    child: const Icon(
+                                      Icons.repeat_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                                if (filtered[i]['status'] == 'pending') ...[
+                                  const SizedBox(width: 6),
+                                  PillBadge(
+                                      text: l.badgePending,
+                                      fontSize: 12,
+                                      color: AppColors.warningInk,
+                                      background: AppColors.warningSoft),
+                                ] else if (filtered[i]['status'] == 'rejected') ...[
+                                  const SizedBox(width: 6),
+                                  PillBadge(
+                                      text: l.badgeRejected,
+                                      fontSize: 12,
+                                      color: AppColors.dangerInk,
+                                      background: AppColors.dangerSoft),
+                                ],
+                              ],
                             ),
+                            Text(
+                                '${filtered[i]['type'] == 'care' ? l.filterCare : l.filterHousehold} · ${_durationLabel(l, toNum(filtered[i]['duration_minutes'] ?? filtered[i]['durationMinutes']).toInt())} · ${filtered[i]['coin_value'] ?? filtered[i]['coinValue'] ?? 0} cc',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
                           ],
-                          if (a['status'] == 'pending') ...[
-                            const SizedBox(width: 6),
-                            PillBadge(
-                                text: l.badgePending,
-                                fontSize: 12,
-                                color: AppColors.warningInk,
-                                background: AppColors.warningSoft),
-                          ] else if (a['status'] == 'rejected') ...[
-                            const SizedBox(width: 6),
-                            PillBadge(
-                                text: l.badgeRejected,
-                                fontSize: 12,
-                                color: AppColors.dangerInk,
-                                background: AppColors.dangerSoft),
-                          ],
+                        ),
+                      ),
+                      if (filtered[i]['status'] == 'pending')
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: VButton(
+                              type: VButtonType.outline,
+                              onPressed: () => _approve(filtered[i]['id']),
+                              child: Text(l.approve)),
+                        ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded,
+                            size: 20, color: AppColors.textSecondary),
+                        onSelected: (val) {
+                          if (val == 'delete') {
+                            _delete(filtered[i]['id']);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                const Icon(Icons.delete_outline_rounded,
+                                    size: 18, color: AppColors.danger),
+                                const SizedBox(width: 8),
+                                Text(l.deleteAction,
+                                    style: const TextStyle(
+                                        color: AppColors.danger)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                      Text(
-                          '${a['type'] == 'care' ? l.filterCare : l.filterHousehold} · ${_durationLabel(l, toNum(a['duration_minutes'] ?? a['durationMinutes']).toInt())} · ${a['coin_value'] ?? a['coinValue'] ?? 0} cc',
-                          style: const TextStyle(
-                              fontSize: 12, color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
-                if (a['status'] == 'pending')
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: VButton(
-                        type: VButtonType.outline,
-                        onPressed: () => _approve(a['id']),
-                        child: Text(l.approve)),
-                  ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded,
-                      size: 20, color: AppColors.textSecondary),
-                  onSelected: (val) {
-                    if (val == 'delete') {
-                      _delete(a['id']);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.delete_outline_rounded,
-                              size: 18, color: AppColors.danger),
-                          const SizedBox(width: 8),
-                          Text(l.deleteAction,
-                              style: const TextStyle(color: AppColors.danger)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ],
-            ),
+            ],
           ),
+        ),
     ];
   }
 

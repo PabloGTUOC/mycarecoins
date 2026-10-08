@@ -148,6 +148,17 @@ void main() {
           'is_recurrent': true,
           'is_template': true,
         },
+        {
+          'id': 'tpl-2',
+          'title': 'One-off Chore',
+          'type': 'care',
+          'category': 'care',
+          'duration_minutes': 20,
+          'coin_value': 10,
+          'status': 'approved',
+          'is_recurrent': false,
+          'is_template': true,
+        },
       ]);
       final app = AppState(api: api)
         ..families = [
