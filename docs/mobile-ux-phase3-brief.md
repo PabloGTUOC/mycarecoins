@@ -8,8 +8,8 @@
 > ARB files, tokens from `lib/theme/app_theme.dart`, Material 3 components,
 > `flutter analyze` and `flutter test` clean. **No `backend/` changes.**
 
-> **Status (2026-10-08):** proposed, not approved. Nothing here is built. The P1 from the
-> critique (Family and Today disagreeing about what is waiting) is ticket P2-11 in Phase 2.
+> **Status (2026-10-08):** approved by the user; in progress, starting with P3-3. The P1
+> from the critique (Family and Today disagreeing about what is waiting) was P2-11.
 
 Decisions this brief rests on: coin balances **stay visible on the Family hub** (user,
 2026-10-08); *Needs you* is **never a number** (D2); KPI cards stay, quieter (Phase 2).
@@ -29,8 +29,8 @@ card headed "TOTAL BALANCE … COINS", and an "Activity Insights" card.
   balance" as its label (no uppercase, no letter-spacing, no dark card), followed by the
   last three ledger lines and "See all" (opens the existing full ledger). The month
   picker and revert action keep working as today.
-- "Activity Insights": keep only if it says something Stats does not; otherwise replace
-  with a "See family stats" row that opens `statsRoute()`. (Open question 2.)
+- "Activity Insights" is replaced by a "See family stats" row that opens `statsRoute()`
+  (user, 2026-10-08).
 - `ProfileScreen.initialTab` callers (the coin pill opens the wallet) scroll to the
   Wallet section instead of switching tabs.
 - Wide layout keeps its two columns; only phones lose the tabs.
@@ -47,9 +47,8 @@ cards and recent activity.
 - Members: one compact list, a row per member (avatar, name, role, balance chip at the
   trailing edge), not a card grid. Balances stay (decision above); order by name, never
   by balance, and no "top" marker. Pending approvals stay in this section.
-- Cover requests and offers are already in *Needs you* on Today. On Family, replace both
-  sections with nothing (the greeting's P2-11 sentence links to Today), unless the user
-  answers open question 1 otherwise.
+- Cover requests and offers are already in *Needs you* on Today. On Family, remove both
+  sections (user, 2026-10-08); the greeting's P2-11 sentence links to Today.
 - The checklist keeps its place and rules (caregivers, auto-hides once the loop ran).
 - Section title "Active Family Members" → "Members" (sentence case).
 - Tests: member rows (not cards) with balances, ordered by name; no cover/offer sections
@@ -65,8 +64,7 @@ cards and recent activity.
 - Recurrence: replace the 🔁 glyph after titles (grid blocks, catalogue rows, sheet) with
   `Icons.repeat_rounded` at text size, `textSecondary`, with a Semantics label
   "Repeats" (localized).
-- Coins: replace 🪙 in widget text with one small coin icon widget used everywhere a coin
-  amount appears inline (tray chips, catalogue meta, KPI units if any).
+- Coins: drop 🪙 from widget text; amounts read "N cc" (decision 3 below).
 - Tests: no 🔁 or 🪙 in widget code outside `landing_screen.dart` (scan test); the
   recurrence icon has its Semantics label.
 
@@ -83,12 +81,12 @@ cards and recent activity.
 P2-11 first (Phase 2, the P1). Then P3-3 (strings and glyphs, touches many files, lands
 before layout work), P3-1, P3-2, P3-4. Third critique after P3-4.
 
-## Open questions (answer before P3-1 / P3-2)
+## Decisions (2026-10-08)
 
-1. Family duplicates *Needs you* (cover requests, offers). Remove them from Family, or
-   keep them as a read-only summary?
-2. "Activity Insights" on Me: remove in favour of a link to Stats, or keep and say what
-   it adds?
+1. Family duplicates *Needs you* (cover requests, offers): **removed from Family.**
+2. "Activity Insights" on Me: **replaced by a link to Stats.**
+3. Coins: P3-3 drops the 🪙 glyph instead of adding a coin icon ("cc" already says coins,
+   matching the header pill; the emoji renders as a grey blob on iOS).
 
 ## Hand back per ticket
 
