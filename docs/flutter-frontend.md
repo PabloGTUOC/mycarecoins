@@ -68,20 +68,20 @@ fluterFront/lib/
 │   └── telemetry.dart            # Onboarding events → POST /api/events
 │
 ├── screens/
-│   ├── shell.dart                # Tab scaffold: pill nav (wide) / bottom bar (narrow)
+│   ├── shell.dart                # Tabs Today·Family·Tasks·Rewards·Me: M3 NavigationBar + AppBar (narrow), pill header (wide)
 │   ├── landing_screen.dart       # Signed-out brand surface
 │   ├── login_screen.dart         # Email/password + Google
 │   ├── onboarding_screen.dart    # Create-family wizard / join by link
 │   ├── dashboard_screen.dart     # Family hub
-│   ├── daily_screen.dart         # The daily timeline — the signature screen
-│   ├── activities_screen.dart    # Template library and creation
+│   ├── daily_screen.dart         # Today: Needs you, week strip, hour grid, task tray (drag-to-schedule)
+│   ├── activities_screen.dart    # Tasks tab: template library and creation
 │   ├── marketplace_screen.dart   # Rewards store
-│   ├── stats_screen.dart         # Charts
+│   ├── stats_screen.dart         # Charts; not a tab, opened from the Family hub
 │   ├── profile_screen.dart       # Account, prefs, wallet, family circle, subscription
 │   └── admin_screen.dart         # Platform admin console
 │
 ├── widgets/
-│   ├── ui.dart                   # The design-system kit (VCard, VButton, VInput, …)
+│   ├── ui.dart                   # Kit wrappers over Material 3 (VButton → FilledButton/…, SegmentedTabs → SegmentedButton, KpiCard, …)
 │   ├── charts.dart               # Hand-rolled charts — no charting dependency
 │   ├── personal_time_dialog.dart # Ask for personal time
 │   ├── absence_dialog.dart       # Log time off (≥ 24 h)
@@ -92,7 +92,7 @@ fluterFront/lib/
 │   └── activation_checklist.dart # First-run checklist on the dashboard
 │
 ├── data/starter_packs.dart       # Localized starter-task catalogue
-├── theme/app_theme.dart          # Colour, radius and typography tokens
+├── theme/app_theme.dart          # Tokens, the M3 ThemeData component themes, CareColors extension
 ├── utils/                        # json.dart (toNum etc.), avatar_upload.dart,
 │                                 # legal_links.dart (privacy + terms)
 └── l10n/app_{en,es,fr,de}.arb    # 787 keys × 4 languages
@@ -147,11 +147,15 @@ data is fetched by the screen that shows it and thrown away with it.
 
 ## 5. Navigation Shell
 
-`shell.dart` holds five tabs — Family, Activities, Rewards, Stats, Me — in an `IndexedStack`,
-so tab state survives switching. It is responsive on one breakpoint,
-`kMobileBreakpoint = 768.0` (`theme/app_theme.dart`): a pill header with nav links above it,
-a bottom navigation bar below it. `isTablet` additionally requires `shortestSide >= 600`, which
-is what separates a large phone from a real tablet layout.
+`shell.dart` holds five tabs — **Today · Family · Tasks · Rewards · Me** — in an `IndexedStack`,
+so tab state survives switching. The app opens on Today. Stats is not a tab: the Family hub's
+KPI cards and "See stats" open it. Opening a day from Family switches to Today on that day.
+
+Layout follows `isWideLayout(context)` (`theme/app_theme.dart`): width above
+`kMobileBreakpoint = 768.0` **and** `shortestSide >= 600`, so a phone in landscape keeps the
+phone layout. Phones get a Material 3 `NavigationBar` (labels always shown; a small `Badge` dot
+on Today while *Needs you* has items, never a count) and a small top `AppBar` per tab (title,
+help, the coin balance pill). Today draws its own header. Wide layouts keep the pill header.
 
 Because `IndexedStack` keeps every tab alive, screens are told when they become visible again
 (an `active` flag) so they can refetch silently — without that, tabs go stale behind your back.
@@ -165,10 +169,10 @@ Because `IndexedStack` keeps every tab alive, screens are told when they become 
 | `landing_screen.dart` | Acquisition surface for signed-out visitors; the one **brand** register in the app |
 | `login_screen.dart` | Email/password and Google, with autofill and forgot-password |
 | `onboarding_screen.dart` | Paged create-family wizard (caretakers, dependents, activity-areas questionnaire, starter-task preview) and join-by-token |
-| `dashboard_screen.dart` | Family hub: member grid, KPIs, week strip, bounties, absences, activation checklist, pending personal-time requests |
-| `daily_screen.dart` | The signature screen. Hour grid with drag-and-drop on wide layouts, a timeline list with day-swipe on phones, NOW divider, free-time gaps, bounties, personal-time chips |
-| `activities_screen.dart` | Template catalogue, creation with a budget-bounded coin slider, budget gauge |
-| `marketplace_screen.dart` | Rewards: store, history, creation |
+| `dashboard_screen.dart` | Family hub: greeting with coins earned today, member grid, quieter KPI cards (open Stats), week list with empty days collapsed, bounties, absences, activation checklist, pending personal-time requests |
+| `daily_screen.dart` | **Today**, the signature screen. *Needs you* (folded to one line on phones), the week strip, and one shared hour grid (`_DayHourGrid`, 6:00–24:00) on every layout: blocks sized by duration, overlaps side by side, red NOW line, absences as shaded bands, pending personal time as dashed blocks. On phones a task tray (`_TaskTray`, a `DraggableScrollableSheet`, collapsed at `kTrayCollapsed`) sits above the bar: drag a chip onto the grid to schedule (15-minute snap, conflicts refused, Undo), or tap it for a time picker |
+| `activities_screen.dart` | Tasks tab: template catalogue, creation with a budget-bounded coin slider, budget gauge |
+| `marketplace_screen.dart` | Rewards: store and history in one list; creation in a sheet; redeem asks for confirmation in a sheet |
 | `stats_screen.dart` | Charts, including personal time taken vs. coverage given |
 | `profile_screen.dart` | Account settings, avatar, notification preferences, language, wallet + ledger, family circle, subscription, admin entry |
 | `admin_screen.dart` | Platform registry, plan catalogue, billing and grants — gated on `isPlatformAdmin` |
@@ -189,10 +193,21 @@ has exactly one semantic job:
 | `bg` / `surface` / `border` | `#F7F8FA` / `#FFFFFF` / `#E5E8EE` | Ground, cards, edges |
 | `textPrimary` / `textSecondary` | `#0E1726` / `#5B6478` | Hierarchy by weight and size, not colour |
 
-Each has a `…Soft` companion for backgrounds. `widgets/ui.dart` is the kit: `VCard`,
-`VButton`, `VInput`, `KpiCard`, `PillBadge`, `SegmentedTabs`, `Tappable`, `EmptyState`,
-`LoadErrorState`, `PageHeading`, `AvatarCircle`, `AssigneeBadge`. Build screens from these
-rather than raw Material widgets, or the app drifts.
+Each has a `…Soft` companion for backgrounds and, where text sits on it, an `…Ink` companion
+(`primaryInk`, `successInk`, `warningInk`, `dangerInk`) plus `successStrong` / `warningStrong`
+for solid fills: **soft fill → ink text, never the base colour.** Widgets read the ink and
+strong colours from the theme with `context.careColors` (a `ThemeExtension`).
+
+The app is **Material 3 on these tokens**. `buildAppTheme()` sets the component themes
+(navigation bar, app bar, filled/tonal/outlined buttons, segmented button, cards, bottom
+sheets with a drag handle, badge, snack bar), and `secondaryContainer` is pinned to
+`primarySoft` so tonal controls stay brand blue. Use stock M3 widgets — `FilledButton`,
+`SegmentedButton`, `Card`, `showModalBottomSheet`, `showTimePicker` — and let the theme style
+them. `widgets/ui.dart` keeps its kit for existing call sites, now as thin wrappers: `VButton`
+renders `FilledButton` / `FilledButton.tonal` / `OutlinedButton` (danger uses the error colour),
+`SegmentedTabs` renders `SegmentedButton`; `KpiCard`, `EmptyState`, `LoadErrorState`,
+`AvatarCircle`, `AssigneeBadge`, `CoinBalancePill` and `PillBadge` remain. Text is never below
+12 pt, and touch targets are at least 44 × 44.
 
 Charts in `widgets/charts.dart` are hand-rolled `CustomPainter`s — a deliberate choice to
 avoid a charting dependency for what is a handful of bar and stacked-bar forms.

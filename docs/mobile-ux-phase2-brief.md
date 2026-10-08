@@ -9,6 +9,10 @@
 > tokens from `lib/theme/app_theme.dart`, `flutter analyze` and `flutter test` clean.
 > **No `backend/` changes**: where a ticket needs one, it says so and the lead does it.
 
+> **Status (2026-10-08, 12:00 CEST):** P2-1, P2-2, P2-3a/b, P2-7, P2-8 done on branch
+> `mobile-ux-phase1` (worktree `../mycarecoins-phase1`), not merged. P2-9 started by Antigravity,
+> stopped on its quota with no edits made. See **Handoff** at the end.
+
 Decisions this brief rests on (Today redesign confirmed 2026-10-07): tabs **Today · Family · Tasks · Rewards · Me** (D1);
 *Needs you* shows **a dot, never a count** (D2); the checklist "complete" step ticks on
 the **first payout** (D3); dark mode waits (D4); KPI cards **stay, quieter** (critique).
@@ -160,3 +164,45 @@ endpoint) → P2-10 → P2-4 → P2-5 → P2-6 → second critique.
 
 Files changed, new ARB keys, `flutter analyze` / `flutter test` results, and anything
 not done with the reason.
+
+## Handoff (for the next session)
+
+**How the work runs.** Claude is lead developer and reviewer; the Antigravity agent in Orca
+**terminal 2** (`term_1337af5f-18f8-4228-908a-0237f9eab8cf`, Gemini) writes the Flutter code.
+Tickets are files in `.lead/` (gitignored, in the worktree): `P2-9.md` (with review notes
+appended), `P2-10.md`, `P2-4.md`, `P2-5.md`, `P2-6.md`. Send a short pointer ("read
+.lead/P2-x.md and implement it exactly"), not the ticket text. `.lead/watch.sh <marker>` polls
+the terminal and exits on DONE / LIMIT / STALLED. Antigravity edits only `fluterFront/` in the
+worktree and never commits. Claude reviews each ticket — diff, `flutter analyze`,
+`flutter test`, response shapes against the backend, permissions against the server, a look on
+the iOS simulator — fixes, and commits one commit per ticket. Backend changes are Claude's.
+
+**Commits so far** (oldest first): T1–T5 and fixes (`3aeb76b` … `5cd2e5f`); personal-time and
+coverage permissions `6d44a34`, `5c2bd9a`; critique + this brief `3e52652`, `b7531db`;
+P2-1 `a9c31a5`; reschedule endpoint `0bd64fe`; P2-2 `1f64a44`; P2-3a `48fe2d9`; P2-3b `4652281`;
+coverage/self bounty refusal `62d46ac`; P2-7 `7720a9d`; P2-8 `56f974b`; docs `4b1f2d1` and the
+doc refresh after it. Backend 223 tests, Flutter 133 tests, all passing at P2-8.
+
+**Next, in order:** P2-9 (resend the pointer once Antigravity's quota resets; it restores
+Remove on phones, see `TODO(P2-9)` in `daily_screen.dart`) → P2-10 → P2-4 → P2-5 → P2-6 →
+second impeccable critique (compare with 22/40) → a morning test checklist for the user
+(drag gestures on the simulator) → ask the user before merging into `main`, pushing or deploying.
+
+**Watch-outs learned in review.**
+- `POST /api/activities/schedule` answers `{activity, warning}`; `PATCH /api/activities/:id/time`
+  answers `{activity}`. Test fakes must use the real shapes (P2-8 shipped a broken Undo because
+  a fake returned `{id}`).
+- Show errors with `app.errorTextFor(e)`, never raw server text.
+- No FAB on phone Today (it covered the tray); the tray's collapsed size is `kTrayCollapsed`.
+- Coverage is never deleted, moved or bountied on its own; personal time only by its owner.
+- To check a screen on the simulator: `flutter run` with
+  `--dart-define=API_BASE=https://mycarecoins.app --dart-define=PURCHASES_ENABLED=false`, hot
+  restart with `kill -USR2 <pid>`, and temporarily set `Shell(initialIndex:)` / `_dailyDate`
+  to reach a state — restore before committing. The Dart MCP server (`dart mcp-server`) is now
+  configured for Claude Code and should replace most of this.
+
+**Open items outside this branch.**
+- The branch's backend fixes are **not deployed**: production still lets a member delete
+  another member's personal time and put coverage up for a bounty until it is.
+- Google OAuth consent screen shows "project-1088534743968": set the app name in Google Cloud.
+- The RevenueCat sandbox secret is in the repo; rotate it before production.

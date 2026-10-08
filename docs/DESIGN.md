@@ -4,12 +4,18 @@ description: Family caregiving coordination with a fair-share coin reward system
 colors:
   primary: "#2563EB"
   primary-soft: "#E8EFFE"
+  primary-ink: "#1D4ED8"
   success: "#16A34A"
   success-soft: "#E7F6EC"
+  success-ink: "#166534"
+  success-strong: "#15803D"
   warning: "#D97706"
   warning-soft: "#FEF1E1"
+  warning-ink: "#92400E"
+  warning-strong: "#B45309"
   danger: "#DC2626"
   danger-soft: "#FCE8E8"
+  danger-ink: "#B91C1C"
   bg: "#F7F8FA"
   surface: "#FFFFFF"
   border: "#E5E8EE"
@@ -139,7 +145,7 @@ A restrained palette where each hue has one job. Primary blue drives every inten
 - **Input Border** (`#CBD5E1`): Input stroke at rest; shifts to primary blue on focus.
 
 **The One Job Rule.** Every color has one semantic role and stays in it. Blue is not used for decoration. Green is not used for branding. Amber is not used for warnings unrelated to household tasks. If a new color feels necessary, it is probably a state variation of an existing token, not a new hue.
-*soft fill → ink text, never the base colour.*
+**The Soft-Ink Rule.** Text on a soft fill uses that hue's ink token (`primary-ink`, `success-ink`, `warning-ink`, `danger-ink`), never the base colour, which fails contrast on its own soft tint. Solid fills carrying white text use the strong tokens (`success-strong`, `warning-strong`). In Flutter these live in the `CareColors` theme extension (`context.careColors`).
 
 ---
 
@@ -169,8 +175,8 @@ A single humanist geometric sans-serif used across all roles. Hierarchy is achie
 CareCoins uses **flat-by-default, ambient-on-state** elevation. Surfaces stack through background color (bg → surface → input-bg), not through shadows. Shadows appear only when an element needs to communicate lift: a floating FAB, an open modal, a hovered card.
 
 ### Shadow Vocabulary
-- **Ambient card** (`0 10px 25px -5px rgba(0,0,0,0.05)`): Default card lift. Barely perceptible — marks a panel as interactive without competing for attention.
-- **Nav float** (`0 4px 24px rgba(14,23,38,0.06)`): Pill navigation. Slight float to indicate the nav is above the content plane.
+- **Cards:** none. Elevation 0 with a `1px border` stroke (Material 3 outlined card).
+- **Nav float** (`0 4px 24px rgba(14,23,38,0.06)`): the wide-layout pill header only. The phone `NavigationBar` is flat.
 - **Modal** (`0 10px 30px rgba(14,23,38,0.12)`): Modals and sheets. Clear depth, not dramatic.
 - **FAB** (`0 4px 20px rgba(0,0,0,0.25)`): Floating action buttons. Stronger shadow to communicate persistent floating position.
 - **Focus ring** (`0 0 0 3px rgba(37,99,235,0.2)`): Input focus. Not a shadow — a 3px spread ring using primary blue at 20% opacity.
@@ -181,55 +187,49 @@ CareCoins uses **flat-by-default, ambient-on-state** elevation. Surfaces stack t
 
 ## 5. Components
 
-Components are compact and purposeful. Buttons are pill-shaped and confident. Cards are rounded containers (24px), never nested. Inputs are pill-shaped to match button language and use a filled background to signal editability.
+**Material 3, brand kept** (decided 2026-10-07). Controls are stock Material 3 widgets, styled once in `buildAppTheme()` (`fluterFront/lib/theme/app_theme.dart`) from the tokens above: the CareCoins blue, Plus Jakarta Sans and the coin language stay; custom look-alike controls go. Cards are rounded containers (24px), never nested.
 
 ### Buttons
-- **Shape:** Full pill (9999px radius) for primary, secondary, and danger. No sharp-corner buttons anywhere in the system.
-- **Primary** (`#2563EB` bg, white text, `0.6rem 1.2rem` padding, `min-height 44px`): The single most important action on the screen. Blue glow shadow (`0 4px 14px rgba(37,99,235,0.3)`) reinforces its weight. One per view or modal.
-- **Hover:** `filter: brightness(1.1)` + deeper glow. No background color shift.
-- **Active:** `scale(0.97)` micro-press.
-- **Secondary** (translucent dark fill `rgba(15,23,42,0.05)`, `text-primary`, `1px border input-border`): Supporting actions. Cancel, close, back.
-- **Outline** (transparent bg, `primary` text, `1px border primary`): Secondary call-to-action that needs more visual weight than `secondary` but without a filled background. Used alongside primary actions where two options share similar prominence.
-- **Danger** (`danger-soft` bg, `danger` text, `1px border danger-soft`): Destructive actions in modals only. Never used as a primary page action.
-- **Disabled:** `opacity: 0.6`, `cursor: not-allowed`. No other visual change.
+- **Shape:** full pill on every button. Minimum 44 × 44.
+- **Filled** (`FilledButton`, primary bg, white text): the one most important action on a screen or sheet.
+- **Tonal** (`FilledButton.tonal`, `primary-soft` bg, `primary-ink` text): supporting actions. The theme pins `secondaryContainer` to `primary-soft`; without that, M3 derives a lavender.
+- **Outlined** (`OutlinedButton`, `primary` border and text): a second option of similar weight.
+- **Danger** (filled with the error colour): destructive actions in sheets and dialogs only, after a confirmation.
+- `VButton` remains as a wrapper that renders these.
+
+### Segmented controls
+`SegmentedButton`, single selection: selected segment `primary-soft` with `primary-ink` text (bold), others transparent with `text-secondary`. Used for Catalogue/Budget, Stats sections and the like.
 
 ### Chips / Pills
-- **Filter chip** (active: `primary` bg, white text; inactive: `surface` bg, `text-secondary`, `1px border`): Category filters, tag selectors. Full pill radius.
-- **Status chip** (`success`/`warning` bg, white text): Completed activity labels in the done bar. Small, scannable.
-- **Coin chip** (`bg` fill, `border`, `primary` coin value): Coin counters in the nav and profile. Pill shape with avatar + amount + unit.
+- **Status pill** (soft fill, ink text): states such as pending or away. Always with a word, never colour alone.
+- **Coin pill** (`CoinBalancePill`): the user's balance in the top app bar; opens the wallet.
+- **Task chips** in the Today tray: draggable, with a tap path to a time picker.
 
 ### Cards / Containers
-- **Corner style:** 24px radius (`--r-lg`). Generous, household-feeling.
-- **Background:** `surface` (`#FFFFFF`) on `bg` (`#F7F8FA`). The 1-step tone difference creates hierarchy without shadow.
-- **Shadow:** Ambient card shadow at rest. No hover shadow shift (cards are not primary interactables).
-- **Border:** `1px solid border` (`#E5E8EE`). Always present on cards; removes ambiguity about where the card ends.
-- **Internal padding:** 1.5rem. Consistent across all VCard uses.
+- **Corner style:** 24px radius. **Background:** `surface` on `bg`. **Elevation:** 0, with a `1px` `border` stroke; no drop shadows.
+- **KPI cards are quiet:** sentence-case labels in `text-secondary`, values in `text-primary`; colour only on a value that signals state.
 
 ### Inputs / Fields
-- **Style:** Pill radius (matching buttons), `input-bg` fill (`#F1F5F9`), `1px border input-border` (`#CBD5E1`), 16px font-size (prevents iOS Safari zoom).
-- **Focus:** Border shifts to `primary` blue; `0 0 0 3px rgba(37,99,235,0.2)` focus ring; background shifts to pure white.
-- **Placeholder:** `rgba(148,163,184,0.5)` — intentionally faint; the field must be visibly empty before the user types.
-- **Disabled:** `opacity: 0.6`, `cursor: not-allowed`.
+- Pill radius, `input-bg` fill, `1px input-border`, 16px text. Focus shifts the border to `primary`.
+- Time entry always uses `showTimePicker`; no hour/minute dropdowns.
 
 ### Navigation
-- **Desktop:** Floating pill container, `rgba(255,255,255,0.85)` backdrop with `blur(12px)`. Nav links are pill-shaped; active state uses `primary-soft` background + `primary` text. Sticky at top.
-- **Mobile:** Fixed bottom tab bar, 5 items, `rgba(255,255,255,0.92)` backdrop with `blur(12px)`. Active tab uses `primary` text color only — no background pill on mobile tab. Font 10px, weight 700.
-- **Logo mark:** 32px square, `primary` bg, 8px radius (`--r-sm`), white icon.
+- **Phones:** Material 3 `NavigationBar`, five destinations **Today · Family · Tasks · Rewards · Me**, labels always visible (12pt, bold when selected), selected indicator `primary-soft` with `primary-ink` icon. A small `Badge` dot (no number) on Today while *Needs you* has items. Each tab has a small top `AppBar`: title, help, coin pill. No logo on phones.
+- **Wide layouts** (`isWideLayout`: width > 768 and shortest side ≥ 600): the pill header with nav links.
 
-### Daily Timeline (Signature Component)
-The mobile condensed timeline list is the primary product surface on mobile. Each row pairs a 52px time-label column (right-aligned, `text-secondary`, 0.72rem) with a full-width card. Activity cards use the assignee color from `MEMBER_THEMES` — saturated solids (blue, green, orange, red), white text, 16px radius. The NOW divider is a red horizontal rule with "NOW" label in `danger` color. Gap indicators ("1h 30min free") appear between cards when gaps exceed 30 minutes, aligned to the card column.
+### Today: hour grid and task tray (signature component)
+- **Hour grid** (6:00–24:00), the same component on phones and wide layouts. Activities are blocks sized by duration (title, assignee, coins), coloured by category with the soft/ink tokens; overlapping blocks (coverage) sit side by side. The red **NOW** line is scrolled into view; other days open an hour before their first activity. Past hours are muted. Absences are a shaded band ("Ati away"); pending personal-time requests are dashed outline blocks.
+- **Needs you** sits above the grid, folded to one line on phones ("Validate Bath time, and 1 more"), never a count.
+- **Task tray** (phones): a sheet peeking above the navigation bar with one row of task chips, most-scheduled first; swipe up or tap "All tasks" for search, category filter and Time for me. Long-press a chip to drag a ghost block onto the grid: it snaps to 15 minutes, shows its time range, turns error-coloured with the reason when the slot conflicts (busy, away, past) and refuses the drop. A drop schedules immediately, with a snack bar and Undo. Every drag has a tap path.
+- Planned next (P2-9, P2-10): tap an empty hour to quick-add; tap a block for its actions sheet; long-press a block to move it; skeleton loading, empty and read-only past days.
 
-### Modals
-- Full-screen overlay on mobile (`position: fixed, inset: 0`).
-- Centered sheet on desktop with `max-width: 480px`.
-- `backdrop-filter: blur(4px)` on overlay background.
-- One primary action and one secondary (cancel/close). Danger actions use `button-danger`.
+### Sheets and dialogs
+- Modal bottom sheets with a drag handle and 24px top corners are the default on phones (forms, confirmations such as redeeming a reward). Dialogs only for short confirmations.
+- One primary action and one way out.
 
-### Toast / Feedback
-- Success: `success-soft` background, `success` text.
-- Error: `danger-soft` background, `danger` text.
-- Auto-dismiss: 3.5 s success, 5 s error.
-- Position: top-center on mobile, top-right on desktop.
+### Snack bars / Feedback
+- Floating snack bars, 16px radius, bold white text. Actions that can be undone offer **Undo** in the snack bar instead of a confirmation dialog.
+- Errors are localized (`app.errorTextFor`), never raw server text.
 
 ---
 
@@ -247,22 +247,22 @@ Step-by-step wizard for new users: create family → set up profile → add acto
 ### JoinView
 Handles both invite-link joins (UUID token in URL) and email-invitation acceptances. Single-action confirmation screen with family name prominently displayed.
 
-### DashboardView
-Overview of the family's current state. Coin balances per member, activity summary KPIs, recent completions. Dense but scannable — designed for a 30-second check-in.
+### Family hub (`dashboard_screen.dart`)
+Overview of the family's current state: the coins earned today, balances per member, quiet KPI cards that open Stats, the week with empty days collapsed into one line, recent completions. Designed for a 30-second check-in.
 
-### DailyView (signature view)
-Vertical timeline for a specific date. Scrollable, time-labelled rows. Day navigation via swipe or header arrows. This is the primary daily-use screen — every design decision prioritises speed and glanceability. Bottom sheets and dialogs (`lib/widgets/`, e.g. `personal_time_dialog.dart`, `absence_dialog.dart`) handle scheduling, completing, personal time and bounty actions inline without leaving the screen.
+### Today (`daily_screen.dart`, signature view)
+The first tab and the app's opening screen: *Needs you*, the week strip (tap a day, fling for another week), the hour grid and the task tray described in §5. Every design decision prioritises speed and glanceability. Personal time and absences are asked for from its header actions.
 
-### ActivitiesView
-Kanban-style board with status columns. Caregivers approve and schedule from here. Members mark activities done. Filter chips allow narrowing by category or status.
+### Tasks (`activities_screen.dart`)
+The task catalogue (templates) and the monthly budget, as two segments. New tasks are created in a sheet; caregivers approve proposed ones.
 
-### MarketplaceView
-Grid of reward cards. Cost shown prominently in the primary coin chip. Redemption history below the grid shows social proof (who redeemed what recently).
+### Rewards (`marketplace_screen.dart`)
+Store and redemption history in one list; creating a reward opens a sheet; redeeming asks for confirmation in a sheet showing the balance before and after.
 
-### StatsView
-Chart-heavy. ECharts for bar and line charts. Monthly toggle for time navigation. Designed for planning sessions on desktop, scannable on mobile.
+### Stats (`stats_screen.dart`)
+Not a tab; opened from the Family hub. Hand-rolled charts (`widgets/charts.dart`), including personal time taken vs. coverage given. Designed for planning sessions on desktop, scannable on mobile.
 
-### ProfileView
+### Me (`profile_screen.dart`)
 Three panels: AccountSettings (display name, avatar, alias, email), FamilyCircle (members, invitations, actors, invite links), WalletPanel (coin balance, ledger, login history). Tab navigation on mobile, sidebar layout on desktop.
 
 ---
@@ -281,6 +281,7 @@ Three panels: AccountSettings (display name, avatar, alias, email), FamilyCircle
 ### Do:
 - **Do** use `primary` (#2563EB) exclusively for primary actions, active states, and focus rings. Its scarcity is its power.
 - **Do** use full pill radius (9999px) on all buttons and inputs — it is the system's primary shape language.
+- **Do** reach for the stock Material 3 widget and let `buildAppTheme()` style it, before building a custom control.
 - **Do** use weight 800 for all headings, 700 for all labels and chips, 500 for body. Never go below 500 for any UI text.
 - **Do** pair semantic colors with text or icons — green chip means "done", amber means "household". Never use color as the only signal.
 - **Do** keep minimum touch targets at 44×44px on all interactive elements.
@@ -294,6 +295,7 @@ Three panels: AccountSettings (display name, avatar, alias, email), FamilyCircle
 - **Don't** use `opacity: 0.8` as a status signal on colored surfaces — it fails contrast. Use the `soft` token variants (e.g. `success-soft`) for muted states.
 - **Don't** nest cards. A card inside a card is always wrong. Use a list row or a contained section with a border instead.
 - **Don't** use shadows on static, non-interactive elements. Shadow = lift = the user expects to interact with it.
+- **Don't** put base-colour text on its own soft tint (blue on `primary-soft`, green on `success-soft`). Use the ink token.
 - **Don't** use `border-left` or `border-right` as a colored stripe accent. Use full background tints (`danger-soft`, `primary-soft`) instead.
 - **Don't** use gradient text (`background-clip: text`). Color emphasis is weight + size, not gradient decoration.
 - **Don't** build a leaderboard-first view. Coins are a fairness tool; the UI should communicate contribution and fairness, not competition rank.
