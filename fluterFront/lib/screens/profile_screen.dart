@@ -595,21 +595,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 placeholder: l.aliasHint),
           ],
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: VButton(
-                    onPressed: _updateProfile,
-                    block: true,
-                    child: Text(l.updateProfileBtn)),
-              ),
-              const SizedBox(width: 10),
-              VButton(
-                  type: VButtonType.outline,
-                  onPressed: _deleteAccount,
-                  child: Text(l.deleteAccountBtn,
-                      style: const TextStyle(color: AppColors.danger))),
-            ],
+          VButton(
+            onPressed: _updateProfile,
+            block: true,
+            child: Text(l.updateProfileBtn),
           ),
           const Divider(height: 32),
           Text(l.pushNotifications,
@@ -620,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           if (!_notifGranted)
             VButton(
-                type: VButtonType.secondary,
+                type: VButtonType.outline,
                 onPressed: _enableNotifications,
                 child: Text(l.enableNotifications))
           else ...[
@@ -672,9 +661,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
           const Divider(height: 32),
           // MyCareCoins Pro (docs/admin-family-management-plan.md Phase 4).
-          // Hides itself on web, where store purchases don't exist.
-          const SubscriptionCard(),
-          const Divider(height: 32),
+          // Rendered only when store purchases are available on this platform.
+          if (SubscriptionCard.isAvailable(app)) ...[
+            const SubscriptionCard(),
+            const Divider(height: 32),
+          ],
           // Directly under the subscription entry point on purpose: Apple
           // requires the privacy policy and terms to be reachable in-app when
           // the app sells subscriptions, and expects them near the purchase.
@@ -774,9 +765,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
           const SizedBox(height: 20),
           VButton(
-            type: VButtonType.danger,
+            type: VButtonType.outline,
+            block: true,
             onPressed: () => app.logout(),
-            child: Text(AppLocalizations.of(context).menuLogout),
+            child: Text(l.menuLogout),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: _deleteAccount,
+              child: Text(
+                l.deleteAccountBtn,
+                style: const TextStyle(color: AppColors.danger),
+              ),
+            ),
           ),
         ],
       ),

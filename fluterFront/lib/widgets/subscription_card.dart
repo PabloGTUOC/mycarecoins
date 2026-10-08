@@ -23,6 +23,11 @@ const _platformNames = {'app_store': 'App Store', 'play': 'Google Play'};
 class SubscriptionCard extends StatefulWidget {
   const SubscriptionCard({super.key});
 
+  /// Whether the card shows anything: the same conditions as its build, so a
+  /// parent can drop the dividers around it when it would be empty.
+  static bool isAvailable(AppState app) =>
+      PurchaseService.supported && app.hasFamilies;
+
   @override
   State<SubscriptionCard> createState() => _SubscriptionCardState();
 }

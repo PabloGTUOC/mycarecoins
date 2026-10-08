@@ -239,7 +239,7 @@
     "description": "Desktop pill-header nav: the personal area link (long label)"
   },
 
-  "menuLogout": "Logout",
+  "menuLogout": "Log out",
   "@menuLogout": {
     "description": "Avatar menu item and profile-screen button that signs the user out"
   },
