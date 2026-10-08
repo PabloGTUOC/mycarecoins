@@ -77,7 +77,7 @@
   "dashTitle": "Familienzentrale",
   "dashEarned": "{greeting}, {name}! Deine Familie hat heute {coins} cc verdient.",
   "dashNothingEarned": "{greeting}, {name}! Heute wurde noch nichts ausgezahlt.",
-  "dashPendingTasks": "{count, plural, one{{count} Aufgabe wartet auf Aufmerksamkeit.} other{{count} Aufgaben warten auf Aufmerksamkeit.}}",
+  "dashNeedsYou": "Etwas unter Heute braucht dich.",
 
   "tourMembersTitle": "Die Familie auf einen Blick",
   "tourMembersBody": "Hier steht der Münzstand aller Mitglieder. Er wächst, wenn eine Betreuungsperson eine erledigte Aufgabe bestätigt.",

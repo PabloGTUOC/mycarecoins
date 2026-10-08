@@ -323,11 +323,8 @@
       "name": {}
     }
   },
-  "dashPendingTasks": "{count, plural, one{{count} task is waiting for attention.} other{{count} tasks are waiting for attention.}}",
-  "@dashPendingTasks": {
-    "description": "Second dashboard subtitle sentence: tasks pending validation/approval",
-    "placeholders": { "count": { "type": "num" } }
-  },
+  "dashNeedsYou": "Something on Today needs you.",
+  "@dashNeedsYou": { "description": "Second dashboard subtitle sentence when Today has something for this user; never a number" },
 
   "tourMembersTitle": "The family at a glance",
   "@tourMembersTitle": { "description": "Dashboard coach-mark title over the member cards" },

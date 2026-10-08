@@ -12,6 +12,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
 import '../utils/json.dart';
+import '../utils/needs_you.dart';
 import '../widgets/absence_dialog.dart';
 import '../widgets/help_sheet.dart';
 import '../widgets/personal_time_dialog.dart';
@@ -1550,63 +1551,16 @@ class _DailyScreenState extends State<DailyScreen> {
 
   // ── Needs you ────────────────────────────────────────────────────
 
-  List<_NeedsItem> _getNeedsItems(AppState app) {
-    final items = <_NeedsItem>[];
+  List<NeedsYouItem> _getNeedsItems(AppState app) => needsYouItems(
+        app: app,
+        activities: _activities,
+        requests: _requests,
+        pendingMembers: _pendingMembers,
+      );
 
-    // 1. Validations they can give (pending_validation, not theirs, user is caregiver)
-    if (app.isCaregiver) {
-      for (final a in _activities) {
-        if (a['is_template'] == true) continue;
-        if (a['status'] == 'pending_validation' &&
-            a['assigned_to']?.toString() != app.userId?.toString()) {
-          items.add(_NeedsValidation(a));
-        }
-      }
-    }
-
-    // 2. Cover requests asked of them or of anyone (status pending, not their own)
-    for (final r in _requests) {
-      if (r['status'] == 'pending' &&
-          r['requester_id']?.toString() != app.userId?.toString()) {
-        final reqOf = r['requested_of'];
-        if (reqOf == null || reqOf.toString() == app.userId?.toString()) {
-          items.add(_NeedsCoverRequest(r));
-        }
-      }
-    }
-
-    // 3. Pending member approvals (caregivers only)
-    if (app.isCaregiver) {
-      for (final m in _pendingMembers) {
-        if (m['status'] == 'pending') {
-          items.add(_NeedsMemberApproval(m));
-        }
-      }
-    }
-
-    // 4. Open offers they could take (caregivers only, bounty > 0, not completed/rejected, not mine)
-    if (app.isCaregiver) {
-      for (final a in _activities) {
-        if (a['is_template'] == true) continue;
-        // A coverage shift's bounty is the requester's sweetener, not an offer.
-        if (a['type'] == 'coverage' || isSelfActivity(a)) continue;
-        if (toNum(a['bounty_amount']) > 0 &&
-            a['status'] != 'completed' &&
-            a['status'] != 'rejected' &&
-            a['status'] != 'cancelled' &&
-            a['status'] != 'pending_validation' &&
-            a['assigned_to']?.toString() != app.userId?.toString()) {
-          items.add(_NeedsTakeOverOffer(a));
-        }
-      }
-    }
-
-    return items;
-  }
-
-  String _needsItemLabel(_NeedsItem item, AppLocalizations l) {
+  String _needsItemLabel(NeedsYouItem item, AppLocalizations l) {
     switch (item) {
-      case _NeedsValidation(:final activity):
+      case NeedsValidation(:final activity):
         final title = displayTitle(l, activity);
         final assignee = (activity['assigned_alias'] ??
                 activity['assigned_to_name'] ??
@@ -1617,20 +1571,20 @@ class _DailyScreenState extends State<DailyScreen> {
             ? l.needsValidateTask(title, assignee)
             : l.needsValidateTaskNoAssignee(title);
 
-      case _NeedsCoverRequest(:final request):
+      case NeedsCoverRequest(:final request):
         final name = (request['requester_name'] ?? '').toString().trim();
         final title = displayTitle(l, request);
         return l.needsCoverRequest(
             name.isNotEmpty ? name : l.fallbackACaregiver, title);
 
-      case _NeedsMemberApproval(:final member):
+      case NeedsMemberApproval(:final member):
         final name = (member['name'] ??
                 l.fallbackUser(
                     (member['user_id'] ?? member['id'] ?? '').toString()))
             .toString();
         return l.needsApproveMember(name);
 
-      case _NeedsTakeOverOffer(:final activity):
+      case NeedsTakeOverOffer(:final activity):
         final title = displayTitle(l, activity);
         final bounty = toNum(activity['bounty_amount']).toInt();
         return l.needsTakeOverOffer(title, bounty);
@@ -1762,10 +1716,10 @@ class _DailyScreenState extends State<DailyScreen> {
     );
   }
 
-  Widget _buildNeedsYouItem(_NeedsItem item, AppLocalizations l) {
+  Widget _buildNeedsYouItem(NeedsYouItem item, AppLocalizations l) {
     final label = _needsItemLabel(item, l);
     switch (item) {
-      case _NeedsValidation(:final activity):
+      case NeedsValidation(:final activity):
         final coins = toNum(activity['coin_value']).toInt();
         return _NeedsRow(
           icon: Icons.verified_outlined,
@@ -1779,7 +1733,7 @@ class _DailyScreenState extends State<DailyScreen> {
           onTap: () => _validate(activity['id']),
         );
 
-      case _NeedsCoverRequest(:final request):
+      case NeedsCoverRequest(:final request):
         final sweetener = toNum(request['sweetener_coins']).toInt();
         return _NeedsRow(
           icon: Icons.swap_horiz_rounded,
@@ -1793,7 +1747,7 @@ class _DailyScreenState extends State<DailyScreen> {
           onTap: () => _openRequest(request),
         );
 
-      case _NeedsMemberApproval(:final member):
+      case NeedsMemberApproval(:final member):
         return _NeedsRow(
           icon: Icons.person_add_outlined,
           iconColor: AppColors.indigo,
@@ -1804,7 +1758,7 @@ class _DailyScreenState extends State<DailyScreen> {
           onTap: () => _approveMember(member['user_id'] ?? member['id']),
         );
 
-      case _NeedsTakeOverOffer(:final activity):
+      case NeedsTakeOverOffer(:final activity):
         final bounty = toNum(activity['bounty_amount']).toInt();
         return _NeedsRow(
           icon: Icons.bolt_rounded,
@@ -4361,28 +4315,6 @@ class WeekDayChip extends StatelessWidget {
       ),
     );
   }
-}
-
-sealed class _NeedsItem {}
-
-class _NeedsValidation extends _NeedsItem {
-  final Map<String, dynamic> activity;
-  _NeedsValidation(this.activity);
-}
-
-class _NeedsCoverRequest extends _NeedsItem {
-  final Map<String, dynamic> request;
-  _NeedsCoverRequest(this.request);
-}
-
-class _NeedsMemberApproval extends _NeedsItem {
-  final Map<String, dynamic> member;
-  _NeedsMemberApproval(this.member);
-}
-
-class _NeedsTakeOverOffer extends _NeedsItem {
-  final Map<String, dynamic> activity;
-  _NeedsTakeOverOffer(this.activity);
 }
 
 class _NeedsRow extends StatelessWidget {

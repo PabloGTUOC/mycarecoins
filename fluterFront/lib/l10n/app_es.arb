@@ -77,7 +77,7 @@
   "dashTitle": "Centro Familiar",
   "dashEarned": "¡{greeting}, {name}! Tu familia ha ganado {coins} cc hoy.",
   "dashNothingEarned": "¡{greeting}, {name}! Todavía no se ha pagado nada hoy.",
-  "dashPendingTasks": "{count, plural, one{{count} tarea espera tu atención.} other{{count} tareas esperan tu atención.}}",
+  "dashNeedsYou": "Algo en Hoy te necesita.",
 
   "tourMembersTitle": "La familia de un vistazo",
   "tourMembersBody": "Aquí vive el saldo de monedas de cada uno. Los saldos crecen cuando un cuidador valida una tarea completada.",

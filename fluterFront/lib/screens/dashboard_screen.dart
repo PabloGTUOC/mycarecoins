@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
 import '../utils/json.dart';
+import '../utils/needs_you.dart';
 import '../widgets/absence_dialog.dart';
 import '../widgets/activation_checklist.dart';
 import '../widgets/coach_marks.dart';
@@ -472,10 +473,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final ts = DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
       return ts != null && DateTime(ts.year, ts.month, ts.day) == today;
     }).length;
+    // KPI card only: the family's done work waiting for validation, whoever
+    // validates it. The greeting uses needsYou below.
     final pendingTasks = _activities
         .where((a) =>
-            a['status'] == 'pending_validation' || a['status'] == 'pending')
+            a['is_template'] != true && a['status'] == 'pending_validation')
         .length;
+    // Same rules as Today's "Needs you"; only whether it is empty is shown.
+    final needsYou = needsYouItems(
+      app: app,
+      activities: _activities,
+      requests: _requests,
+      pendingMembers: pending,
+    ).isNotEmpty;
     final offers = _scheduled
         .where(
             (a) => toNum(a['bounty_amount']) > 0 && a['status'] != 'completed')
@@ -499,7 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final firstSentence = coinsEarnedToday > 0
         ? l.dashEarned(_greeting(l), greetName, coinsEarnedToday)
         : l.dashNothingEarned(_greeting(l), greetName);
-    final subtitle = '$firstSentence ${l.dashPendingTasks(pendingTasks)}';
+    final subtitle = needsYou ? '$firstSentence ${l.dashNeedsYou}' : firstSentence;
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -511,7 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: l.dashTitle,
               subtitle: subtitle,
               onSubtitleTap: () => _openDaily(DateTime.now())),
-          if (pendingTasks > 0)
+          if (needsYou)
             Padding(
               padding: const EdgeInsets.only(top: 2, bottom: 16),
               child: Align(

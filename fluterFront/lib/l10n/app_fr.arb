@@ -77,7 +77,7 @@
   "dashTitle": "Espace Famille",
   "dashEarned": "{greeting}, {name} ! Votre famille a gagné {coins} cc aujourd'hui.",
   "dashNothingEarned": "{greeting}, {name} ! Rien n'a encore été versé aujourd'hui.",
-  "dashPendingTasks": "{count, plural, one{{count} tâche attend votre attention.} other{{count} tâches attendent votre attention.}}",
+  "dashNeedsYou": "Quelque chose dans Aujourd'hui a besoin de vous.",
 
   "tourMembersTitle": "La famille en un coup d'œil",
   "tourMembersBody": "Le solde de pièces de chacun se trouve ici. Les soldes augmentent quand un aidant valide une tâche terminée.",
