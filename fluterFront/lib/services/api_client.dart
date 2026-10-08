@@ -31,8 +31,8 @@ class ApiException implements Exception {
   String toString() =>
       serverMessage ??
       switch (kind) {
-        ApiErrorKind.timeout => 'Request timed out — check your connection.',
-        ApiErrorKind.network => 'Network error — check your connection.',
+        ApiErrorKind.timeout => 'Request timed out; check your connection.',
+        ApiErrorKind.network => 'Network error; check your connection.',
         ApiErrorKind.requestFailed => 'Request failed (${statusCode ?? 0})',
         ApiErrorKind.uploadTimeout => 'Upload timed out',
         ApiErrorKind.uploadFailed => 'Upload failed (${statusCode ?? 0})',

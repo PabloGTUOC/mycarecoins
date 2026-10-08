@@ -697,8 +697,8 @@
   "careObjectNameHint": "Nombre (p. ej. Tomás)",
   "addSomeoneToCareFor": "+ Añadir a alguien a quien cuidar",
   "completeSetup": "Completar configuración",
-  "errTimeout": "Se agotó el tiempo de espera — comprueba tu conexión.",
-  "errNetwork": "Error de red — comprueba tu conexión.",
+  "errTimeout": "Se agotó el tiempo de espera. Comprueba tu conexión.",
+  "errNetwork": "Error de red. Comprueba tu conexión.",
   "errRequestFailed": "La solicitud falló ({code})",
   "errUploadTimeout": "Se agotó el tiempo de la subida",
   "errUploadFailed": "La subida falló ({code})",
@@ -791,7 +791,7 @@
   "adminNotifyInactiveConfirm": "¿Enviar una notificación a los cuidadores de esta familia preguntando si siguen usando CareCoins? No verás quién la recibe.",
   "adminNotifySent": "Aviso enviado.",
   "adminBillingTitle": "Facturación",
-  "adminNoSubscription": "Sin suscripción de tienda — se aplica el plan por defecto.",
+  "adminNoSubscription": "Sin suscripción de tienda: se aplica el plan por defecto.",
   "adminPlanLabel": "Plan",
   "adminStatusColLabel": "Estado",
   "adminPlatformLabel": "Plataforma",
@@ -838,7 +838,7 @@
   "proRestoreDone": "Compras restauradas.",
   "proRestoreNone": "No hay compras que restaurar.",
   "proPurchaseSuccess": "¡Bienvenido a MyCareCoins Pro!",
-  "proSyncDelayed": "Compra completada — puede tardar un momento en activarse.",
+  "proSyncDelayed": "Compra completada. Puede tardar un momento en activarse.",
   "proOtherPlatform": "El Pro de tu familia se gestiona en {platform} por el cuidador que lo compró.",
 
   "taskBreakfastPrep": "Preparar el desayuno",
@@ -892,5 +892,8 @@
   "assigneeYou": "Tú",
   "decrease": "Disminuir",
   "increase": "Aumentar",
-  "cancelPersonalTimeWithCoverage": "Al cancelar esto también se cancela el turno de cobertura de la otra persona y se te devuelve cualquier incentivo."
+  "cancelPersonalTimeWithCoverage": "Al cancelar esto también se cancela el turno de cobertura de la otra persona y se te devuelve cualquier incentivo.",
+  "coveringFor": "Cubriendo: {title}",
+  "ledgerMonthlyDistribution": "Reparto mensual",
+  "ledgerRedeemed": "Canjeado: {title}"
 }

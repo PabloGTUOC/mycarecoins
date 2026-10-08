@@ -7,6 +7,7 @@ import '../services/telemetry.dart';
 import '../services/tour_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/activity_title.dart';
 import '../utils/json.dart';
 import '../widgets/absence_dialog.dart';
 import '../widgets/personal_time_dialog.dart';
@@ -308,9 +309,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _rangeLabel(List<DateTime> days, String loc) {
     final first = days.first, last = days.last;
     if (first.month == last.month) {
-      return '${DateFormat('MMM', loc).format(first)} ${first.day} — ${last.day}';
+      return '${DateFormat('MMM', loc).format(first)} ${first.day} to ${last.day}';
     }
-    return '${DateFormat('MMM d', loc).format(first)} — ${DateFormat('MMM d', loc).format(last)}';
+    return '${DateFormat('MMM d', loc).format(first)} to ${DateFormat('MMM d', loc).format(last)}';
   }
 
   List<Map<String, dynamic>> _absencesOn(DateTime day) {
@@ -405,7 +406,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             background: AppColors.primarySoft,
             actor: (a['assigned_to_name'] ?? l.fallbackSomeone).toString(),
             verb: l.feedVerbCompleted,
-            subject: (a['title'] ?? '').toString(),
+            subject: displayTitle(l, a),
             time: DateTime.tryParse(a['starts_at']?.toString() ?? ''),
             coinText: isSelfActivity(a) ? null : '+${toNum(a['coin_value'])} cc',
             coinColor: AppColors.success,
@@ -768,7 +769,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text((offer['title'] ?? '').toString(),
+                            Text(displayTitle(l, offer),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w800)),
                             if (offer['starts_at'] != null)
@@ -1389,6 +1390,7 @@ class _ActChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final status = a['status']?.toString() ?? '';
     final isCare = a['type'] == 'care';
 
@@ -1422,7 +1424,7 @@ class _ActChip extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${status == 'rejected' ? '⚠️ ' : ''}${a['title'] ?? ''}',
+                  '${status == 'rejected' ? '⚠️ ' : ''}${displayTitle(l, a)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1533,7 +1535,7 @@ class _CoverRequestCardState extends State<_CoverRequestCard> {
                     (r['requester_name'] ?? '').toString(),
                     '${DateFormat('EEE d MMM', loc).format(start)} '
                     '${DateFormat('HH:mm').format(start)}\u2013${DateFormat('HH:mm').format(end)}',
-                    (r['title'] ?? '').toString(),
+                    displayTitle(l, r),
                   ),
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),

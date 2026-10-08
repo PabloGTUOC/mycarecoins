@@ -95,7 +95,7 @@ class PushService {
       final title = message.notification?.title;
       final body = message.notification?.body;
       if (title == null) return;
-      app.setSuccess(body == null ? '🔔 $title' : '🔔 $title — $body');
+      app.setSuccess(body == null ? '🔔 $title' : '🔔 $title: $body');
     });
   }
 }

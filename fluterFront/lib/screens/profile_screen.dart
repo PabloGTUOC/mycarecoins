@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../services/push_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/activity_title.dart';
 import '../utils/avatar_upload.dart';
 import '../utils/json.dart';
 import '../services/tour_service.dart';
@@ -38,6 +39,10 @@ class ProfileScreen extends StatefulWidget {
   final int initialTab;
 
   const ProfileScreen({super.key, this.active = true, this.initialTab = 0});
+
+  /// Human-readable label for a ledger row.
+  static String ledgerLabel(AppLocalizations l, Map<String, dynamic> item) =>
+      _WalletPanel.ledgerLabel(l, item);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -293,11 +298,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _uncheckActivity(Map<String, dynamic> item) async {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
+    final actTitle = displayTitle(l, item);
     final ok = await _confirm(
         l.uncheckTitle,
         l.uncheckBody(
             '${toNum(item['amount']).abs()}',
-            (item['activity_title'] ?? l.fallbackThisActivity).toString()));
+            actTitle.isNotEmpty ? actTitle : l.fallbackThisActivity));
     if (!ok) return;
     await app.runAction(() async {
       await app.api.post('/api/activities/${item['activity_id']}/revert');
@@ -399,31 +405,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xD9FFFFFF))),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: const Color(0x26FFFFFF),
-                      border: Border.all(color: const Color(0x40FFFFFF)),
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(l.familyIdLabel,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                                color: Color(0xD9FFFFFF))),
-                        Text('${family['family_id'] ?? '—'}',
-                            style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5,
-                                color: Colors.white)),
                       ],
                     ),
                   ),
@@ -835,8 +816,18 @@ class _WalletPanel extends StatelessWidget {
 
   /// Human-readable label for a ledger row.
   static String ledgerLabel(AppLocalizations l, Map<String, dynamic> item) {
-    final title = item['activity_title']?.toString();
-    switch (item['reason']?.toString()) {
+    final rawTitle = (item['activity_title'] ?? item['title'])?.toString();
+    final title = rawTitle != null && rawTitle.isNotEmpty
+        ? displayTitle(l, item)
+        : null;
+    final reason = item['reason']?.toString();
+
+    if (reason != null && reason.startsWith('Redeemed: ')) {
+      final reward = reason.substring('Redeemed: '.length).trim();
+      return l.ledgerRedeemed(reward);
+    }
+
+    switch (reason) {
       case 'activity_completed':
         return title ?? l.ledgerActivityCompleted;
       case 'activity_reverted':
@@ -867,8 +858,10 @@ class _WalletPanel extends StatelessWidget {
         return l.ledgerSweetenerEscrow;
       case 'coverage_sweetener_refunded':
         return l.ledgerSweetenerRefunded;
+      case 'monthly_distribution':
+        return l.ledgerMonthlyDistribution;
       default:
-        return title ?? (item['reason']?.toString() ?? l.ledgerMovement);
+        return title ?? l.ledgerMovement;
     }
   }
 
@@ -1204,17 +1197,19 @@ class _WalletPanel extends StatelessWidget {
                             Text(icon, style: const TextStyle(fontSize: 20)),
                       ),
                       const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(label,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 14)),
-                          Text(sub,
-                              style: const TextStyle(
-                                  fontSize: 12.5,
-                                  color: AppColors.textSecondary)),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 14)),
+                            Text(sub,
+                                style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.textSecondary)),
+                          ],
+                        ),
                       ),
                     ],
                   ),

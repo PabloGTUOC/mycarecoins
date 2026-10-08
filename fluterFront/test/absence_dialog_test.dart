@@ -64,7 +64,7 @@ void main() {
 
     expect(find.text('Log time off'), findsOneWidget);
     expect(
-        find.textContaining('Time off covers whole days — pick one day or more.'),
+        find.textContaining('Time off covers whole days: pick one day or more.'),
         findsOneWidget);
     expect(
         find.textContaining(

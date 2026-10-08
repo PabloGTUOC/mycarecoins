@@ -277,7 +277,7 @@
   "@welcomeTitle": {
     "description": "Title of the one-time welcome dialog after first landing in the app"
   },
-  "welcomeBody": "The idea in one line: tasks earn coins from your family's monthly budget, and coins buy rewards your family chooses.\n\nWe can point out the important bits on each screen as you visit it — or you can find your own way (the ? up top always has the full story).",
+  "welcomeBody": "The idea in one line: tasks earn coins from your family's monthly budget, and coins buy rewards your family chooses.\n\nWe can point out the important bits on each screen as you visit it, or you can find your own way (the ? up top always has the full story).",
   "@welcomeBody": {
     "description": "Body of the welcome dialog explaining the coin economy and offering a guided tour"
   },
@@ -327,7 +327,7 @@
   "@tourMembersBody": { "description": "Dashboard coach-mark body over the member cards" },
   "tourWeekTitle": "Your week",
   "@tourWeekTitle": { "description": "Dashboard coach-mark title over the week strip" },
-  "tourWeekBody": "Tap any day to open its full schedule — that's where tasks get scheduled, completed and validated.",
+  "tourWeekBody": "Tap any day to open its full schedule. That's where tasks get scheduled, completed and validated.",
   "@tourWeekBody": { "description": "Dashboard coach-mark body over the week strip" },
   "tourKpiTitle": "The vital signs",
   "@tourKpiTitle": { "description": "Dashboard coach-mark title over the KPI cards" },
@@ -342,7 +342,7 @@
   "@checklistSchedule": { "description": "Activation checklist step 2" },
   "checklistMarkDone": "Mark it done",
   "@checklistMarkDone": { "description": "Activation checklist step 3" },
-  "checklistValidate": "Validate it — the coins land",
+  "checklistValidate": "Validate it: the coins land",
   "@checklistValidate": { "description": "Activation checklist step 4" },
   "checklistStockStore": "Stock the reward store",
   "@checklistStockStore": { "description": "Activation checklist step 5" },
@@ -495,7 +495,7 @@
   "@errScheduleDuringAbsence": { "description": "Error when scheduling inside own absence window" },
   "errFillAllFields": "Please fill in all fields.",
   "@errFillAllFields": { "description": "Generic form validation error" },
-  "errNoApprovedTasks": "No approved tasks in the library yet — create one in Activities.",
+  "errNoApprovedTasks": "No approved tasks in the library yet. Create one in Activities.",
   "@errNoApprovedTasks": { "description": "Error opening the task sheet with an empty library" },
 
   "removeRecurringTitle": "Remove recurring task?",
@@ -538,7 +538,7 @@
 
   "completedLockedTitle": "Completed activities are locked",
   "@completedLockedTitle": { "description": "Dialog title when tapping a completed card" },
-  "completedLockedBody": "Validated activities can no longer be modified from the schedule — recurrence can't be added and they can't be removed here. To undo one, revert its coin entry from your ledger in the Personal Area.",
+  "completedLockedBody": "Validated activities can no longer be modified from the schedule. Recurrence can't be added and they can't be removed here. To undo one, revert its coin entry from your ledger in the Personal Area.",
   "@completedLockedBody": { "description": "Dialog body when tapping a completed card" },
   "gotIt": "Got it",
   "@gotIt": { "description": "Acknowledgement button" },
@@ -581,7 +581,7 @@
     "description": "Absence dialog: length of the selected date range",
     "placeholders": { "count": { "type": "num" } }
   },
-  "absenceWholeDaysNote": "Time off covers whole days — pick one day or more.",
+  "absenceWholeDaysNote": "Time off covers whole days: pick one day or more.",
   "@absenceWholeDaysNote": { "description": "Absence dialog: explains the one-day minimum" },
   "absenceCostNote": "While you're away, your share of the monthly coins goes to whoever is home.",
   "@absenceCostNote": { "description": "Absence dialog: what logging time off costs the person leaving" },
@@ -637,7 +637,7 @@
   },
   "personalTimeTheirConflict": "Heads up: they already have \"{what}\" then.",
   "@personalTimeTheirConflict": {
-    "description": "Warning that the counterparty is busy — never a refusal",
+    "description": "Warning that the counterparty is busy (never a refusal)",
     "placeholders": { "what": {} }
   },
   "personalTimeWhoLabel": "Who to ask",
@@ -668,7 +668,7 @@
   "@personalTimeAsk": { "description": "Confirm button of the personal-time dialog" },
   "personalTimeEntry": "Personal time",
   "@personalTimeEntry": { "description": "Row in the add sheet, and the empty-gap affordance" },
-  "personalTimeGapHint": "Free — take it for yourself",
+  "personalTimeGapHint": "Free: take it for yourself",
   "@personalTimeGapHint": { "description": "Affordance on a free-time gap in the timeline" },
   "toastPersonalTimeAsked": "Asked. We will tell you when they answer.",
   "@toastPersonalTimeAsked": { "description": "Toast after creating a request" },
@@ -678,7 +678,7 @@
   "@toastPersonalTimeWithdrawn": { "description": "Toast after withdrawing a request" },
   "toastCoverageAccepted": "Accepted. It is on your calendar.",
   "@toastCoverageAccepted": { "description": "Toast after accepting a coverage request" },
-  "toastCoverageAcceptedSeries": "Covered {created} of {total} times — the rest clashed.",
+  "toastCoverageAcceptedSeries": "Covered {created} of {total} times; the rest clashed.",
   "@toastCoverageAcceptedSeries": {
     "description": "Toast after accepting a repeating request where some dates could not be booked",
     "placeholders": { "created": { "type": "num" }, "total": { "type": "num" } }
@@ -729,11 +729,11 @@
   "@flowCoverage": { "description": "Coin-flow chart series for coverage earnings" },
   "glossSelfTerm": "Personal time",
   "@glossSelfTerm": { "description": "Glossary entry" },
-  "glossSelfDef": "Time you take for yourself — the gym, a coffee with friends, your own doctor. It earns you nothing, and under a day it needs someone to cover; a day or more is time off instead.",
+  "glossSelfDef": "Time you take for yourself, like the gym, a coffee with friends, or your own doctor. It earns you nothing, and under a day it needs someone to cover; a day or more is time off instead.",
   "@glossSelfDef": { "description": "Glossary definition" },
   "glossCoverageTerm": "Coverage",
   "@glossCoverageDef": { "description": "Glossary definition" },
-  "glossCoverageDef": "The shift the other caretaker picks up so you can take personal time. It pays them the usual rate, plus anything you add from your own coins — and they are free to say no.",
+  "glossCoverageDef": "The shift the other caretaker picks up so you can take personal time. It pays them the usual rate, plus anything you add from your own coins, and they are free to say no.",
   "@glossCoverageTerm": { "description": "Glossary entry" },
   "logAction": "Log",
   "@logAction": { "description": "Confirm button of the absence dialog" },
@@ -859,7 +859,7 @@
   "@tabCreate": { "description": "Marketplace tab (caregivers only)" },
   "storeEmptyTitle": "The reward store is empty",
   "@storeEmptyTitle": { "description": "Store empty state title" },
-  "storeEmptyBodyCaregiver": "Rewards are what coins are for — anything your family agrees is worth earning toward, from screen time to a day out.",
+  "storeEmptyBodyCaregiver": "Rewards are what coins are for: anything your family agrees is worth earning toward, from screen time to a day out.",
   "@storeEmptyBodyCaregiver": { "description": "Store empty state body for caregivers" },
   "storeEmptyBodyMember": "A caregiver can stock the store with anything your family agrees is worth earning toward.",
   "@storeEmptyBodyMember": { "description": "Store empty state body for non-caregivers" },
@@ -953,7 +953,7 @@
   "@errNameFirst": { "description": "Validation error creating a template without a title" },
   "errAvatarType": "That image must be a JPEG, PNG or WebP.",
   "@errAvatarType": { "description": "Rejected an avatar whose bytes are not an accepted image type" },
-  "toastTemplateCreated": "Activity template created — pending approval.",
+  "toastTemplateCreated": "Activity template created, pending approval.",
   "@toastTemplateCreated": { "description": "Toast after creating a template" },
   "toastTemplateApproved": "Activity approved! It can now be scheduled from the Daily view.",
   "@toastTemplateApproved": { "description": "Toast after approving a template" },
@@ -977,7 +977,7 @@
   "@tabBudget": { "description": "Activities tab" },
   "catEmptyTitle": "No tasks in the catalogue yet",
   "@catEmptyTitle": { "description": "Catalogue empty state title" },
-  "catEmptyBody": "Task templates describe a job — its duration and what it pays in coins. Everything else starts from one.",
+  "catEmptyBody": "Task templates describe a job: its duration and what it pays in coins. Everything else starts from one.",
   "@catEmptyBody": { "description": "Catalogue empty state body" },
   "catEmptyAction": "Create your first task",
   "@catEmptyAction": { "description": "Catalogue empty state action" },
@@ -1306,7 +1306,7 @@
 
   "tourStatsTitle": "The fairness receipts",
   "@tourStatsTitle": { "description": "Stats coach-mark title" },
-  "tourStatsBody": "Who contributed what — by person, category and month. This is where the invisible labour becomes visible.",
+  "tourStatsBody": "Who contributed what, by person, category and month. This is where the invisible labour becomes visible.",
   "@tourStatsBody": { "description": "Stats coach-mark body" },
   "tourCompareTitle": "Compare caregivers",
   "@tourCompareTitle": { "description": "Stats coach-mark title on the compare toggle" },
@@ -1352,7 +1352,7 @@
   "@legendRoles": { "description": "Leaderboard color legend" },
   "chartCompletionRate": "Completion Rate",
   "@chartCompletionRate": { "description": "Chart title" },
-  "chartBounties": "Bounties — Offered vs Earned vs Refunded",
+  "chartBounties": "Bounties: Offered vs Earned vs Refunded",
   "@chartBounties": { "description": "Chart title" },
   "chartFairness": "Personal time & coverage",
   "@chartFairness": { "description": "Title of the stats card setting personal time taken against coverage given" },
@@ -1360,7 +1360,7 @@
   "@fairnessTaken": { "description": "Bar label: hours this member spent on themselves" },
   "fairnessGiven": "Coverage given",
   "@fairnessGiven": { "description": "Bar label: hours this member covered so someone else could" },
-  "fairnessNoDeclines": "Saying no is never counted — not here, not anywhere.",
+  "fairnessNoDeclines": "Saying no is never counted. Not here, not anywhere.",
   "@fairnessNoDeclines": { "description": "Footnote making explicit that declined requests are never tallied" },
   "offered": "Offered",
   "@offered": { "description": "Bounty chart series label" },
@@ -1462,7 +1462,7 @@
   "@landStep2Body": { "description": "Landing how-it-works step" },
   "landStep3Title": "Complete and earn",
   "@landStep3Title": { "description": "Landing how-it-works step" },
-  "landStep3Body": "Members check off tasks. Caregivers validate with a tap — coins land immediately in the earner's account.",
+  "landStep3Body": "Members check off tasks. Caregivers validate with a tap: coins land immediately in the earner's account.",
   "@landStep3Body": { "description": "Landing how-it-works step" },
   "landStep4Title": "Spend on rewards",
   "@landStep4Title": { "description": "Landing how-it-works step" },
@@ -1474,7 +1474,7 @@
   "@landSeeSub": { "description": "Landing section head subtitle" },
   "landFairTitle": "Fairness, not guesswork",
   "@landFairTitle": { "description": "Landing fairness section title" },
-  "landFairBody": "Chore charts get ignored because they carry no weight. CareCoins puts a real value on caregiving work — tracked, validated, and paid out from a budget the whole family can see.",
+  "landFairBody": "Chore charts get ignored because they carry no weight. CareCoins puts a real value on caregiving work: tracked, validated, and paid out from a budget the whole family can see.",
   "@landFairBody": { "description": "Landing fairness section body" },
   "landFair1Title": "Contribution history at a glance",
   "@landFair1Title": { "description": "Landing fairness bullet title" },
@@ -1518,7 +1518,7 @@
   "@helpTitle": { "description": "Help sheet title" },
   "closeHelp": "Close help",
   "@closeHelp": { "description": "Help sheet close tooltip" },
-  "helpIntro": "Tasks earn coins from your family's monthly budget; coins buy rewards in your family's private store. That's the whole economy — here it is in four steps.",
+  "helpIntro": "Tasks earn coins from your family's monthly budget; coins buy rewards in your family's private store. That's the whole economy. Here it is in four steps.",
   "@helpIntro": { "description": "Help sheet intro paragraph" },
   "helpGlossary": "Glossary",
   "@helpGlossary": { "description": "Help sheet section title" },
@@ -1533,7 +1533,7 @@
   "@glossCoinDef": { "description": "Glossary definition" },
   "glossBudgetTerm": "Monthly budget",
   "@glossBudgetTerm": { "description": "Glossary term" },
-  "glossBudgetDef": "Each month the family pool (1,000 cc by default) is allocated. Task coin values draw from it — the Budget gauge in Activities shows what's left.",
+  "glossBudgetDef": "Each month the family pool (1,000 cc by default) is allocated. Task coin values draw from it. The Budget gauge in Activities shows what's left.",
   "@glossBudgetDef": { "description": "Glossary definition" },
   "glossTemplateTerm": "Template vs. scheduled task",
   "@glossTemplateTerm": { "description": "Glossary term" },
@@ -1578,7 +1578,7 @@
   "@faqBountyA": { "description": "FAQ answer" },
   "faqRewardsQ": "Who can create rewards?",
   "@faqRewardsQ": { "description": "FAQ question" },
-  "faqRewardsA": "Caregivers, from the Rewards tab. The store is private to your family — a reward can be anything you agree is worth earning toward.",
+  "faqRewardsA": "Caregivers, from the Rewards tab. The store is private to your family: a reward can be anything you agree is worth earning toward.",
   "@faqRewardsA": { "description": "FAQ answer" },
 
   "errFamilyNameRequired": "Family name is required.",
@@ -1662,7 +1662,7 @@
   "@aliasRoleHint": { "description": "Wizard input hint" },
   "step2Title": "2. Caregivers",
   "@step2Title": { "description": "Wizard step title" },
-  "step2Desc": "You are the Main Caregiver. Invite others by email below — they receive an invitation when the family is created.",
+  "step2Desc": "You are the Main Caregiver. Invite others by email below. They receive an invitation when the family is created.",
   "@step2Desc": { "description": "Wizard step description" },
   "yourDisplayName": "Your Display Name",
   "@yourDisplayName": { "description": "Wizard input label" },
@@ -1682,9 +1682,9 @@
   "@addSomeoneToCareFor": { "description": "Wizard button" },
   "completeSetup": "Complete Setup",
   "@completeSetup": { "description": "Wizard submit button" },
-  "errTimeout": "Request timed out — check your connection.",
+  "errTimeout": "Request timed out. Check your connection.",
   "@errTimeout": { "description": "API client: request exceeded the timeout" },
-  "errNetwork": "Network error — check your connection.",
+  "errNetwork": "Network error. Check your connection.",
   "@errNetwork": { "description": "API client: connection or host lookup failed" },
   "errRequestFailed": "Request failed ({code})",
   "@errRequestFailed": { "description": "API client: HTTP error with no server-provided message", "placeholders": { "code": { "type": "int" } } },
@@ -1869,7 +1869,7 @@
   "@adminNotifySent": { "description": "Toast after the inactivity notice was sent" },
   "adminBillingTitle": "Billing",
   "@adminBillingTitle": { "description": "Family detail: subscription card title" },
-  "adminNoSubscription": "No store subscription — the default plan applies.",
+  "adminNoSubscription": "No store subscription. The default plan applies.",
   "@adminNoSubscription": { "description": "Shown when a family has no paid subscription record" },
   "adminPlanLabel": "Plan",
   "@adminPlanLabel": { "description": "Subscription card: plan code row label" },
@@ -1962,13 +1962,13 @@
   "@proRestoreNone": { "description": "Toast when restore found nothing" },
   "proPurchaseSuccess": "Welcome to MyCareCoins Pro!",
   "@proPurchaseSuccess": { "description": "Toast once the purchase is confirmed by the backend" },
-  "proSyncDelayed": "Purchase completed — it may take a moment to activate.",
+  "proSyncDelayed": "Purchase completed. It may take a moment to activate.",
   "@proSyncDelayed": { "description": "Toast when the purchase succeeded but the backend hasn't confirmed within the polling window" },
   "proOtherPlatform": "Your family's Pro is managed on {platform} by the caregiver who bought it.",
   "@proOtherPlatform": { "description": "Double-purchase guard: family already subscribed via the other store", "placeholders": { "platform": { "type": "String" } } },
 
   "taskBreakfastPrep": "Breakfast prep",
-  "@taskBreakfastPrep": { "description": "Starter task title (meals pack). Seeded into a new family's activity library — keep short, imperative-free, and natural in each language." },
+  "@taskBreakfastPrep": { "description": "Starter task title (meals pack). Seeded into a new family's activity library: keep short, imperative-free, and natural in each language." },
   "taskLunchPrep": "Lunch prep",
   "@taskLunchPrep": { "description": "Starter task title (meals pack)" },
   "taskDinnerPrep": "Dinner prep",
@@ -2016,7 +2016,7 @@
   "@stepIndicator": { "description": "Progress label in the create-family wizard", "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
   "step4Title": "4. Starter Tasks",
   "@step4Title": { "description": "Fourth step of the create-family wizard: the activity questionnaire" },
-  "step4Desc": "Pick the areas your family handles. We'll add matching tasks so you're not starting from an empty list — you can edit or delete any of them later.",
+  "step4Desc": "Pick the areas your family handles. We'll add matching tasks so you're not starting from an empty list. You can edit or delete any of them later.",
   "@step4Desc": { "description": "Explanation under the starter-tasks step title" },
   "startWithTasks": "Start me with ready-made tasks",
   "@startWithTasks": { "description": "Starting-point option: seed the activity library" },
@@ -2078,5 +2078,23 @@
   "increase": "Increase",
   "@increase": { "description": "Stepper button tooltip: increase value" },
   "cancelPersonalTimeWithCoverage": "Cancelling this also cancels the other person's coverage shift, and any sweetener comes back to you.",
-  "@cancelPersonalTimeWithCoverage": { "description": "Confirmation when cancelling personal time that has an accepted coverage shift" }
+  "@cancelPersonalTimeWithCoverage": { "description": "Confirmation when cancelling personal time that has an accepted coverage shift" },
+  "coveringFor": "Covering for {title}",
+  "@coveringFor": {
+    "description": "Title prefix for coverage shifts",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "ledgerMonthlyDistribution": "Monthly share",
+  "@ledgerMonthlyDistribution": {
+    "description": "Wallet ledger line for monthly pool distribution"
+  },
+  "ledgerRedeemed": "Redeemed: {title}",
+  "@ledgerRedeemed": {
+    "description": "Wallet ledger line for reward redemption",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  }
 }

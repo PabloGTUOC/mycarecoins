@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/activity_title.dart';
 import '../utils/json.dart';
 import '../widgets/absence_dialog.dart';
 import '../widgets/help_sheet.dart';
@@ -623,8 +624,8 @@ class _DailyScreenState extends State<DailyScreen> {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadii.lg)),
             title: Text(
-                (a['title'] ?? '').toString().isNotEmpty
-                    ? (a['title'] ?? '').toString()
+                displayTitle(l, a).isNotEmpty
+                    ? displayTitle(l, a)
                     : l.personalTimeEntry,
                 style: const TextStyle(fontWeight: FontWeight.w800)),
             content: Text(
@@ -657,7 +658,7 @@ class _DailyScreenState extends State<DailyScreen> {
               borderRadius: BorderRadius.circular(AppRadii.lg)),
           title: Text(l.removeRecurringTitle,
               style: const TextStyle(fontWeight: FontWeight.w800)),
-          content: Text(l.removeRecurringBody((a['title'] ?? '').toString())),
+          content: Text(l.removeRecurringBody(displayTitle(l, a))),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
@@ -692,7 +693,7 @@ class _DailyScreenState extends State<DailyScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l.bountyDialogBody((a['title'] ?? '').toString()),
+            Text(l.bountyDialogBody(displayTitle(l, a)),
                 style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: 16),
             VInput(
@@ -732,7 +733,7 @@ class _DailyScreenState extends State<DailyScreen> {
         title: Text(l.takeOverTitle,
             style: const TextStyle(fontWeight: FontWeight.w800)),
         content: Text(l.takeOverBody(
-            (a['title'] ?? '').toString(), '${a['bounty_amount']}')),
+            displayTitle(l, a), '${a['bounty_amount']}')),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -790,7 +791,7 @@ class _DailyScreenState extends State<DailyScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l.recurrenceBody((a['title'] ?? '').toString()),
+              Text(l.recurrenceBody(displayTitle(l, a)),
                   style: const TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -1059,7 +1060,7 @@ class _DailyScreenState extends State<DailyScreen> {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
     final templateId = template['id'];
-    final title = (template['title'] ?? '').toString();
+    final title = displayTitle(l, template);
 
     // Block scheduling inside your own absence (matches _confirmSchedule)
     final durMin = toNum(template['duration_minutes']).toInt();
@@ -1186,7 +1187,7 @@ class _DailyScreenState extends State<DailyScreen> {
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
     final actId = a['id'];
-    final rawTitle = (a['title'] ?? '').toString();
+    final rawTitle = displayTitle(l, a);
     final title = rawTitle.isNotEmpty
         ? rawTitle
         : (isSelfActivity(a) ? l.personalTimeEntry : '');
@@ -1592,7 +1593,7 @@ class _DailyScreenState extends State<DailyScreen> {
   String _needsItemLabel(_NeedsItem item, AppLocalizations l) {
     switch (item) {
       case _NeedsValidation(:final activity):
-        final title = (activity['title'] ?? '').toString();
+        final title = displayTitle(l, activity);
         final assignee = (activity['assigned_alias'] ??
                 activity['assigned_to_name'] ??
                 '')
@@ -1604,7 +1605,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
       case _NeedsCoverRequest(:final request):
         final name = (request['requester_name'] ?? '').toString().trim();
-        final title = (request['title'] ?? '').toString();
+        final title = displayTitle(l, request);
         return l.needsCoverRequest(
             name.isNotEmpty ? name : l.fallbackACaregiver, title);
 
@@ -1616,7 +1617,7 @@ class _DailyScreenState extends State<DailyScreen> {
         return l.needsApproveMember(name);
 
       case _NeedsTakeOverOffer(:final activity):
-        final title = (activity['title'] ?? '').toString();
+        final title = displayTitle(l, activity);
         final bounty = toNum(activity['bounty_amount']).toInt();
         return l.needsTakeOverOffer(title, bounty);
     }
@@ -2142,7 +2143,7 @@ String _activitySemanticsLabel({
   required AppState app,
 }) {
   final parts = <String>[];
-  final title = (item['title'] ?? '').toString().trim();
+  final title = displayTitle(l, item).trim();
   if (title.isNotEmpty) parts.add(title);
 
   final typeName = _activityTypeName(l, item);
@@ -2324,7 +2325,7 @@ class _TaskLibraryPanelState extends State<_TaskLibraryPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text((t['title'] ?? '').toString(),
+                Text(displayTitle(AppLocalizations.of(context), t),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -2478,7 +2479,7 @@ class _TaskSheetState extends State<_TaskSheet> {
                             borderRadius: BorderRadius.circular(AppRadii.md)),
                         leading: Text(t['type'] == 'care' ? '❤️' : '🍽️',
                             style: const TextStyle(fontSize: 20)),
-                        title: Text((t['title'] ?? '').toString(),
+                        title: Text(displayTitle(AppLocalizations.of(context), t),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w700)),
                         trailing: PillBadge(text: '${t['coin_value'] ?? 0} cc'),
@@ -2561,7 +2562,7 @@ class _TaskTrayState extends State<_TaskTray> {
   }
 
   Widget _buildTrayChip(Map<String, dynamic> t, AppLocalizations l) {
-    final title = (t['title'] ?? '').toString();
+    final title = displayTitle(l, t);
     final isCare = t['type'] == 'care';
     final coins = toNum(t['coin_value']).toInt();
 
@@ -2636,7 +2637,7 @@ class _TaskTrayState extends State<_TaskTray> {
   }
 
   Widget _buildExpandedTaskRow(Map<String, dynamic> t, AppLocalizations l) {
-    final title = (t['title'] ?? '').toString();
+    final title = displayTitle(l, t);
     final isCare = t['type'] == 'care';
     final coins = toNum(t['coin_value']).toInt();
 
@@ -3422,8 +3423,8 @@ class _DayHourGridState extends State<_DayHourGrid> {
                 children: [
                   Expanded(
                     child: Text(
-                      ((_hoverTemplate!['title'] ?? '').toString().isNotEmpty
-                          ? (_hoverTemplate!['title'] ?? '').toString()
+                      (displayTitle(l, _hoverTemplate!).isNotEmpty
+                          ? displayTitle(l, _hoverTemplate!)
                           : (isSelfActivity(_hoverTemplate!) ? l.timeForMe : '')),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -3802,7 +3803,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
             ? l.ptAwaitingAnyone
             : l.ptAwaiting(req['requested_of_name'].toString()))
         : l.ptAskedYouToCover(requester);
-    final title = (req['title'] ?? '').toString();
+    final title = displayTitle(l, req);
     final glyph = personalTimeTypeGlyph(req['type']?.toString() ?? '');
     final semanticsLabel =
         '$glyph $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
@@ -4084,7 +4085,7 @@ class DayActivityBlock extends StatelessWidget {
           final titleText = Text.rich(
             TextSpan(children: [
               if (status == 'rejected') const TextSpan(text: '⚠️ '),
-              TextSpan(text: (a['title'] ?? '').toString()),
+              TextSpan(text: displayTitle(l, a)),
               if (a['is_recurrent'] == true) const TextSpan(text: '  🔁'),
             ]),
             maxLines: titleMaxLines,
@@ -4597,7 +4598,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
               for (final t in filtered) ...[
                 Builder(
                   builder: (ctx) {
-                    final title = (t['title'] ?? '').toString();
+                    final title = displayTitle(l, t);
                     final isCare = t['type'] == 'care';
                     final coins = toNum(t['coin_value']).toInt();
                     return Container(
@@ -4726,7 +4727,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
     final canMove = !isPastDay && canMoveActivity(a, app);
     final canRemove = !isPastDay && !completed && canRemoveActivity(a, app);
 
-    final rawTitle = (a['title'] ?? '').toString();
+    final rawTitle = displayTitle(l, a);
     final title = rawTitle.isNotEmpty
         ? rawTitle
         : (isSelf ? l.personalTimeEntry : '');

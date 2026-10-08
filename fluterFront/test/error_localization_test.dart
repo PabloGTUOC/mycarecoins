@@ -30,7 +30,7 @@ void main() {
     final app = await boundApp(tester, const Locale('es'));
 
     await app.runAction(() async => throw ApiException(ApiErrorKind.network));
-    expect(app.error, 'Error de red — comprueba tu conexión.');
+    expect(app.error, 'Error de red. Comprueba tu conexión.');
 
     await app.runAction(
         () async => throw ApiException(ApiErrorKind.requestFailed, statusCode: 500));

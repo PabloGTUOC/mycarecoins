@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../services/tour_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/formatters.dart';
 import '../utils/json.dart';
 import '../widgets/charts.dart';
 import '../widgets/coach_marks.dart';
@@ -252,7 +253,7 @@ class _StatsScreenState extends State<StatsScreen> {
           title: l.chartIncomeTrend,
           child: _comparing
               ? MultiLineChart(
-                  labels: trendMonths,
+                  labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
                   series: [
                     for (final (i, cg) in _caregivers.indexed)
                       LineSeries(cg, _cgColor(i), [
@@ -267,12 +268,14 @@ class _StatsScreenState extends State<StatsScreen> {
                       ]),
                   ],
                 )
-              : LineAreaChart(labels: trendMonths, values: [
-                  for (final m in trendMonths)
-                    trend
-                        .where((t) => t['month'].toString() == m)
-                        .fold<double>(0, (sum, t) => sum + toNum(t['coins'])),
-                ]),
+              : LineAreaChart(
+                  labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
+                  values: [
+                    for (final m in trendMonths)
+                      trend
+                          .where((t) => t['month'].toString() == m)
+                          .fold<double>(0, (sum, t) => sum + toNum(t['coins'])),
+                  ]),
         ),
       ..._buildCategoryBalance(),
       ..._buildTaskFrequency(),
@@ -550,6 +553,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   List<Widget> _buildEconomy() {
     final l = AppLocalizations.of(context);
+    final loc = l.localeName;
     final coinFlow = _listOf('coinFlowByReason');
     final rewardsByUser = _listOf('rewardsByUser');
     final topRewards = _listOf('topRewards');
@@ -590,7 +594,10 @@ class _StatsScreenState extends State<StatsScreen> {
       if (flowSeries.isNotEmpty)
         VCard(
           title: l.chartCoinFlow,
-          child: StackedBarChart(labels: flowMonths, series: flowSeries),
+          child: StackedBarChart(
+            labels: [for (final m in flowMonths) formatChartMonth(m, loc)],
+            series: flowSeries,
+          ),
         ),
       if (rewardsByUser.isNotEmpty)
         VCard(
