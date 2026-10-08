@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:carecoins_flutter/l10n/app_localizations.dart';
+import 'package:carecoins_flutter/screens/dashboard_screen.dart';
 import 'package:carecoins_flutter/screens/shell.dart';
 import 'package:carecoins_flutter/screens/stats_screen.dart';
 import 'package:carecoins_flutter/services/api_client.dart';
@@ -289,7 +290,7 @@ void main() {
     });
 
     testWidgets('tapping KPI card opens Stats screen', (tester) async {
-      tester.view.physicalSize = const Size(500, 900);
+      tester.view.physicalSize = const Size(1000, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
@@ -304,7 +305,18 @@ void main() {
         ]
         ..profile = {'id': 1, 'display_name': 'Parent'};
 
-      await tester.pumpWidget(_wrap(const Shell(initialIndex: 1), app));
+      await tester.pumpWidget(_wrap(
+        Builder(
+          builder: (context) => Scaffold(
+            body: DashboardScreen(
+              onOpenStats: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const StatsScreen()),
+              ),
+            ),
+          ),
+        ),
+        app,
+      ));
       await tester.pumpAndSettle();
 
       // Scroll down to the KPI cards section
@@ -397,7 +409,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // "Yoga break" appears in recent activity
-      expect(find.textContaining('Yoga break'), findsOneWidget);
+      expect(find.textContaining('completed Yoga break'), findsOneWidget);
       // Does not show "+0 cc"
       expect(find.text('+0 cc'), findsNothing);
     });

@@ -100,7 +100,7 @@
   "approve": "Aprobar",
   "dashThisWeek": "Esta semana",
   "dashComingUp": "Próximos días",
-  "logTimeOff": "+ Registrar ausencia",
+  "dashMyTasksWaiting": "{count, plural, =1{1 de tus tareas espera validación} other{{count} de tus tareas esperan validación}}",
   "prevWeek": "Semana anterior",
   "nextWeek": "Semana siguiente",
 

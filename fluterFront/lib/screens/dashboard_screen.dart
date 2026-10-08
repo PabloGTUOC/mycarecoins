@@ -492,6 +492,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
     final bountyTotal =
         offers.fold<num>(0, (acc, o) => acc + toNum(o['bounty_amount']));
+    final myTasksWaiting = _activities.where((a) {
+      final mine = a['assigned_to'] != null &&
+          app.userId != null &&
+          (a['assigned_to'] == app.userId ||
+              a['assigned_to'].toString() == app.userId.toString());
+      return mine &&
+          a['is_template'] != true &&
+          a['status'] == 'pending_validation';
+    }).length;
+    final phoneKpiParts = <String>[
+      if (myTasksWaiting > 0) l.dashMyTasksWaiting(myTasksWaiting),
+      if (bountyTotal > 0) l.kpiUpForGrabs(bountyTotal),
+    ];
     final recent = _recentActivity;
     final greetName = (app.family?['alias'] ??
             app.profile?['display_name'] ??
@@ -672,20 +685,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        VButton(
-                            type: VButtonType.outline,
-                            onPressed: _logTimeOff,
-                            child: Text(l.logTimeOff)),
-                        const SizedBox(width: 8),
-                        _PaginationButton(
-                            label: '«',
-                            tooltip: l.prevWeek,
-                            onTap: () => setState(() => _weekOffset--)),
-                        const SizedBox(width: 8),
-                        _PaginationButton(
-                            label: '»',
-                            tooltip: l.nextWeek,
-                            onTap: () => setState(() => _weekOffset++)),
+                        TextButton.icon(
+                          onPressed: _logTimeOff,
+                          icon: const Icon(Icons.add_rounded),
+                          label: Text(l.timeOffLong),
+                        ),
+                        IconButton(
+                          tooltip: l.prevWeek,
+                          icon: const Icon(Icons.chevron_left_rounded),
+                          onPressed: () => setState(() => _weekOffset--),
+                        ),
+                        IconButton(
+                          tooltip: l.nextWeek,
+                          icon: const Icon(Icons.chevron_right_rounded),
+                          onPressed: () => setState(() => _weekOffset++),
+                        ),
                       ],
                     ),
                   ],
@@ -742,66 +756,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
-          const SizedBox(height: 32),
-
-          // ── KPIs ──
-          LayoutBuilder(builder: (context, c) {
-            final perRow = c.maxWidth > kMobileBreakpoint ? 4 : 2;
-            final w = (c.maxWidth - (perRow - 1) * 14) / perRow;
-            return Wrap(
+          // ── KPIs / sentence ──
+          if (wide) ...[
+            const SizedBox(height: 32),
+            LayoutBuilder(builder: (context, c) {
+              final perRow = c.maxWidth > kMobileBreakpoint ? 4 : 2;
+              final w = (c.maxWidth - (perRow - 1) * 14) / perRow;
+              return Wrap(
+                key: _tourKpiKey,
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  SizedBox(
+                      width: w,
+                      child: InkWell(
+                          onTap: widget.onOpenStats,
+                          child: KpiCard(
+                              label: l.kpiFamilyBalance,
+                              value: NumberFormat.decimalPattern(loc)
+                                  .format(totalCoins),
+                              unit: 'cc',
+                              subtitle: l.kpiMembersCount(_members.length)))),
+                  SizedBox(
+                      width: w,
+                      child: InkWell(
+                          onTap: widget.onOpenStats,
+                          child: KpiCard(
+                              label: l.kpiTasksToday,
+                              value: '$completedToday/$todayActs',
+                              subtitle: pendingTasks > 0
+                                  ? l.kpiAwaitingValidation(pendingTasks)
+                                  : l.kpiOnTrack,
+                              progress: todayActs == 0
+                                  ? 0
+                                  : 100 * completedToday / todayActs))),
+                  SizedBox(
+                      width: w,
+                      child: InkWell(
+                          onTap: widget.onOpenStats,
+                          child: KpiCard(
+                              label: l.kpiOpenBounties,
+                              value: '${offers.length}',
+                              subtitle: offers.isEmpty
+                                  ? l.kpiNoBounties
+                                  : l.kpiUpForGrabs(bountyTotal)))),
+                  SizedBox(
+                      width: w,
+                      child: InkWell(
+                          onTap: widget.onOpenStats,
+                          child: KpiCard(
+                              label: l.recentActivity,
+                              value: '${recent.length}',
+                              subtitle: recent.isEmpty
+                                  ? l.kpiNoRecent
+                                  : l.kpiCompletedRecently))),
+                ],
+              );
+            }),
+          ] else if (phoneKpiParts.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            Text(
+              phoneKpiParts.join(' · '),
               key: _tourKpiKey,
-              spacing: 14,
-              runSpacing: 14,
-              children: [
-                SizedBox(
-                    width: w,
-                    child: InkWell(
-                        onTap: widget.onOpenStats,
-                        child: KpiCard(
-                            label: l.kpiFamilyBalance,
-                            value: NumberFormat.decimalPattern(loc)
-                                .format(totalCoins),
-                            unit: 'cc',
-                            subtitle: l.kpiMembersCount(_members.length)))),
-                SizedBox(
-                    width: w,
-                    child: InkWell(
-                        onTap: widget.onOpenStats,
-                        child: KpiCard(
-                            label: l.kpiTasksToday,
-                            value: '$completedToday/$todayActs',
-                            subtitle: pendingTasks > 0
-                                ? l.kpiAwaitingValidation(pendingTasks)
-                                : l.kpiOnTrack,
-                            progress: todayActs == 0
-                                ? 0
-                                : 100 * completedToday / todayActs))),
-                SizedBox(
-                    width: w,
-                    child: InkWell(
-                        onTap: widget.onOpenStats,
-                        child: KpiCard(
-                            label: l.kpiOpenBounties,
-                            value: '${offers.length}',
-                            subtitle: offers.isEmpty
-                                ? l.kpiNoBounties
-                                : l.kpiUpForGrabs(bountyTotal)))),
-                SizedBox(
-                    width: w,
-                    child: InkWell(
-                        onTap: widget.onOpenStats,
-                        child: KpiCard(
-                            label: l.recentActivity,
-                            value: '${recent.length}',
-                            subtitle: recent.isEmpty
-                                ? l.kpiNoRecent
-                                : l.kpiCompletedRecently))),
-              ],
-            );
-          }),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
 
           if (widget.onOpenStats != null) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: (wide || phoneKpiParts.isNotEmpty) ? 8 : 16),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -945,45 +970,6 @@ class _FeedItem {
     if (ms.inHours > 24) return l.timeAgoDays(ms.inHours ~/ 24);
     if (ms.inHours > 0) return l.timeAgoHours(ms.inHours);
     return l.timeAgoMins(ms.inMinutes.clamp(1, 59));
-  }
-}
-
-class _PaginationButton extends StatelessWidget {
-  final String label;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _PaginationButton(
-      {required this.label, required this.tooltip, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: _buildButton(),
-    );
-  }
-
-  Widget _buildButton() {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        width: 44,
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          border: Border.all(color: AppColors.border),
-          shape: BoxShape.circle,
-        ),
-        child: Text(label,
-            style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary)),
-      ),
-    );
   }
 }
 

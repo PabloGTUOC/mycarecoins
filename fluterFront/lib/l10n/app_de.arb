@@ -100,7 +100,7 @@
   "approve": "Freigeben",
   "dashThisWeek": "Diese Woche",
   "dashComingUp": "Demnächst",
-  "logTimeOff": "+ Abwesenheit eintragen",
+  "dashMyTasksWaiting": "{count, plural, =1{1 deiner Aufgaben wartet auf Bestätigung} other{{count} deiner Aufgaben warten auf Bestätigung}}",
   "prevWeek": "Vorherige Woche",
   "nextWeek": "Nächste Woche",
 

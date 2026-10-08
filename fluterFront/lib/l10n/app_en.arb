@@ -366,8 +366,11 @@
   "@dashThisWeek": { "description": "Week strip label on wide layouts (calendar week)" },
   "dashComingUp": "Coming up",
   "@dashComingUp": { "description": "Week strip label on phones (rolling window from today)" },
-  "logTimeOff": "+ Log time off",
-  "@logTimeOff": { "description": "Button opening the absence dialog" },
+  "dashMyTasksWaiting": "{count, plural, =1{1 of your tasks waits for validation} other{{count} of your tasks wait for validation}}",
+  "@dashMyTasksWaiting": {
+    "description": "Family hub phone sentence: user tasks pending validation",
+    "placeholders": { "count": { "type": "num" } }
+  },
   "prevWeek": "Previous week",
   "@prevWeek": { "description": "Tooltip on the week-back pagination button" },
   "nextWeek": "Next week",

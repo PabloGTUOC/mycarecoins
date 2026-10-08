@@ -290,8 +290,7 @@ void main() {
       expect(find.textContaining('Something on Today needs you.'), findsOneWidget);
       expect(find.text('Go to Today'), findsOneWidget);
 
-      // And the KPI card still accounts for the bounty offer
-      expect(find.text('Open bounties'), findsOneWidget);
+      // And the KPI sentence still accounts for the bounty offer
       expect(find.text('25 cc up for grabs'), findsOneWidget);
     });
   });
