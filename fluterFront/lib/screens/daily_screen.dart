@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
 import '../utils/json.dart';
 import '../utils/needs_you.dart';
+import '../utils/tray_ranking.dart';
 import '../widgets/absence_dialog.dart';
 import '../widgets/help_sheet.dart';
 import '../widgets/personal_time_dialog.dart';
@@ -447,29 +448,16 @@ class _DailyScreenState extends State<DailyScreen> {
     return day.isBefore(today);
   }
 
-  List<Map<String, dynamic>> get _sortedTemplates {
-    final counts = <String, int>{};
-    for (final a in _activities) {
-      if (a['is_template'] == true) continue;
-      final title = (a['title'] ?? '').toString();
-      if (title.isNotEmpty) {
-        counts[title] = (counts[title] ?? 0) + 1;
-      }
-    }
+  ({List<Map<String, dynamic>> ordered, List<Map<String, dynamic>> quick})
+      get _ranked => rankTemplates(
+            templates: _templates,
+            activities: _activities,
+            userId: context.read<AppState>().userId?.toString(),
+            now: widget.now ?? DateTime.now(),
+          );
 
-    final list = List<Map<String, dynamic>>.from(_templates);
-    list.sort((a, b) {
-      final titleA = (a['title'] ?? '').toString();
-      final titleB = (b['title'] ?? '').toString();
-      final cA = counts[titleA] ?? 0;
-      final cB = counts[titleB] ?? 0;
-      if (cA != cB) {
-        return cB.compareTo(cA);
-      }
-      return titleA.toLowerCase().compareTo(titleB.toLowerCase());
-    });
-    return list;
-  }
+  /// Every template, most-used first (expanded tray, quick add).
+  List<Map<String, dynamic>> get _sortedTemplates => _ranked.ordered;
 
   bool _isSlotConflicted(DateTime start, DateTime end, AppState app) {
     final now = (widget.now ?? DateTime.now()).toLocal();
@@ -1888,6 +1876,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
   Widget _buildNarrow(List<Map<String, dynamic>> items) {
     final l = AppLocalizations.of(context);
+    final ranked = _ranked;
     return Stack(
       children: [
         Column(
@@ -1950,7 +1939,8 @@ class _DailyScreenState extends State<DailyScreen> {
         ),
         _TaskTray(
           controller: _trayController,
-          templates: _sortedTemplates,
+          templates: ranked.ordered,
+          quickTemplates: ranked.quick,
           isPastDay: _isPastDay,
           onTapChip: _onTapTrayChip,
           onTapTimeForMe: _onTapTimeForMe,
@@ -2463,6 +2453,9 @@ class _TaskSheetState extends State<_TaskSheet> {
 class _TaskTray extends StatefulWidget {
   final DraggableScrollableController controller;
   final List<Map<String, dynamic>> templates;
+
+  /// What the collapsed tray shows; `templates` stays the full list.
+  final List<Map<String, dynamic>> quickTemplates;
   final bool isPastDay;
   final ValueChanged<Map<String, dynamic>> onTapChip;
   final VoidCallback onTapTimeForMe;
@@ -2474,6 +2467,7 @@ class _TaskTray extends StatefulWidget {
   const _TaskTray({
     required this.controller,
     required this.templates,
+    required this.quickTemplates,
     required this.isPastDay,
     required this.onTapChip,
     required this.onTapTimeForMe,
@@ -2779,7 +2773,7 @@ class _TaskTrayState extends State<_TaskTray> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              for (final t in widget.templates) ...[
+                              for (final t in widget.quickTemplates) ...[
                                 _buildTrayChip(t, l),
                                 const SizedBox(width: 8),
                               ],

@@ -144,11 +144,11 @@ void main() {
           },
           // Non-template instances for frequency counting
           // Cooking: 3 instances
-          {'id': 101, 'title': 'Cooking', 'is_template': false, 'status': 'completed'},
-          {'id': 102, 'title': 'Cooking', 'is_template': false, 'status': 'completed'},
-          {'id': 103, 'title': 'Cooking', 'is_template': false, 'status': 'completed'},
+          {'id': 101, 'title': 'Cooking', 'type': 'household', 'category': 'care', 'assigned_to': 1, 'starts_at': '2026-10-05T08:00:00Z', 'is_template': false, 'status': 'completed'},
+          {'id': 102, 'title': 'Cooking', 'type': 'household', 'category': 'care', 'assigned_to': 1, 'starts_at': '2026-10-05T08:00:00Z', 'is_template': false, 'status': 'completed'},
+          {'id': 103, 'title': 'Cooking', 'type': 'household', 'category': 'care', 'assigned_to': 1, 'starts_at': '2026-10-05T08:00:00Z', 'is_template': false, 'status': 'completed'},
           // Bath: 1 instance
-          {'id': 104, 'title': 'Bath', 'is_template': false, 'status': 'completed'},
+          {'id': 104, 'title': 'Bath', 'type': 'care', 'category': 'care', 'assigned_to': 1, 'starts_at': '2026-10-05T08:00:00Z', 'is_template': false, 'status': 'completed'},
           // Laundry: 0 instances
         ],
       );
