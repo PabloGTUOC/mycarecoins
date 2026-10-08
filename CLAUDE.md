@@ -45,7 +45,8 @@ Run `db:init` twice.
 - **Personal time is its owner's, and coverage lives and dies with it.** Only the person
   taking personal time can cancel it, whatever anyone's role; cancelling it deletes the
   linked coverage shift (`counterpart_activity_id`) and refunds its sweetener. A coverage
-  shift is never deleted or reverted on its own.
+  shift is never deleted, reverted, moved or put up for a bounty on its own, and personal
+  time is never put up for a bounty.
 - **Payout reasons come from `db/ledgerReasons.js`** (`payoutReasons(type)`). Coverage files under
   its own reasons, so never hard-code `activity_completed` / `bounty_earned`.
 - **Personal-time declines are never counted or shown anywhere.** That is a product decision
@@ -58,6 +59,10 @@ Run `db:init` twice.
   `schema.sql`, and chain it in `init-db.js`. Production runs `db:init` on every container start.
 - **Authorization lives server-side.** Use `requireRole` / `requireAdmin` (`middleware/rbac.js`)
   or the service-level membership check. UI gating is cosmetic.
+- **Flutter UI is Material 3 on the CareCoins tokens.** Use stock M3 widgets (`NavigationBar`,
+  `FilledButton`, `SegmentedButton`, `Card`, `showTimePicker`, sheets) themed in
+  `lib/theme/app_theme.dart`; status colours come from `context.careColors` (soft fill → ink
+  text). Don't hand-roll a control the theme already styles.
 - **Every user-facing string goes in all four ARB files.** No literals in widgets. ICU plurals
   must not contain a bare `#` (`arb_plurals_test.dart`).
 - **Don't run `dart format` on whole files.** The code is not formatter-clean, and it turns a

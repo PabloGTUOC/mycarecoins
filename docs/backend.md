@@ -406,10 +406,10 @@ No auth. Returns `{ status: 'ok', service: 'carecoins-backend' }`. Used by Docke
 | POST | `/api/activities/:id/complete` | assignee | Mark activity as completed |
 | POST | `/api/activities/:id/validate` | caregiver | Validate completion; credit coins to assignee |
 | POST | `/api/activities/:id/revert` | assignee | Undo a completion before validation |
-| POST | `/api/activities/:id/bounty` | caregiver | Offer a coin bounty on an activity |
+| POST | `/api/activities/:id/bounty` | caregiver | Offer a coin bounty on an activity. Never on coverage or personal time (409) |
 | POST | `/api/activities/:id/accept-bounty` | member | Accept a bounty (take over the activity) |
 | PATCH | `/api/activities/:id/time` | assignee or caregiver | Move an upcoming activity to `startsAt`, keeping its duration. Coverage never moves on its own; personal time only by its owner and not once covered. Checks the assignee's absences and overlaps (coverage exempt) |
-| DELETE | `/api/activities/:id` | creator/caregiver | Delete single instance or full series (`?series=true`) |
+| DELETE | `/api/activities/:id` | assignee or caregiver (templates: creator or caregiver) | Un-schedule an upcoming instance, or the full series (`?series=true`). Personal time: its owner only; cancelling it also deletes its coverage and refunds the sweetener. Coverage: never on its own (409) |
 
 ---
 
@@ -502,9 +502,10 @@ Services contain all business logic. Routes are kept thin — they validate inpu
 | `completeActivity(client, userId, instanceId)` | Sets status to `pending_validation` (awaits caregiver validation) |
 | `validateActivity(client, userId, activityId)` | Sets status to `completed`; credits `coin_value + bounty_amount` to the assignee via `coin_ledger` and updates `family_members.coin_balance` |
 | `revertActivity(client, userId, activityId)` | Undoes a `completed` activity (status → `rejected`): debits the payout and **appends** `*_reverted` rows to `coin_ledger` — the original credit is never rewritten — and refunds any bounty to its offerer |
-| `offerBounty(client, userId, activityId, amount)` | Sets `bounty_amount` and `bounty_offered_by` |
+| `offerBounty(client, userId, activityId, amount)` | Sets `bounty_amount` and `bounty_offered_by`; refuses coverage and personal time |
 | `acceptBounty(client, userId, activityId)` | Reassigns the activity to the accepting user |
-| `deleteActivity(client, userId, activityId, isSeries)` | Deletes a single instance or all instances sharing the same template root |
+| `deleteActivity(client, userId, activityId, isSeries)` | Deletes a single instance or all instances sharing the same template root. Personal time is owner-only and takes its coverage counterpart with it (sweetener refunded, `coverage_sweetener_refunded`); coverage cannot be deleted directly |
+| `rescheduleActivity(client, userId, activityId, startsAt)` | Moves an upcoming `approved` activity, keeping its duration; same permissions as deletion, plus absence and overlap checks |
 
 ### `familyService.js`
 
