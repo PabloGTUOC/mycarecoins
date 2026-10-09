@@ -581,43 +581,13 @@ class _StatsScreenState extends State<StatsScreen> {
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: AppColors.warning,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l.legendCaregiver,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                    ],
+                  _LegendDot(
+                    color: AppColors.warning,
+                    label: l.legendCaregiver,
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l.legendMember,
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                    ],
+                  _LegendDot(
+                    color: AppColors.primary,
+                    label: l.legendMember,
                   ),
                 ],
               ),
@@ -646,9 +616,16 @@ class _StatsScreenState extends State<StatsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('🟢 ≥80% · 🟡 50–79% · 🔴 <50%',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary)),
+                const Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _LegendDot(color: AppColors.success, label: '≥80%'),
+                    _LegendDot(color: AppColors.warning, label: '50–79%'),
+                    _LegendDot(color: AppColors.danger, label: '<50%'),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 for (final r in completion)
                   Builder(builder: (_) {
@@ -929,6 +906,36 @@ class _BarRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+              fontSize: 12, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 }

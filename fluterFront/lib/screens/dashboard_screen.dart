@@ -401,7 +401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       for (final a in _scheduled)
         if (a['status'] == 'completed')
           _FeedItem(
-            icon: '✓',
+            icon: Icons.check_rounded,
             color: AppColors.primaryInk,
             background: AppColors.primarySoft,
             actor: (a['assigned_to_name'] ?? l.fallbackSomeone).toString(),
@@ -413,7 +413,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
       for (final r in _claimed)
         _FeedItem(
-          icon: '🛍️',
+          icon: Icons.shopping_bag_rounded,
           color: AppColors.dangerInk,
           background: AppColors.dangerSoft,
           actor: (r['buyer_name'] ?? l.fallbackSomeone).toString(),
@@ -877,11 +877,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                               color: item.background, shape: BoxShape.circle),
-                          child: Text(item.icon,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: item.color)),
+                          child: Icon(item.icon, size: 18, color: item.color),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -943,7 +939,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 /// One row of the Recent Activity feed (activity completed / reward claimed).
 class _FeedItem {
-  final String icon;
+  final IconData icon;
   final Color color;
   final Color background;
   final String actor;

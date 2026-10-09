@@ -19,14 +19,6 @@ String personalTimeTypeLabel(AppLocalizations l, String type) => switch (type) {
       _ => l.ptTypeOther,
     };
 
-String personalTimeTypeGlyph(String type) => switch (type) {
-      'sport' => '🏃',
-      'social' => '👥',
-      'rest' => '😴',
-      'appointment' => '🩺',
-      _ => '✨',
-    };
-
 /// The recurrences the API accepts, mirroring RECURRENCES in
 /// personalTimeService.js; null is "just once".
 const kPersonalTimeRepeats = <String?>[null, 'daily', 'weekdays', 'weekly'];

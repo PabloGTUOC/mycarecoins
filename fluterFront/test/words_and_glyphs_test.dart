@@ -114,37 +114,12 @@ void main() {
       expect(violations, isEmpty, reason: violations.join('\n'));
     });
 
-    test('no 📷 in any lib/**/*.dart', () {
-      final libDir = Directory('lib');
-      expect(libDir.existsSync(), isTrue);
-
-      final dartFiles = libDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'));
-
-      final violations = <String>[];
-      for (final file in dartFiles) {
-        final content = file.readAsStringSync();
-        if (content.contains('📷')) {
-          violations.add('${file.path} contains 📷');
-        }
-      }
-
-      expect(violations, isEmpty, reason: violations.join('\n'));
-    });
-
-    test('no character in U+1F300–U+1FAFF in lib/**/*.dart except landing_screen and pre-existing feature glyphs', () {
+    test('no character in U+1F300–U+1FAFF in lib/**/*.dart except landing_screen', () {
       final libDir = Directory('lib');
       expect(libDir.existsSync(), isTrue);
 
       const allowedFiles = {
         'landing_screen.dart',
-        'personal_time_dialog.dart',
-        'dashboard_screen.dart',
-        'stats_screen.dart',
-        'marketplace_screen.dart',
-        'push_service.dart',
       };
 
       final dartFiles = libDir

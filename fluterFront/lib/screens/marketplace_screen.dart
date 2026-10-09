@@ -485,7 +485,8 @@ class _RewardCard extends StatelessWidget {
             height: 84,
             color: banner,
             alignment: Alignment.center,
-            child: const Text('🎁', style: TextStyle(fontSize: 34)),
+            child: const Icon(Icons.card_giftcard_rounded,
+                size: 34, color: AppColors.textSecondary),
           ),
           Padding(
             padding: const EdgeInsets.all(16),

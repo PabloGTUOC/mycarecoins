@@ -8,18 +8,22 @@ import 'package:carecoins_flutter/widgets/personal_time_dialog.dart';
 
 void main() {
   group('personal-time types', () {
-    test('every type the API accepts has a label and a glyph', () {
+    test('every type the API accepts has a distinct label', () {
       // Mirrors SELF_TYPES in backend/src/services/personalTimeService.js —
       // a type the app cannot name is a type the picker cannot offer.
       expect(kPersonalTimeTypes,
           ['sport', 'social', 'rest', 'appointment', 'other']);
-      final glyphs = kPersonalTimeTypes.map(personalTimeTypeGlyph).toSet();
-      expect(glyphs.length, kPersonalTimeTypes.length,
-          reason: 'each type needs a glyph of its own');
+      final l = lookupAppLocalizations(const Locale('en'));
+      final labels =
+          kPersonalTimeTypes.map((t) => personalTimeTypeLabel(l, t)).toSet();
+      expect(labels.length, kPersonalTimeTypes.length,
+          reason: 'each type needs a label of its own');
+      expect(labels.every((s) => s.isNotEmpty), isTrue);
     });
 
     test('an unknown type falls back rather than crashing the timeline', () {
-      expect(personalTimeTypeGlyph('yoga'), personalTimeTypeGlyph('other'));
+      final l = lookupAppLocalizations(const Locale('en'));
+      expect(personalTimeTypeLabel(l, 'yoga'), personalTimeTypeLabel(l, 'other'));
     });
   });
 

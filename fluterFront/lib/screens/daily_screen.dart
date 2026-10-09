@@ -3758,9 +3758,9 @@ class _DayHourGridState extends State<_DayHourGrid> {
             : l.ptAwaiting(req['requested_of_name'].toString()))
         : l.ptAskedYouToCover(requester);
     final title = displayTitle(l, req);
-    final glyph = personalTimeTypeGlyph(req['type']?.toString() ?? '');
+    final typeLabel = personalTimeTypeLabel(l, req['type']?.toString() ?? '');
     final semanticsLabel =
-        '$glyph $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
+        '$typeLabel: $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
 
     return Positioned(
       top: top,
