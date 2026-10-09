@@ -367,11 +367,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         const FamilyCircle(),
         if (app.isCaregiver && family != null) ...[
-          const SizedBox(height: 16),
-          VButton(
-              type: VButtonType.danger,
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
               onPressed: _deleteFamily,
-              child: Text(l.deleteFamilyBtn)),
+              child: Text(
+                l.deleteFamilyBtn,
+                style: const TextStyle(color: AppColors.danger),
+              ),
+            ),
+          ),
         ],
       ],
     );
