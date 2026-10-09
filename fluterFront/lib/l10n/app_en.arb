@@ -1015,26 +1015,21 @@
   "@createTemplateBtn": { "description": "Create-template submit button" },
   "budgetUnavailable": "Budget information is unavailable.",
   "@budgetUnavailable": { "description": "Budget tab when the endpoint failed" },
-  "budgetTitle": "Family budget health",
-  "@budgetTitle": { "description": "Budget card title" },
-  "remainingThisMonth": "Remaining this month",
-  "@remainingThisMonth": { "description": "Gauge caption (uppercase)" },
-  "totalMonthlyPool": "Total monthly pool",
-  "@totalMonthlyPool": { "description": "Budget row label" },
-  "scheduledUsed": "Scheduled or used",
-  "@scheduledUsed": { "description": "Budget row label" },
-  "budgetScheduledProgress": "{used} of {pool} cc scheduled this month",
-  "@budgetScheduledProgress": {
-    "description": "Budget progress indicator label",
+  "budgetSentence": "This month: {used} of {pool} cc paid out for tasks. The rest is shared between caregivers at the end of the month.",
+  "@budgetSentence": {
+    "description": "Sentence summarizing monthly care coins paid out and pool remainder",
     "placeholders": {
-      "used": {},
-      "pool": {}
+      "used": { "type": "String" },
+      "pool": { "type": "String" }
     }
   },
-  "estimatedRate": "Estimated rate",
-  "@estimatedRate": { "description": "Budget row label" },
-  "ratePerHour": "~{rate} cc / hr",
-  "@ratePerHour": { "description": "Budget rate value", "placeholders": { "rate": {} } },
+  "budgetRateLine": "About {rate} cc per hour of care.",
+  "@budgetRateLine": {
+    "description": "Estimated coin rate per hour of care",
+    "placeholders": {
+      "rate": { "type": "String" }
+    }
+  },
   "durMins": "{count} mins",
   "@durMins": { "description": "Duration under an hour", "placeholders": { "count": {} } },
   "durHours": "{count, plural, one{1 hour} other{{count} hours}}",

@@ -7,6 +7,7 @@ import 'package:carecoins_flutter/l10n/app_localizations.dart';
 import 'package:carecoins_flutter/screens/activities_screen.dart';
 import 'package:carecoins_flutter/services/api_client.dart';
 import 'package:carecoins_flutter/state/app_state.dart';
+import 'package:carecoins_flutter/theme/app_theme.dart';
 import 'package:carecoins_flutter/widgets/family_circle.dart';
 import 'package:carecoins_flutter/widgets/personal_time_dialog.dart';
 import 'package:carecoins_flutter/widgets/ui.dart';
@@ -224,15 +225,15 @@ void main() {
     });
   });
 
-  group('P2-6 Item 3: Budget progress indicator & labels', () {
-    testWidgets('LinearProgressIndicator with labelled progress and renamed Scheduled or used',
+  group('P4-8: Budget as one sentence', () {
+    testWidgets('LinearProgressIndicator with sentence and rate line, no nested card or warning text',
         (tester) async {
       final fakeApi = _FakePolishApiClient(
         budget: {
           'monthlyBudget': 100,
           'remainingBudget': 70,
           'usedThisMonth': 30,
-          'baseRatePerHour': 10,
+          'baseRatePerHour': 1,
         },
       );
 
@@ -254,14 +255,20 @@ void main() {
       // Progress bar is LinearProgressIndicator
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-      // Progress label shows "{used} of {pool} cc scheduled this month"
-      expect(find.text(l.budgetScheduledProgress('30', '100')), findsOneWidget);
+      // Sentence and rate line
+      expect(find.text(l.budgetSentence('30', '100')), findsOneWidget);
+      expect(find.text(l.budgetRateLine('1')), findsOneWidget);
 
-      // Three rows beneath are present
-      expect(find.text(l.totalMonthlyPool), findsOneWidget);
-      expect(find.text(l.scheduledUsed), findsOneWidget);
-      expect(l.scheduledUsed, 'Scheduled or used');
-      expect(find.text(l.estimatedRate), findsOneWidget);
+      // No old rows
+      expect(find.text('Scheduled or used'), findsNothing);
+      expect(find.text('Total monthly pool'), findsNothing);
+      expect(find.text('Estimated rate'), findsNothing);
+
+      // No AppColors.warning-coloured text in the Budget tab
+      final allTexts = tester.widgetList<Text>(find.byType(Text));
+      for (final t in allTexts) {
+        expect(t.style?.color, isNot(equals(AppColors.warning)));
+      }
     });
   });
 
@@ -393,28 +400,20 @@ void main() {
       expect(de.badgeRejected, 'abgelehnt');
     });
 
-    test('scheduledUsed renamed in all locales', () {
+    test('budgetSentence in all locales', () {
       final en = lookupAppLocalizations(const Locale('en'));
       final es = lookupAppLocalizations(const Locale('es'));
       final fr = lookupAppLocalizations(const Locale('fr'));
       final de = lookupAppLocalizations(const Locale('de'));
 
-      expect(en.scheduledUsed, 'Scheduled or used');
-      expect(es.scheduledUsed, 'Programado o usado');
-      expect(fr.scheduledUsed, 'Programmé ou utilisé');
-      expect(de.scheduledUsed, 'Geplant oder verbraucht');
-    });
-
-    test('budgetScheduledProgress in all locales', () {
-      final en = lookupAppLocalizations(const Locale('en'));
-      final es = lookupAppLocalizations(const Locale('es'));
-      final fr = lookupAppLocalizations(const Locale('fr'));
-      final de = lookupAppLocalizations(const Locale('de'));
-
-      expect(en.budgetScheduledProgress('20', '100'), '20 of 100 cc scheduled this month');
-      expect(es.budgetScheduledProgress('20', '100'), '20 de 100 cc programadas este mes');
-      expect(fr.budgetScheduledProgress('20', '100'), '20 sur 100 cc programmées ce mois-ci');
-      expect(de.budgetScheduledProgress('20', '100'), '20 von 100 cc diesen Monat verplant');
+      expect(en.budgetSentence('20', '100'),
+          'This month: 20 of 100 cc paid out for tasks. The rest is shared between caregivers at the end of the month.');
+      expect(es.budgetSentence('20', '100'),
+          'Este mes: 20 de 100 cc pagadas por tareas. El resto se reparte entre los cuidadores a final de mes.');
+      expect(fr.budgetSentence('20', '100'),
+          'Ce mois-ci : 20 sur 100 cc versées pour des tâches. Le reste est partagé entre les aidants à la fin du mois.');
+      expect(de.budgetSentence('20', '100'),
+          'Diesen Monat: 20 von 100 cc für Aufgaben ausgezahlt. Der Rest wird am Monatsende unter den Betreuenden aufgeteilt.');
     });
   });
 }
