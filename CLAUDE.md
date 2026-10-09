@@ -74,6 +74,8 @@ Run `db:init` twice.
 
 - Current references: `docs/backend.md`, `docs/flutter-frontend.md`, `docs/database-schema.md`,
   `docs/DESIGN.md`.
+- `docs/agent-setup.md`: the skills, MCP servers and Orca/Antigravity workflow, and how to
+  rebuild them on a new machine.
 - `docs/deployment-and-delivery.md` is the release runbook and records what is actually deployed.
   Production lags `main`, so check it before assuming a route exists live.
 - The `*-plan.md` files carry a status line and per-phase **As built** logs.
