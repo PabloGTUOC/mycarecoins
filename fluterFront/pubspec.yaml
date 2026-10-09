@@ -30,8 +30,8 @@ dependencies:
   shared_preferences: ^2.3.0
   # RevenueCat (docs/admin-family-management-plan.md Phase 4). Mobile-only:
   # PurchaseService no-ops on web, where purchases_flutter has no support.
-  purchases_flutter: ^9.0.0
-  purchases_ui_flutter: ^9.0.0
+  purchases_flutter: ^10.0.0
+  purchases_ui_flutter: ^10.0.0
 
 dev_dependencies:
   flutter_test:

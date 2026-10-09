@@ -8,7 +8,7 @@ build or run the app itself; for that see `docs/running-instructions.txt`.
 
 | Tool | Version | Notes |
 |---|---|---|
-| Flutter | 3.44.4 stable | iOS Simulator via Xcode; the lead tests on an iPhone 17e simulator |
+| Flutter | 3.47.7 stable | iOS Simulator via Xcode 27; the lead tests on an iPhone 17e simulator |
 | Node | 25.9 (backend needs ≥ 20) | `npx` is also needed by the chrome-devtools MCP |
 | Claude Code | current | settings in `~/.claude/settings.json`, model `opus` |
 | Orca | 1.4.220 | CLI at `/usr/local/bin/orca`; agent hooks in `~/.orca/agent-hooks/` |
@@ -109,6 +109,14 @@ flutter run -d <simulator udid> --dart-define=API_BASE=https://mycarecoins.app \
 This runs against production with the owner's own account, so simulator checks are
 read-only. Hot restart a background run with
 `kill -USR2 $(pgrep -f "flutter_tools.snapshot run")`.
+
+On a fresh machine: accept the Xcode license (`sudo xcodebuild -license accept`, in a real
+terminal), then `xcodebuild -downloadPlatform iOS` (about 8 GB). Xcode 27 has no
+Simulator.app; the device window is `Xcode.app/Contents/Applications/DeviceHub.app`. The lead
+taps and swipes through `idb` (`brew install facebook/fb/idb-companion`,
+`pip3 install --user fb-idb`; `idb ui tap --udid <udid> X Y` in points, 390×844 on the
+17e) and reads `xcrun simctl io <udid> screenshot`. Keep `fluterFront/build` symlinked out
+of iCloud (`docs/deployment-and-delivery.md` §4).
 
 ## Carrying Claude's memory across
 
