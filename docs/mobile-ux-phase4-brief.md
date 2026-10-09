@@ -9,7 +9,8 @@
 > ARB files, tokens from `lib/theme/app_theme.dart`, Material 3 components,
 > `flutter analyze` and `flutter test` clean. **No `backend/` changes.**
 
-> **Status (2026-10-09):** scope and decisions approved by the user; in progress.
+> **Status (2026-10-10):** done on `mobile-ux-phase4` (not merged). Fifth critique: 32/40, no P0/P1
+> (`.impeccable/critique/2026-10-10T00-20-00Z__fluterfront-lib-screens.md`).
 
 ## Decisions (2026-10-09)
 
@@ -141,3 +142,20 @@ P4-6, P4-5, P4-8, P4-4. Fifth critique after P4-4.
 Files changed, new and removed ARB keys, `flutter analyze` and `flutter test` results,
 and anything in the ticket that conflicted with existing behaviour (keep the existing
 behaviour and say so; do not remove copy the ticket does not name).
+
+## As built (2026-10-10)
+
+Implemented by Antigravity from `.lead/` tickets, reviewed and committed by the lead, one
+commit per ticket. `flutter analyze` clean, `flutter test` 274 passing.
+
+| Ticket | Commit | Notes |
+|---|---|---|
+| P4-1 | `ff52a40` | Delete family is red `TextButton` text (`AppColors.danger`) |
+| P4-2 | `e0a2e24` | `ledgerBountyOfferedT` "Offered for: {title}" / `ledgerBountyOffered` |
+| P4-3 | `4936202` | 11 ARB values de-emoji'd; icons on invite/link/deletion banner; camera badges are icons labelled "Change photo"; ARB emoji scan test |
+| P4-3b | `610d2f0` | Follow-up: personal-time glyphs (screen-reader only), feed, legends, reward card, push toast; lib scan allows only `landing_screen.dart` |
+| P4-7 | `be599c4` | Paperwork rule → `receipt_long`; household fallback → `home` |
+| P4-6 | `b16bfef` | Add-at-time sheet is one divided list |
+| P4-5 | `9bfdb89` | Wider than briefed: the role chip was the raw API value uppercased, so it now uses `roleCaregiver`/`roleMember`; deletion statuses translated; absence labels lose ✈️ + uppercase; ⚠️ → icon; scan covers U+2600–27BF |
+| P4-8 | `b84145b` | Budget is `budgetSentence` + bar + `budgetRateLine`; seven keys removed |
+| P4-4 | `0701d47` | Phones: KPI sentence; "All time ·" subtitles; donut note and 100 % sentence; straight lines, no fill, < 3 points as text |
