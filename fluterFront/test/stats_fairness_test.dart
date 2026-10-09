@@ -335,16 +335,16 @@ void main() {
 
       // Check summaries on visible charts
       expect(find.text('You covered 3 h for Ati and took 1 h 30 for yourself.'), findsOneWidget);
-      expect(find.text('Most coins in October: 35 cc'), findsOneWidget);
-      expect(find.text('Most work in Care: 67%'), findsOneWidget);
-      expect(find.text('Most frequent: Cooking (5×)'), findsOneWidget);
+      expect(find.text('All time · Most coins in October: 35 cc'), findsOneWidget);
+      expect(find.text('All time · Most work in Care: 67%'), findsOneWidget);
+      expect(find.text('All time · Most frequent: Cooking (5×)'), findsOneWidget);
       expect(find.text('Highest balance: Ati (150 cc)'), findsOneWidget);
       expect(find.text('Overall completion rate: 70%'), findsOneWidget);
       expect(find.text('Total bounties offered: 45 cc'), findsOneWidget);
 
       // Verify Semantics contains the summary text for screen readers
       // Screen readers get the summary once, from the visible line.
-      expect(find.bySemanticsLabel(RegExp(RegExp.escape('Most coins in October: 35 cc'))), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(RegExp.escape('All time · Most coins in October: 35 cc'))), findsOneWidget);
 
       // Scroll down to Economy section
       await tester.drag(find.byType(ListView), const Offset(0, -1500));

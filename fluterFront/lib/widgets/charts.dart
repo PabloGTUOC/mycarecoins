@@ -34,6 +34,7 @@ class LineAreaChart extends StatelessWidget {
   final List<double> values;
   final Color color;
   final double height;
+  final String Function(double)? format;
 
   const LineAreaChart({
     super.key,
@@ -41,10 +42,32 @@ class LineAreaChart extends StatelessWidget {
     required this.values,
     this.color = AppColors.primary,
     this.height = 220,
+    this.format,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (labels.length < 3) {
+      final fmt = format ?? (v) => v.round().toString();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(child: Text(labels[i])),
+                  Text(
+                    fmt(i < values.length ? values[i] : 0.0),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -88,26 +111,12 @@ class _LinePainter extends CustomPainter {
       return Offset(x, y);
     }
 
-    // area + line
+    // line
     final line = Path()..moveTo(pt(0).dx, pt(0).dy);
     for (var i = 1; i < values.length; i++) {
-      final p0 = pt(i - 1), p1 = pt(i);
-      final cx = (p0.dx + p1.dx) / 2;
-      line.cubicTo(cx, p0.dy, cx, p1.dy, p1.dx, p1.dy);
+      final p1 = pt(i);
+      line.lineTo(p1.dx, p1.dy);
     }
-    final area = Path.from(line)
-      ..lineTo(pt(values.length - 1).dx, plot.bottom)
-      ..lineTo(pt(0).dx, plot.bottom)
-      ..close();
-    canvas.drawPath(
-      area,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0)],
-        ).createShader(plot),
-    );
     canvas.drawPath(
       line,
       Paint()
@@ -157,16 +166,46 @@ class MultiLineChart extends StatelessWidget {
   final List<String> labels;
   final List<LineSeries> series;
   final double height;
+  final String Function(double)? format;
 
   const MultiLineChart({
     super.key,
     required this.labels,
     required this.series,
     this.height = 220,
+    this.format,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (labels.length < 3) {
+      final fmt = format ?? (v) => v.round().toString();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Text(labels[i]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      series
+                          .map((s) =>
+                              '${s.label} ${fmt(i < s.values.length ? s.values[i] : 0.0)}')
+                          .join(' · '),
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -245,9 +284,8 @@ class _MultiLinePainter extends CustomPainter {
 
       final line = Path()..moveTo(pt(0).dx, pt(0).dy);
       for (var i = 1; i < labels.length; i++) {
-        final p0 = pt(i - 1), p1 = pt(i);
-        final cx = (p0.dx + p1.dx) / 2;
-        line.cubicTo(cx, p0.dy, cx, p1.dy, p1.dx, p1.dy);
+        final p1 = pt(i);
+        line.lineTo(p1.dx, p1.dy);
       }
       canvas.drawPath(
         line,

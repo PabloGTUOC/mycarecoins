@@ -331,42 +331,55 @@ class _StatsScreenState extends State<StatsScreen> {
       ..sort();
     final fmt = NumberFormat.decimalPattern(loc);
     final fairnessCard = _buildFairnessCard();
+    final coins = toNum(kpis['total_lifetime_coins']);
+    final tasks = toNum(kpis['total_lifetime_tasks']).toInt();
+    final bounties = toNum(kpis['total_bounties_offered']).toInt();
+    final rewards = toNum(kpis['total_rewards_claimed']).toInt();
 
     return [
       if (fairnessCard != null) fairnessCard,
-      LayoutBuilder(builder: (context, c) {
-        final perRow = c.maxWidth > kMobileBreakpoint ? 4 : 2;
-        final w = (c.maxWidth - (perRow - 1) * 14) / perRow;
-        return Wrap(
-          spacing: 14,
-          runSpacing: 14,
-          children: [
-            SizedBox(
-                width: w,
-                child: KpiCard(
-                    label: l.kpiLifetimeCoins,
-                    value: fmt.format(toNum(kpis['total_lifetime_coins'])),
-                    unit: 'cc')),
-            SizedBox(
-                width: w,
-                child: KpiCard(
-                    label: l.kpiTasksCompleted,
-                    value: fmt.format(toNum(kpis['total_lifetime_tasks'])))),
-            SizedBox(
-                width: w,
-                child: KpiCard(
-                    label: l.kpiBountiesOffered,
-                    value:
-                        fmt.format(toNum(kpis['total_bounties_offered'])))),
-            SizedBox(
-                width: w,
-                child: KpiCard(
-                    label: l.kpiRewardsClaimed,
-                    value: fmt.format(toNum(kpis['total_rewards_claimed'])))),
-          ],
-        );
-      }),
-      const SizedBox(height: 20),
+      if (isWideLayout(context)) ...[
+        LayoutBuilder(builder: (context, c) {
+          final perRow = c.maxWidth > kMobileBreakpoint ? 4 : 2;
+          final w = (c.maxWidth - (perRow - 1) * 14) / perRow;
+          return Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            children: [
+              SizedBox(
+                  width: w,
+                  child: KpiCard(
+                      label: l.kpiLifetimeCoins,
+                      value: fmt.format(coins),
+                      unit: 'cc')),
+              SizedBox(
+                  width: w,
+                  child: KpiCard(
+                      label: l.kpiTasksCompleted,
+                      value: fmt.format(tasks))),
+              SizedBox(
+                  width: w,
+                  child: KpiCard(
+                      label: l.kpiBountiesOffered,
+                      value: fmt.format(bounties))),
+              SizedBox(
+                  width: w,
+                  child: KpiCard(
+                      label: l.kpiRewardsClaimed,
+                      value: fmt.format(rewards))),
+            ],
+          );
+        }),
+        const SizedBox(height: 20),
+      ] else
+        VCard(
+          child: Text(
+            l.statsAllTimeSentence(
+                fmt.format(coins), tasks, bounties, rewards),
+            style: const TextStyle(
+                fontSize: 15, height: 1.4, color: AppColors.textPrimary),
+          ),
+        ),
       if (trendMonths.isNotEmpty)
         Builder(builder: (_) {
           String bestMonth = '';
@@ -383,9 +396,10 @@ class _StatsScreenState extends State<StatsScreen> {
           final monthLabel = bestMonth.isNotEmpty
               ? DateFormat.MMMM(loc).format(DateTime.parse('$bestMonth-01'))
               : '';
+          final summary = l.summaryCoinsPerMonth(monthLabel, maxCoins.toInt());
           return VCard(
             title: l.chartIncomeTrend,
-            subtitle: l.summaryCoinsPerMonth(monthLabel, maxCoins.toInt()),
+            subtitle: '${l.statsPeriodAllTime} · $summary',
             action: _compareChip(
               key: _tourCompareKey,
               selected: _compareIncome,
@@ -407,6 +421,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                 .toDouble(),
                         ]),
                     ],
+                    format: (v) => '${v.round()} cc',
                   )
                 : LineAreaChart(
                     labels: [for (final m in trendMonths) formatChartMonth(m, loc)],
@@ -415,7 +430,9 @@ class _StatsScreenState extends State<StatsScreen> {
                         trend
                             .where((t) => t['month'].toString() == m)
                             .fold<double>(0, (sum, t) => sum + toNum(t['coins'])),
-                    ]),
+                    ],
+                    format: (v) => '${v.round()} cc',
+                  ),
           );
         }),
       ..._buildCategoryBalance(),
@@ -440,11 +457,12 @@ class _StatsScreenState extends State<StatsScreen> {
     final topPct = totalVal > 0
         ? '${(100 * (careVal >= householdVal ? careVal : householdVal) / totalVal).round()}%'
         : '0%';
+    final summary = l.summaryCategoryBalance(topCat, topPct);
 
     return [
       VCard(
         title: l.chartCategoryBalance,
-        subtitle: l.summaryCategoryBalance(topCat, topPct),
+        subtitle: '${l.statsPeriodAllTime} · $summary',
         action: _compareChip(
           selected: _compareCategory,
           onSelected: (v) => setState(() => _compareCategory = v),
@@ -477,12 +495,37 @@ class _StatsScreenState extends State<StatsScreen> {
                   ],
                 ],
               )
-            : DonutChart(segments: [
-                DonutSegment(l.filterCare, sumFor('care').toDouble(),
-                    AppColors.success),
-                DonutSegment(l.filterHousehold,
-                    sumFor('household').toDouble(), AppColors.warning),
-              ]),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (totalVal > 0 && (careVal == 0 || householdVal == 0))
+                    Text(
+                      householdVal == 0
+                          ? l.categoryAllCare(totalVal.toInt())
+                          : l.categoryAllHousehold(totalVal.toInt()),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        height: 1.4,
+                        color: AppColors.textPrimary,
+                      ),
+                    )
+                  else
+                    DonutChart(segments: [
+                      DonutSegment(l.filterCare, sumFor('care').toDouble(),
+                          AppColors.success),
+                      DonutSegment(l.filterHousehold,
+                          sumFor('household').toDouble(), AppColors.warning),
+                    ]),
+                  const SizedBox(height: 8),
+                  Text(
+                    l.categoryBalanceNote,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
       ),
     ];
   }
@@ -508,13 +551,16 @@ class _StatsScreenState extends State<StatsScreen> {
 
     final topTask = top6.isNotEmpty ? top6.first : '';
     final topCount = topTask.isNotEmpty ? (totals[topTask] ?? 0) : 0;
+    final summary = topTask.isNotEmpty
+        ? l.summaryTaskFrequency(topTask, topCount)
+        : null;
 
     return [
       VCard(
         title: l.chartTaskFrequency,
-        subtitle: topTask.isNotEmpty
-            ? l.summaryTaskFrequency(topTask, topCount)
-            : null,
+        subtitle: summary != null
+            ? '${l.statsPeriodAllTime} · $summary'
+            : l.statsPeriodAllTime,
         action: _compareChip(
           selected: _compareTasks,
           onSelected: (v) => setState(() => _compareTasks = v),

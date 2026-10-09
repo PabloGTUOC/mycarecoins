@@ -1320,6 +1320,38 @@
   "@tabOverview": { "description": "Stats mobile tab" },
   "tabEconomy": "Economy",
   "@tabEconomy": { "description": "Stats mobile tab" },
+  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
+  "@statsAllTimeSentence": {
+    "description": "All-time overview sentence replacing the 2x2 KPI grid on phones",
+    "placeholders": {
+      "coins": { "type": "String" },
+      "tasks": { "type": "int" },
+      "bounties": { "type": "int" },
+      "rewards": { "type": "int" }
+    }
+  },
+  "statsPeriodAllTime": "All time",
+  "@statsPeriodAllTime": {
+    "description": "Period prefix for stats card subtitles"
+  },
+  "categoryBalanceNote": "Care and household tasks by current members. Covering shifts are not counted.",
+  "@categoryBalanceNote": {
+    "description": "Note under category balance donut"
+  },
+  "categoryAllCare": "{count, plural, one{The only task was care.} other{All {count} tasks were care.}}",
+  "@categoryAllCare": {
+    "description": "Replaces donut when 100% of tasks are care",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "categoryAllHousehold": "{count, plural, one{The only task was household.} other{All {count} tasks were household.}}",
+  "@categoryAllHousehold": {
+    "description": "Replaces donut when 100% of tasks are household",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "kpiLifetimeCoins": "Coins from tasks",
   "@kpiLifetimeCoins": { "description": "Stats KPI label" },
   "kpiTasksCompleted": "Tasks completed",
