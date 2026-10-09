@@ -64,7 +64,7 @@ New users land on the onboarding flow where they:
 - Set up their own caregiver profile (display name, alias).
 - Optionally add initial caregivers or objects of care (actors).
 
-A family can have **multiple caregivers** and **multiple members** (dependents). Each family has a monthly CareCoins budget (default 1 000 coins) that is distributed to caregivers once per month.
+A family can have **multiple caregivers** and **multiple members** (dependents). The family's coins come from its objects of care: each one generates one coin per hour of the month (half for part-time care), and that total (`totalGdp`) is the real monthly ceiling. Completed activities claim part of it; once a month the unclaimed remainder is split between the caregivers by presence, so the coins for the hours someone was away go to whoever was home (`distributionService.js`). Logging an activity therefore does not create coins — it moves them from the shared remainder to whoever did the work.
 
 ### 3. Joining a Family
 
@@ -84,7 +84,7 @@ The signature product view. Displays all activities for a selected day on a vert
 
 ### 5. Activities / Task Library
 
-A kanban-style view of all activities in the family, grouped by status. Lifecycle:
+The Tasks tab: one divided list of the family's activities, with status filters and a per-task icon. Lifecycle:
 
 ```
 pending → approved → pending_validation → completed
@@ -92,7 +92,7 @@ pending → approved → pending_validation → completed
 ```
 
 Features:
-- **Create activity**: title, category (care/household), duration (min 15 min), coin value, optional recurrence.
+- **Create activity**: title, type (care/household), duration (min 15 min), coin value, optional recurrence.
 - **Approve / reject**: caregivers review newly created activities.
 - **Schedule**: assign a start time to an approved activity, turning it into a concrete instance.
 - **Recurrence**: generate repeated instances from a template (daily, weekdays, weekly) up to a given end date.
@@ -103,13 +103,17 @@ Features:
 - **Delete**: deletes a single instance or the full recurrence series.
 - **Revert**: undo a completion before it is validated.
 
-### 6. Dashboard
+### 6. Family hub
 
-A summary view showing:
-- Coin balances for all family members.
-- Activity counts by status (pending, completed, upcoming).
-- Recent activity feed with per-member attribution.
-- KPI cards for caregiving hours and task distribution.
+The Family tab (`dashboard_screen.dart`). What is waiting on you lives on Today (*Needs you*); Family shows the household at a glance:
+- A greeting with one sentence on what is waiting, linking to Today.
+- The activation checklist for caregivers, until the core loop has run once.
+- Members as a compact list with coin balances, ordered by name — never by balance, and no "top" marker. Pending join approvals sit here.
+- The week ahead.
+- The family's numbers: one sentence on phones, quiet KPI cards on wide layouts.
+- Recent activity with per-member attribution.
+
+The app has five tabs: Today, Family, Tasks, Rewards, Me. Statistics open from Family and Me.
 
 ### 7. Marketplace
 
@@ -184,10 +188,8 @@ See `docs/admin-family-management-plan.md` for the full design and implementatio
 ### 14. Progressive Web App (PWA)
 
 CareCoins is installable as a PWA on iOS (Add to Home Screen) and Android (install prompt). Features:
-- `manifest.webmanifest` with name, icons (192 × 192, 512 × 512), standalone display mode, and brand colours.
-- Service worker via **Workbox** (auto-update mode) for offline asset caching.
-- Separate `firebase-messaging-sw.js` service worker for background push notifications.
-- App badge API support (clears on notification tap).
+- `web/manifest.json` with name, icons (192 × 192, 512 × 512), standalone display mode, and brand colours.
+- Separate `web/firebase-messaging-sw.js` service worker for background push notifications; tapping a notification focuses or opens the app.
 
 ### 15. Personal Time & Coverage
 

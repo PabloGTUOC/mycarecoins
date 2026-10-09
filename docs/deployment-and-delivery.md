@@ -36,19 +36,12 @@ shipped ahead of the server talks to an API that lacks its endpoints.
 
 `main` serves the Flutter frontend (`fluterFront/`) — the only frontend.
 
-**Production is well behind `main`.** Probed on 2026-08-28: `/api/personal-time`,
-`/api/admin/*` and `/api/billing/webhook` all return **404**, meaning the deployed backend
-predates personal time, the admin console and billing. `/api/me`, `/api/activities`,
-`/api/absences` and `/api/events` return 401, so those exist. The *frontend* container was
-rebuilt at some point; the backend was not.
-
-Practical consequences until [§2](#2-server) is done:
-
-- Every personal-time feature 404s in the app.
-- The RevenueCat webhook points at `/api/billing/webhook`, which does not exist — **no
-  purchase can upgrade a family**.
-- Seven migrations are pending: `absence-floor`, `activity-subclasses`, `heartbeat`,
-  `ledger-reversals`, `personal-time`, `plans`, `platform-admin`.
+**The backend has been deployed since the 2026-08-28 probe.** Probed on 2026-10-09:
+`/api/me`, `/api/personal-time` and `/api/admin/families` answer 401 to a GET, and
+`/api/billing/webhook` answers 401 to a POST (it is POST-only, so a GET 404s). Personal time,
+the admin console and the billing webhook are all mounted, and since production runs `db:init`
+on every container start, the seven migrations they need have run with them. The probe does
+not say which `main` commit is live; check the server before assuming the latest one is.
 
 Repeat the probe any time you want to know what is actually deployed — an unmounted route
 falls through to the 404 handler, a mounted one answers 401:
