@@ -179,6 +179,13 @@ final List<_TaskIconRule> _rules = [
     'courses', 'supermarche',
     'einkauf', 'einkaufen',
   ]),
+  // 18b. paperwork
+  _TaskIconRule(Icons.receipt_long_rounded, const [
+    'paperwork', 'bill', 'invoice', 'taxes', 'tax', 'admin',
+    'papeleo', 'factura', 'impuesto', 'tramite',
+    'papiers', 'papier', 'facture', 'impot',
+    'papierkram', 'rechnung', 'steuer', 'formular',
+  ]),
   // 19. laundry
   _TaskIconRule(Icons.local_laundry_service_rounded, const [
     'laundry', 'washing',

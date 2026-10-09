@@ -86,14 +86,14 @@ IconData activityTypeIcon(String? type, {String? category, String? title}) {
   }
   return switch (type) {
     'care' => Icons.favorite_rounded,
-    'household' => Icons.restaurant_rounded,
+    'household' => Icons.home_rounded,
     'coverage' => Icons.home_rounded,
     'sport' => Icons.fitness_center_rounded,
     'social' => Icons.groups_rounded,
     'rest' => Icons.self_improvement_rounded,
     'appointment' => Icons.event_rounded,
     'other' => Icons.auto_awesome_rounded,
-    _ => Icons.restaurant_rounded,
+    _ => Icons.home_rounded,
   };
 }
 

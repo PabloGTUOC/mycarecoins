@@ -268,7 +268,7 @@ void main() {
   group('P2-6 Item 4: Material Rounded structural icons', () {
     test('activityTypeIcon maps type and category correctly to Material Rounded icons', () {
       expect(activityTypeIcon('care'), Icons.favorite_rounded);
-      expect(activityTypeIcon('household'), Icons.restaurant_rounded);
+      expect(activityTypeIcon('household'), Icons.home_rounded);
       expect(activityTypeIcon('coverage'), Icons.home_rounded);
       expect(activityTypeIcon('sport', category: 'self'), Icons.fitness_center_rounded);
       expect(activityTypeIcon('social', category: 'self'), Icons.groups_rounded);
