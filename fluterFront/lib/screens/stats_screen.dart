@@ -453,8 +453,8 @@ class _StatsScreenState extends State<StatsScreen> {
             ? Column(
                 children: [
                   for (final (label, category) in [
-                    (l.catCareEmoji, 'care'),
-                    (l.catHouseholdEmoji, 'household')
+                    (l.catCareLabel, 'care'),
+                    (l.catHouseholdLabel, 'household')
                   ]) ...[
                     Align(
                       alignment: Alignment.centerLeft,
@@ -576,9 +576,51 @@ class _StatsScreenState extends State<StatsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l.legendRoles,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary)),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: AppColors.warning,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        l.legendCaregiver,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        l.legendMember,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               for (final b in balances)
                 _BarRow(

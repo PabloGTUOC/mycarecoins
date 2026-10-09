@@ -408,10 +408,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l.deletionBannerTitle,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.dangerInk)),
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 18, color: AppColors.dangerInk),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(l.deletionBannerTitle,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.dangerInk)),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                       l.deletionBannerBody(
@@ -536,15 +545,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Positioned(
                         bottom: -2,
                         right: -2,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                              color: AppColors.indigo,
-                              shape: BoxShape.circle),
-                          child: const Text('📷',
-                              style: TextStyle(fontSize: 12)),
+                        child: Semantics(
+                          label: l.changePhoto,
+                          button: true,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                                color: AppColors.indigo,
+                                shape: BoxShape.circle),
+                            child: const Icon(Icons.photo_camera_rounded,
+                                size: 12, color: Colors.white),
+                          ),
                         ),
                       ),
                     ],

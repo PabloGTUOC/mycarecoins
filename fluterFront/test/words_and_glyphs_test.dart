@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -72,6 +73,94 @@ void main() {
         }
         if (content.contains('🔁')) {
           violations.add('${file.path} contains 🔁');
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('no emoji in ARB values (ranges U+1F300–U+1FAFF and U+2600–U+27BF except ✓)', () {
+      final arbFiles = [
+        'lib/l10n/app_en.arb',
+        'lib/l10n/app_es.arb',
+        'lib/l10n/app_fr.arb',
+        'lib/l10n/app_de.arb',
+      ];
+
+      final violations = <String>[];
+      for (final path in arbFiles) {
+        final file = File(path);
+        expect(file.existsSync(), isTrue, reason: '$path must exist');
+        final jsonMap = json.decode(file.readAsStringSync()) as Map<String, dynamic>;
+
+        for (final entry in jsonMap.entries) {
+          if (entry.key.startsWith('@')) continue;
+          final value = entry.value;
+          if (value is String) {
+            for (final rune in value.runes) {
+              if (rune == 0x2713) continue; // ✓ is allowed
+              if ((rune >= 0x1F300 && rune <= 0x1FAFF) ||
+                  (rune >= 0x2600 && rune <= 0x27BF)) {
+                violations.add(
+                  '$path: key "${entry.key}" contains emoji "${String.fromCharCode(rune)}" (U+${rune.toRadixString(16).toUpperCase()}) in "$value"',
+                );
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('no 📷 in any lib/**/*.dart', () {
+      final libDir = Directory('lib');
+      expect(libDir.existsSync(), isTrue);
+
+      final dartFiles = libDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
+
+      final violations = <String>[];
+      for (final file in dartFiles) {
+        final content = file.readAsStringSync();
+        if (content.contains('📷')) {
+          violations.add('${file.path} contains 📷');
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('no character in U+1F300–U+1FAFF in lib/**/*.dart except landing_screen and pre-existing feature glyphs', () {
+      final libDir = Directory('lib');
+      expect(libDir.existsSync(), isTrue);
+
+      const allowedFiles = {
+        'landing_screen.dart',
+        'personal_time_dialog.dart',
+        'dashboard_screen.dart',
+        'stats_screen.dart',
+        'marketplace_screen.dart',
+        'push_service.dart',
+      };
+
+      final dartFiles = libDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .where((f) => !allowedFiles.any((a) => f.path.endsWith(a)));
+
+      final violations = <String>[];
+      for (final file in dartFiles) {
+        final content = file.readAsStringSync();
+        for (final rune in content.runes) {
+          if (rune >= 0x1F300 && rune <= 0x1FAFF) {
+            violations.add('${file.path} contains U+${rune.toRadixString(16).toUpperCase()} (${String.fromCharCode(rune)})');
+            break;
+          }
         }
       }
 
