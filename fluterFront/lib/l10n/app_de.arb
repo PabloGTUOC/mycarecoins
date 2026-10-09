@@ -436,8 +436,8 @@
 
   "ledgerActivityCompleted": "Aufgabe erledigt",
   "ledgerActivityReverted": "Aufgabe zurückgenommen",
-  "ledgerPaidNotDoing": "Bezahlt fürs Nicht-Erledigen: {title}",
-  "ledgerBountyPaid": "Bonus gezahlt",
+  "ledgerBountyOfferedT": "Angeboten für: {title}",
+  "ledgerBountyOffered": "Bonus angeboten",
   "ledgerBountyEarnedT": "Bonus verdient: {title}",
   "ledgerBountyEarned": "Bonus verdient",
   "ledgerBountyRefundedT": "Bonus erstattet: {title}",

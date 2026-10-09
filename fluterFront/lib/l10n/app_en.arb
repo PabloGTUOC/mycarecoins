@@ -1167,13 +1167,13 @@
   "@ledgerActivityCompleted": { "description": "Ledger fallback label" },
   "ledgerActivityReverted": "Activity reverted",
   "@ledgerActivityReverted": { "description": "Ledger fallback label" },
-  "ledgerPaidNotDoing": "You paid for not doing: {title}",
-  "@ledgerPaidNotDoing": {
+  "ledgerBountyOfferedT": "Offered for: {title}",
+  "@ledgerBountyOfferedT": {
     "description": "Ledger label for bounty escrow",
     "placeholders": { "title": {} }
   },
-  "ledgerBountyPaid": "Bounty paid",
-  "@ledgerBountyPaid": { "description": "Ledger fallback label" },
+  "ledgerBountyOffered": "Bounty offered",
+  "@ledgerBountyOffered": { "description": "Ledger fallback label" },
   "ledgerBountyEarnedT": "Bounty earned: {title}",
   "@ledgerBountyEarnedT": { "description": "Ledger label", "placeholders": { "title": {} } },
   "ledgerBountyEarned": "Bounty earned",

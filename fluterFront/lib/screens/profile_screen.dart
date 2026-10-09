@@ -837,7 +837,9 @@ class _WalletPanel extends StatelessWidget {
         return title ?? l.ledgerActivityReverted;
       case 'bounty_escrow':
       case 'bounty_paid':
-        return title != null ? l.ledgerPaidNotDoing(title) : l.ledgerBountyPaid;
+        return title != null
+            ? l.ledgerBountyOfferedT(title)
+            : l.ledgerBountyOffered;
       case 'bounty_earned':
         return title != null
             ? l.ledgerBountyEarnedT(title)

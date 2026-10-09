@@ -436,8 +436,8 @@
 
   "ledgerActivityCompleted": "Activité terminée",
   "ledgerActivityReverted": "Activité annulée",
-  "ledgerPaidNotDoing": "Vous avez payé pour ne pas faire : {title}",
-  "ledgerBountyPaid": "Prime payée",
+  "ledgerBountyOfferedT": "Offert pour : {title}",
+  "ledgerBountyOffered": "Prime offerte",
   "ledgerBountyEarnedT": "Prime gagnée : {title}",
   "ledgerBountyEarned": "Prime gagnée",
   "ledgerBountyRefundedT": "Prime remboursée : {title}",
