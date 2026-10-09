@@ -432,7 +432,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       .cast<Map>()
                       .map((m) => m.cast<String, dynamic>()))
                     Text(
-                        '${a['caregiver_name']}: ${(a['status'] ?? '').toString().toUpperCase()}',
+                        '${a['caregiver_name']}: ${switch (a['status']) {
+                          'approved' => l.statusApproved,
+                          'rejected' => l.statusRejected,
+                          _ => l.statusPending,
+                        }}',
                         style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -581,10 +585,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: PillBadge(
-                            text: family!['role']
-                                .toString()
-                                .replaceAll('_', ' ')
-                                .toUpperCase(),
+                            text: family!['role'] == 'caregiver'
+                                ? l.roleCaregiver
+                                : l.roleMember,
                             fontSize: 12,
                             color: AppColors.indigo,
                             background: AppColors.primarySoft),

@@ -114,7 +114,7 @@ void main() {
       expect(violations, isEmpty, reason: violations.join('\n'));
     });
 
-    test('no character in U+1F300–U+1FAFF in lib/**/*.dart except landing_screen', () {
+    test('no character in U+1F300–U+1FAFF or U+2600–U+27BF (outside comments) in lib/**/*.dart except landing_screen', () {
       final libDir = Directory('lib');
       expect(libDir.existsSync(), isTrue);
 
@@ -130,11 +130,20 @@ void main() {
 
       final violations = <String>[];
       for (final file in dartFiles) {
-        final content = file.readAsStringSync();
-        for (final rune in content.runes) {
-          if (rune >= 0x1F300 && rune <= 0x1FAFF) {
-            violations.add('${file.path} contains U+${rune.toRadixString(16).toUpperCase()} (${String.fromCharCode(rune)})');
-            break;
+        final lines = file.readAsLinesSync();
+        for (var lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+          final line = lines[lineIdx];
+          if (line.trim().startsWith('//')) continue;
+          for (final rune in line.runes) {
+            if (rune >= 0x1F300 && rune <= 0x1FAFF) {
+              violations.add('${file.path}:${lineIdx + 1} contains U+${rune.toRadixString(16).toUpperCase()} (${String.fromCharCode(rune)})');
+              break;
+            }
+            if (rune >= 0x2600 && rune <= 0x27BF) {
+              if (rune == 0x2713 || rune == 0x2715) continue; // ✓ and ✕ allowed
+              violations.add('${file.path}:${lineIdx + 1} contains U+${rune.toRadixString(16).toUpperCase()} (${String.fromCharCode(rune)})');
+              break;
+            }
           }
         }
       }

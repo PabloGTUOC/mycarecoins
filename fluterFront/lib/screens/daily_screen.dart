@@ -851,8 +851,16 @@ class _DailyScreenState extends State<DailyScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.lg)),
-        title: Text('✈️ ${abs['title']}',
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Row(children: [
+          const Icon(Icons.flight_rounded, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${abs['title']}',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ]),
         content: Text(
             '${l.absenceAway((abs['user_alias'] ?? abs['user_name'] ?? l.fallbackACaregiver).toString())}\n'
             '${DateFormat('d MMM HH:mm', loc).format(DateTime.parse(abs['start_time'].toString()).toLocal())}'
@@ -4043,7 +4051,18 @@ class DayActivityBlock extends StatelessWidget {
 
           final titleText = Text.rich(
             TextSpan(children: [
-              if (status == 'rejected') const TextSpan(text: '⚠️ '),
+              if (status == 'rejected')
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 14,
+                      color: fg,
+                    ),
+                  ),
+                ),
               TextSpan(text: displayTitle(l, a)),
               if (a['is_recurrent'] == true) ...[
                 const TextSpan(text: ' '),

@@ -494,5 +494,26 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('a caregiver\'s Me shows a chip reading exactly "Caregiver", and CAREGIVER is not shown', (tester) async {
+      final api = _FakeProfileApi();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Caregiver'), findsOneWidget);
+      expect(find.text('CAREGIVER'), findsNothing);
+    });
   });
 }
