@@ -4,7 +4,7 @@ What the AI tooling around this repo needs, and how to rebuild it on a new machi
 2026-10-09 for the move from the laptop to an always-on desktop). Nothing here is needed to
 build or run the app itself; for that see `docs/running-instructions.txt`.
 
-## Toolchain on the laptop today
+## Toolchain (desktop, 2026-10-09)
 
 | Tool | Version | Notes |
 |---|---|---|
@@ -20,10 +20,10 @@ build or run the app itself; for that see `docs/running-instructions.txt`.
 ### Project skills (`.claude/skills/`, pinned by `skills-lock.json`)
 
 `.claude/` is gitignored, so the skill files are not in the repo; `skills-lock.json` records
-each skill's source and hash. Restore them from the repo root with the skills CLI
-(vercel-labs/skills): `npx skills add flutter/skills`, `npx skills add mattpocock/skills` and
-`npx skills add vercel-labs/skills`, picking the skills listed below. Then compare against the
-lock file.
+each skill's source and hash. Restore all 29 from the repo root with
+`npx -y skills experimental_install -y`. It installs into `.agents/skills/` (add `.agents/` to
+`.git/info/exclude`); Claude Code reads `.claude/skills/`, so link each one across:
+`mkdir -p .claude/skills && for d in .agents/skills/*/; do ln -s ../../$d .claude/skills/; done`.
 
 | Source | Skills |
 |---|---|
@@ -34,7 +34,8 @@ lock file.
 ### User skills (`~/.claude/skills/`)
 
 Most are symlinks into `~/.agents/skills/`, tracked by `~/.agents/.skill-lock.json`.
-Install them with `npx skills add <repo> -g` or copy `~/.agents/` across.
+Install them with `npx skills add <repo> -g` or copy `~/.agents/` across, e.g.
+`npx -y skills add stablyai/orca -g -y --skill orca-cli --skill orchestration -a claude-code`.
 
 | Skill | Source | Used for |
 |---|---|---|
@@ -43,7 +44,7 @@ Install them with `npx skills add <repo> -g` or copy `~/.agents/` across.
 | orchestration | github.com/stablyai/orca | Orca's multi-agent orchestration |
 | find-skills | github.com/vercel-labs/skills | Finding and installing skills |
 | ui-ux-pro-max | github.com/nextlevelbuilder/ui-ux-pro-max-skill | Design reference |
-| push-notifications | local only (`~/.claude/skills/push-notifications/SKILL.md`) | FCM / APNs setup notes; copy the folder by hand |
+| push-notifications | local only (`~/.claude/skills/push-notifications/SKILL.md`) | FCM / APNs setup notes; copy the folder by hand (not yet on the desktop) |
 
 ### Plugins (`~/.claude/settings.json` → `enabledPlugins`)
 
@@ -90,7 +91,14 @@ repo uses them; ignore them, or authenticate only the ones you want.
   `orca terminal send --terminal <id> --text "Read .lead/P3-8.md and implement it" --enter`.
   Find terminal ids with `orca terminal list`; they change per machine.
 - `scripts/dev/watch-antigravity.sh <terminal id> <ticket file>` runs in the background and
-  exits with DONE, LIMIT or STALLED, which wakes the lead to review.
+  exits with DONE, LIMIT, STALLED or PROMPT, which wakes the lead. Read-only and test commands
+  that agy asks to run are approved in place; anything else is a PROMPT for the lead.
+- **agy's own settings do not travel with the repo.** They live in
+  `~/.gemini/antigravity-cli/settings.json` (`permissions.allow`, entries like
+  `command(flutter test)`). Copy that file from the old machine, or agy asks before every
+  command. In agy's terminal, Shift+Tab once per session turns on accept-edits mode.
+- Claude Code needs two allow rules to drive agy without prompting the owner:
+  `Bash(bash scripts/dev/watch-antigravity.sh:*)` and `Bash(orca terminal:*)` (`/permissions`).
 - The lead reviews the diff, fixes, runs `flutter analyze && flutter test`, checks on the
   simulator, and commits one commit per ticket. Merging into main, pushing and deploying need
   the owner's OK.
