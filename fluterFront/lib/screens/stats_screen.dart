@@ -65,7 +65,7 @@ class _StatsScreenState extends State<StatsScreen> {
     AppColors.primary,
     AppColors.success,
     AppColors.warning,
-    AppColors.danger,
+    AppColors.violet,
   ];
 
   final _tourHeadingKey = GlobalKey();
@@ -478,11 +478,15 @@ class _StatsScreenState extends State<StatsScreen> {
         ? '${(100 * (careVal >= householdVal ? careVal : householdVal) / totalVal).round()}%'
         : '0%';
     final summary = l.summaryCategoryBalance(topCat, topPct);
+    final oneCategory =
+        totalVal > 0 && (careVal == 0 || householdVal == 0) && !_comparingCategory;
 
     return [
       VCard(
         title: l.chartCategoryBalance,
-        subtitle: '${l.statsPeriodAllTime} · $summary',
+        subtitle: oneCategory
+            ? l.statsPeriodAllTime
+            : '${l.statsPeriodAllTime} · $summary',
         action: _compareChip(
           selected: _compareCategory,
           onSelected: (v) => setState(() => _compareCategory = v),
@@ -586,6 +590,7 @@ class _StatsScreenState extends State<StatsScreen> {
           onSelected: (v) => setState(() => _compareTasks = v),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_comparingTasks)
               for (final t in top6) ...[
@@ -617,6 +622,14 @@ class _StatsScreenState extends State<StatsScreen> {
                       totals[t]!, [for (final x in top6) totals[x]!]),
                   color: AppColors.primary,
                 ),
+            const SizedBox(height: 4),
+            Text(
+              l.taskFrequencyNote,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),

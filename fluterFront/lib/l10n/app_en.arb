@@ -1320,7 +1320,7 @@
   "@tabOverview": { "description": "Stats mobile tab" },
   "tabEconomy": "Economy",
   "@tabEconomy": { "description": "Stats mobile tab" },
-  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
+  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}, covering shifts and former members included. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
   "@statsAllTimeSentence": {
     "description": "All-time overview sentence replacing the 2x2 KPI grid on phones",
     "placeholders": {
@@ -1337,6 +1337,10 @@
   "categoryBalanceNote": "Care and household tasks by current members. Covering shifts are not counted.",
   "@categoryBalanceNote": {
     "description": "Note under category balance donut"
+  },
+  "taskFrequencyNote": "Completed tasks by current members, covering shifts included.",
+  "@taskFrequencyNote": {
+    "description": "Note under task frequency bars"
   },
   "categoryAllCare": "{count, plural, one{The only task was care.} other{All {count} tasks were care.}}",
   "@categoryAllCare": {
