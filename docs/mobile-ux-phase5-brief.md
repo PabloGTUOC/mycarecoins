@@ -10,8 +10,8 @@
 > `flutter analyze` and `flutter test` clean. **One backend change** (P5-1); it reaches
 > production only with the next deploy.
 
-> **Status (2026-10-10):** in progress on `mobile-ux-phase5` (branched from the unmerged
-> `mobile-ux-phase4`).
+> **Status (2026-10-10):** done on `mobile-ux-phase5` (branched from the unmerged
+> `mobile-ux-phase4`; not merged). P5-1 needs a backend deploy to take effect.
 
 ## Decisions (2026-10-10)
 
@@ -68,3 +68,33 @@ beside the title, so titles stay on one line.
 Raw `Color(0x…)` outside the theme: map each to an `AppColors` token (adding the few that
 are missing), keep only the Google logo colours and shadow/scrim alphas, and enforce it
 with a test.
+
+## As built
+
+| Ticket | Commit | Notes |
+|---|---|---|
+| P5-1 | `4a20a95` | Also fixed: templates (the Tasks catalogue) were counted as unfinished tasks. Live only after a backend deploy; until then the app shows the old denominator ("15 of 31"). |
+| P5-2 | `46fd674` | Balances / Tasks done / Bounties: one sentence each, bars behind the chip, sorted by name, no red. `_LegendDot` removed. |
+| P5-3 | `76ca148` | `statsShowEconomy = kDebugMode`; Most popular rewards moved to Members. Debug builds (`flutter run`) still show Economy. |
+| P5-4 | `85a170a` | Fourth compared caregiver is violet. |
+| P5-5 | `679bab2` | `greetingFor(hour, l)`; tray not rendered on a past day (four older tests updated). |
+| P5-6 | `9c6efab` | The phone test uses a 0.6 text scale because the test font is wider than Plus Jakarta; checked on the simulator. |
+| P5-7 | `0314ac5` | `theme_colours_p5_7_test.dart` allows only the Google logo. |
+
+Flutter: 292 tests, analyze clean. Backend: 223 tests.
+
+## Phase 6 candidates (lead review of heuristics 3, 5, 9; reading only)
+
+1. **Server errors are English-only.** About 200 backend messages (`error:` / `message:`
+   strings in `routes/` and `services/`) reach the user verbatim through
+   `AppState._localizeError` (`serverMessage` passes through). A Spanish user sees "You
+   cannot validate your own retroactive activity." Fix: stable error codes from the
+   backend, mapped to ARB keys in the app; English text stays as the fallback.
+2. **Removing a one-off task has no confirmation and no Undo** (`daily_screen.dart`
+   `_removeFlow` → `_unschedule`), while scheduling and moving do offer Undo.
+3. **Error toasts vanish after 5 s with no retry** (`AppState.setError`), and a failed
+   Undo is swallowed (`catch (_) {}` in the schedule/move Undo actions).
+4. Generic failures read "Request failed (500)" (`errRequestFailed`): technical, no next
+   step.
+5. Already good: every screen that fails to load shows `LoadErrorState` with Retry;
+   deleting a task template, a dependent, the account or the family asks first.
