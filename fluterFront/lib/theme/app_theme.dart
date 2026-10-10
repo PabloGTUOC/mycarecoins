@@ -33,10 +33,20 @@ abstract class AppColors {
   static const ink = Color(0xFF0F172A);
   static const inkMuted = Color(0xFF94A3B8);
   static const gold = Color(0xFFFBBF24);
+  static const successOnDark = Color(0xFF34D399); // +amounts on the dark wallet card
+  static const dangerOnDark = Color(0xFFF87171); // −amounts on the dark wallet card
 
   // Profile family-banner gradient
   static const indigo = Color(0xFF6366F1);
   static const violet = Color(0xFF8B5CF6);
+  static const violetSoft = Color(0xFFEDE9FE); // 5th reward-banner tint
+
+  // Dependent badges on the Family circle (playful names kept, P4 decision).
+  static const badgeChild = indigo;
+  static const badgePet = Color(0xFF10B981);
+  static const badgeElderly = Color(0xFFF59E0B);
+  static const badgeCaregiver = Color(0xFF059669);
+  static const badgeMember = Color(0xFF3B82F6);
 
   static const accentGradient = LinearGradient(
     begin: Alignment.topLeft,

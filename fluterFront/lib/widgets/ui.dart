@@ -281,7 +281,7 @@ class VInput extends StatelessWidget {
             hintText: placeholder,
             // Slate at full opacity: the old 50%-alpha hint fell to ~2:1
             // contrast, below the WCAG AA floor PRODUCT.md commits to.
-            hintStyle: const TextStyle(color: Color(0xFF64748B)),
+            hintStyle: const TextStyle(color: AppColors.textSecondary),
             filled: true,
             fillColor: AppColors.inputBg,
             isDense: true,

@@ -1179,7 +1179,7 @@ class _AmountText extends StatelessWidget {
   Widget build(BuildContext context) {
     final positive = amount > 0;
     final color = dark
-        ? (positive ? const Color(0xFF34D399) : const Color(0xFFF87171))
+        ? (positive ? AppColors.successOnDark : AppColors.dangerOnDark)
         : (positive ? AppColors.success : AppColors.danger);
     return Text('${positive ? '+' : ''}$amount$suffix',
         style: TextStyle(
