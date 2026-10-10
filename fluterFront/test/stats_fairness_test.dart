@@ -338,9 +338,9 @@ void main() {
       expect(find.text('All time · Most coins in October: 35 cc'), findsOneWidget);
       expect(find.text('All time · Most work in Care: 67%'), findsOneWidget);
       expect(find.text('All time · Most frequent: Cooking (5×)'), findsOneWidget);
-      expect(find.text('Highest balance: Ati (150 cc)'), findsOneWidget);
-      expect(find.text('Overall completion rate: 70%'), findsOneWidget);
-      expect(find.text('Total bounties offered: 45 cc'), findsOneWidget);
+      expect(find.text('2 people hold 250 cc between them.'), findsOneWidget);
+      expect(find.text('14 of 20 tasks that were due are done.'), findsOneWidget);
+      expect(find.text('45 cc offered, 30 cc earned by whoever took them, 15 cc returned.'), findsOneWidget);
 
       // Verify Semantics contains the summary text for screen readers
       // Screen readers get the summary once, from the visible line.

@@ -49,6 +49,9 @@ class _StatsScreenState extends State<StatsScreen> {
   bool _compareIncome = false;
   bool _compareCategory = false;
   bool _compareTasks = false;
+  bool _compareBalances = false;
+  bool _compareCompletion = false;
+  bool _compareBounties = false;
   int _tab = 0; // mobile: 0 overview, 1 members, 2 economy
 
   static const _caregiverColors = [
@@ -140,6 +143,9 @@ class _StatsScreenState extends State<StatsScreen> {
   bool get _comparingIncome => _compareIncome && _caregivers.length > 1;
   bool get _comparingCategory => _compareCategory && _caregivers.length > 1;
   bool get _comparingTasks => _compareTasks && _caregivers.length > 1;
+  bool get _comparingBalances => _compareBalances && _caregivers.length > 1;
+  bool get _comparingCompletion => _compareCompletion && _caregivers.length > 1;
+  bool get _comparingBounties => _compareBounties && _caregivers.length > 1;
 
   Widget? _compareChip({
     Key? key,
@@ -607,131 +613,155 @@ class _StatsScreenState extends State<StatsScreen> {
 
   List<Widget> _buildMembers() {
     final l = AppLocalizations.of(context);
+    final loc = l.localeName;
+    final fmt = NumberFormat.decimalPattern(loc);
     final balances = _listOf('memberBalances');
     final completion = _listOf('completionRates');
     final bounties = _listOf('bountyStats');
 
     return [
       if (balances.isNotEmpty)
-        VCard(
-          title: l.chartLeaderboard,
-          subtitle: l.summaryLeaderboard(
-            (balances.first['name'] ?? '').toString(),
-            balances.first['coin_balance'] ?? 0,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _LegendDot(
-                    color: AppColors.warning,
-                    label: l.legendCaregiver,
+        Builder(builder: (_) {
+          final total = balances.fold<num>(0, (s, b) => s + toNum(b['coin_balance']));
+          final count = balances.length;
+          final sorted = List<Map<String, dynamic>>.from(balances)
+            ..sort((a, b) => (a['name'] ?? '')
+                .toString()
+                .toLowerCase()
+                .compareTo((b['name'] ?? '').toString().toLowerCase()));
+          return VCard(
+            title: l.chartBalances,
+            subtitle: l.statsPeriodNow,
+            action: _compareChip(
+              selected: _compareBalances,
+              onSelected: (v) => setState(() => _compareBalances = v),
+            ),
+            child: _comparingBalances
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final b in sorted)
+                        _BarRow(
+                          label: (b['name'] ?? '').toString(),
+                          valueLabel: '${b['coin_balance'] ?? 0} cc',
+                          fraction: _fractionOfMax(toNum(b['coin_balance']),
+                              [for (final x in balances) toNum(x['coin_balance'])]),
+                          color: AppColors.primary,
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l.balancesNote,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    l.balancesSentence(fmt.format(total), count),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  _LegendDot(
-                    color: AppColors.primary,
-                    label: l.legendMember,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              for (final b in balances)
-                _BarRow(
-                  label: (b['name'] ?? '').toString(),
-                  valueLabel: '${b['coin_balance'] ?? 0} cc',
-                  fraction: _fractionOfMax(toNum(b['coin_balance']),
-                      [for (final x in balances) toNum(x['coin_balance'])]),
-                  color: b['role'] == 'caregiver'
-                      ? AppColors.warning
-                      : AppColors.primary,
-                ),
-            ],
-          ),
-        ),
+          );
+        }),
       if (completion.isNotEmpty)
         Builder(builder: (_) {
-          final total = completion.fold<num>(0, (s, r) => s + toNum(r['total']));
-          final done = completion.fold<num>(0, (s, r) => s + toNum(r['completed']));
-          final rate = total > 0 ? '${(100 * done / total).round()}%' : '0%';
+          final total = completion.fold<num>(0, (s, r) => s + toNum(r['total'])).toInt();
+          final done = completion.fold<num>(0, (s, r) => s + toNum(r['completed'])).toInt();
+          final waiting = completion.fold<num>(0, (s, r) => s + toNum(r['waiting'])).toInt();
           return VCard(
             title: l.chartCompletionRate,
-            subtitle: l.summaryCompletionRate(rate),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _LegendDot(color: AppColors.success, label: '≥80%'),
-                    _LegendDot(color: AppColors.warning, label: '50–79%'),
-                    _LegendDot(color: AppColors.danger, label: '<50%'),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                for (final r in completion)
-                  Builder(builder: (_) {
-                    final rTotal = toNum(r['total']);
-                    final rDone = toNum(r['completed']);
-                    final rRate = rTotal > 0 ? (100 * rDone / rTotal).round() : 0;
-                    return _BarRow(
-                      label: (r['caregiver'] ?? '').toString(),
-                      valueLabel: '$rRate% ($rDone/$rTotal)',
-                      fraction: rRate / 100,
-                      color: rRate >= 80
-                          ? AppColors.success
-                          : rRate >= 50
-                              ? AppColors.warning
-                              : AppColors.danger,
-                    );
-                  }),
-              ],
+            subtitle: l.statsPeriodAllTime,
+            action: _compareChip(
+              selected: _compareCompletion,
+              onSelected: (v) => setState(() => _compareCompletion = v),
             ),
+            child: _comparingCompletion
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final r in completion)
+                        Builder(builder: (_) {
+                          final rTotal = toNum(r['total']).toInt();
+                          final rDone = toNum(r['completed']).toInt();
+                          return _BarRow(
+                            label: (r['caregiver'] ?? '').toString(),
+                            valueLabel: l.completionRow(rDone, rTotal),
+                            fraction: rTotal > 0 ? rDone / rTotal : 0,
+                            color: AppColors.primary,
+                          );
+                        }),
+                    ],
+                  )
+                : Text(
+                    '${l.completionSentence(done, total)}${waiting > 0 ? ' ${l.completionWaiting(waiting)}' : ''}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
           );
         }),
       if (bounties.isNotEmpty)
-        VCard(
-          title: l.chartBounties,
-          subtitle: l.summaryBounties(
-            bounties.fold<num>(0, (s, b) => s + toNum(b['offered'])).toInt(),
-          ),
-          child: Column(
-            children: [
-              for (final b in bounties) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8, top: 4),
-                    child: Text((b['name'] ?? '').toString(),
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 14)),
+        Builder(builder: (_) {
+          final offered = bounties.fold<num>(0, (s, b) => s + toNum(b['offered'])).toInt();
+          final earned = bounties.fold<num>(0, (s, b) => s + toNum(b['earned'])).toInt();
+          final refunded = bounties.fold<num>(0, (s, b) => s + toNum(b['refunded'])).toInt();
+          return VCard(
+            title: l.chartBounties,
+            subtitle: l.statsPeriodAllTime,
+            action: _compareChip(
+              selected: _compareBounties,
+              onSelected: (v) => setState(() => _compareBounties = v),
+            ),
+            child: _comparingBounties
+                ? Column(
+                    children: [
+                      for (final b in bounties) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 8, top: 4),
+                            child: Text((b['name'] ?? '').toString(),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800, fontSize: 14)),
+                          ),
+                        ),
+                        for (final (label, key, color) in [
+                          (l.offered, 'offered', AppColors.primary),
+                          (l.earned, 'earned', AppColors.success),
+                          (l.refunded, 'refunded', AppColors.inkMuted),
+                        ])
+                          _BarRow(
+                            label: label,
+                            valueLabel: '${toNum(b[key])} cc',
+                            fraction: _fractionOfMax(toNum(b[key]), [
+                              for (final x in bounties) ...[
+                                toNum(x['offered']),
+                                toNum(x['earned']),
+                                toNum(x['refunded'])
+                              ]
+                            ]),
+                            color: color,
+                          ),
+                      ],
+                    ],
+                  )
+                : Text(
+                    l.bountiesSentence(offered, earned, refunded),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                for (final (label, key, color) in [
-                  (l.offered, 'offered', AppColors.danger),
-                  (l.earned, 'earned', AppColors.success),
-                  (l.refunded, 'refunded', const Color(0xFF94A3B8)),
-                ])
-                  _BarRow(
-                    label: label,
-                    valueLabel: '${toNum(b[key])} cc',
-                    fraction: _fractionOfMax(toNum(b[key]), [
-                      for (final x in bounties) ...[
-                        toNum(x['offered']),
-                        toNum(x['earned']),
-                        toNum(x['refunded'])
-                      ]
-                    ]),
-                    color: color,
-                  ),
-              ],
-            ],
-          ),
-        ),
+          );
+        }),
     ];
   }
 
@@ -952,36 +982,6 @@ class _BarRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendDot({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-              fontSize: 12, color: AppColors.textSecondary),
-        ),
-      ],
     );
   }
 }

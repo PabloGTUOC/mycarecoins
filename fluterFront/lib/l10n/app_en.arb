@@ -1370,15 +1370,55 @@
   "@catHouseholdLabel": { "description": "Category group header in compare mode" },
   "chartTaskFrequency": "Task frequency",
   "@chartTaskFrequency": { "description": "Chart title" },
-  "chartLeaderboard": "Coin balance leaderboard",
-  "@chartLeaderboard": { "description": "Chart title" },
-  "legendCaregiver": "Caregiver",
-  "@legendCaregiver": { "description": "Leaderboard color legend caregiver label" },
-  "legendMember": "Member",
-  "@legendMember": { "description": "Leaderboard color legend member label" },
-  "chartCompletionRate": "Completion rate",
+  "chartBalances": "Balances",
+  "@chartBalances": { "description": "Balances card title replacing leaderboard" },
+  "statsPeriodNow": "Right now",
+  "@statsPeriodNow": { "description": "Period label for balances card" },
+  "balancesSentence": "{count, plural, one{1 person holds {coins} cc.} other{{count} people hold {coins} cc between them.}}",
+  "@balancesSentence": {
+    "description": "Summary sentence for balances card",
+    "placeholders": {
+      "coins": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "balancesNote": "A balance goes down when someone claims a reward, so it is not a score.",
+  "@balancesNote": { "description": "Footnote clarifying that balance is not a score" },
+  "completionSentence": "{total, plural, one{{done} of 1 task that was due is done.} other{{done} of {total} tasks that were due are done.}}",
+  "@completionSentence": {
+    "description": "Summary sentence for completed tasks",
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "completionWaiting": "{count, plural, one{1 more waits for someone else to confirm it.} other{{count} more wait for someone else to confirm them.}}",
+  "@completionWaiting": {
+    "description": "Sentence fragment for tasks waiting validation",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "completionRow": "{done} of {total}",
+  "@completionRow": {
+    "description": "Per-caregiver completion value label",
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "bountiesSentence": "{offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
+  "@bountiesSentence": {
+    "description": "Summary sentence for bounties card",
+    "placeholders": {
+      "offered": { "type": "int" },
+      "earned": { "type": "int" },
+      "refunded": { "type": "int" }
+    }
+  },
+  "chartCompletionRate": "Tasks done",
   "@chartCompletionRate": { "description": "Chart title" },
-  "chartBounties": "Bounties: offered vs earned vs refunded",
+  "chartBounties": "Bounties",
   "@chartBounties": { "description": "Chart title" },
   "chartFairness": "Time given and taken",
   "fairnessNoDeclines": "Saying no is never counted. Not here, not anywhere.",
@@ -1419,28 +1459,6 @@
     "placeholders": {
       "task": {},
       "count": {}
-    }
-  },
-  "summaryLeaderboard": "Highest balance: {name} ({coins} cc)",
-  "@summaryLeaderboard": {
-    "description": "Summary line under leaderboard chart",
-    "placeholders": {
-      "name": {},
-      "coins": {}
-    }
-  },
-  "summaryCompletionRate": "Overall completion rate: {rate}",
-  "@summaryCompletionRate": {
-    "description": "Summary line under completion rate chart",
-    "placeholders": {
-      "rate": {}
-    }
-  },
-  "summaryBounties": "Total bounties offered: {coins} cc",
-  "@summaryBounties": {
-    "description": "Summary line under bounties chart",
-    "placeholders": {
-      "coins": {}
     }
   },
   "summaryCoinFlow": "Most active month: {month} ({coins} cc)",
