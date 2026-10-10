@@ -18,7 +18,7 @@ s='\n'.join(L); i=s.rfind(os.environ['MARK']); after=s[i:] if i>=0 else ''
 spin=any(c in '\n'.join(L[-6:]) for c in '⣾⣽⣻⢿⡿⣟⣯⣷')
 tail='\n'.join(L[-40:])
 m=re.search(r'Requesting permission for:\s*\n\s*(.+)', tail)
-SAFE=r'^(cd fluterFront && )?(git (log|status|diff|show|grep)|find|grep|rg|ls|cat|head|tail|wc|sed -n|flutter (analyze|test|gen-l10n|pub get)|dart analyze|(cd backend && )?(npm (test|run test)|node --test))\b'
+SAFE=r'^(cd fluterFront && )?(git (log|status|diff|show|grep)|find|grep|rg|ls|which|cat|head|tail|wc|sed -n|flutter (analyze|test|gen-l10n|pub get)|dart analyze|(cd backend && )?(npm (test|run test)|node --test))\b'
 UNSAFE=r'[;|&]{1,2}\s*(rm|git (commit|push|checkout|reset|switch|merge|rebase)|curl|sudo)\b|>\s*[^&]'
 if m and 'Run this command?' in tail and re.match(SAFE, m.group(1).strip()) and not re.search(UNSAFE, m.group(1)): print('SAFEPROMPT')
 elif re.search(r'Run this command\?|Accept this file edit\?|Requesting permission for|Allow this (edit|change|action)\?|Do you want to (proceed|apply|make this edit)', '\n'.join(L[-40:])) and not spin: print('PROMPT')
