@@ -100,7 +100,7 @@
   "approve": "Aprobar",
   "dashThisWeek": "Esta semana",
   "dashComingUp": "Próximos días",
-  "dashMyTasksWaiting": "{count, plural, =1{1 de tus tareas espera validación} other{{count} de tus tareas esperan validación}}",
+  "dashMyTasksWaiting": "{count, plural, =1{1 de tus tareas espera que otra persona la confirme} other{{count} de tus tareas esperan que otra persona las confirme}}",
   "prevWeek": "Semana anterior",
   "nextWeek": "Semana siguiente",
 
@@ -128,7 +128,7 @@
   "timeAgoMins": "{count, plural, one{hace {count} min} other{hace {count} min}}",
 
   "caredFor": "Bajo cuidado",
-  "dayToday": "HOY",
+  "dayToday": "Hoy",
   "freeDay": "Día libre",
   "moreCount": "+{count} más",
 

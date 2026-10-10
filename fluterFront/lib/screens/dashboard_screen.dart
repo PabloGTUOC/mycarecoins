@@ -16,6 +16,14 @@ import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
 import 'daily_screen.dart';
 
+@visibleForTesting
+String greetingFor(int hour, AppLocalizations l) {
+  if (hour < 5) return l.greetingEvening;
+  if (hour < 12) return l.greetingMorning;
+  if (hour < 18) return l.greetingAfternoon;
+  return l.greetingEvening;
+}
+
 /// Family Hub: member cards, paginated week
 /// strip with absences, task offers, KPI summary and the Recent Activity feed.
 class DashboardScreen extends StatefulWidget {
@@ -428,12 +436,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return items.take(3).toList();
   }
 
-  String _greeting(AppLocalizations l) {
-    final h = DateTime.now().hour;
-    if (h < 12) return l.greetingMorning;
-    if (h < 18) return l.greetingAfternoon;
-    return l.greetingEvening;
-  }
+  String _greeting(AppLocalizations l) => greetingFor(DateTime.now().hour, l);
 
   @override
   Widget build(BuildContext context) {
@@ -1142,7 +1145,6 @@ class _DayHeader extends StatelessWidget {
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
                 color: isToday ? AppColors.primary : AppColors.textSecondary)),
         Text('${day.day}',
             style: TextStyle(

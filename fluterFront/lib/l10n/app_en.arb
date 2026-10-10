@@ -366,7 +366,7 @@
   "@dashThisWeek": { "description": "Week strip label on wide layouts (calendar week)" },
   "dashComingUp": "Coming up",
   "@dashComingUp": { "description": "Week strip label on phones (rolling window from today)" },
-  "dashMyTasksWaiting": "{count, plural, =1{1 of your tasks waits for validation} other{{count} of your tasks wait for validation}}",
+  "dashMyTasksWaiting": "{count, plural, =1{1 of your tasks waits for someone else to confirm it} other{{count} of your tasks wait for someone else to confirm them}}",
   "@dashMyTasksWaiting": {
     "description": "Family hub phone sentence: user tasks pending validation",
     "placeholders": { "count": { "type": "num" } }
@@ -439,7 +439,7 @@
 
   "caredFor": "Cared for",
   "@caredFor": { "description": "Badge on dependent cards (children/pets/elderly) instead of a balance" },
-  "dayToday": "TODAY",
+  "dayToday": "Today",
   "@dayToday": { "description": "Short uppercase label replacing the weekday for today in the agenda; must stay very short" },
   "freeDay": "Free day",
   "@freeDay": { "description": "Agenda row with no tasks or absences" },

@@ -1945,32 +1945,33 @@ class _DailyScreenState extends State<DailyScreen> {
             ),
           ],
         ),
-        _TaskTray(
-          controller: _trayController,
-          templates: ranked.ordered,
-          quickTemplates: ranked.quick,
-          isPastDay: _isPastDay,
-          onTapChip: _onTapTrayChip,
-          onTapTimeForMe: _onTapTimeForMe,
-          onExpand: _openScheduleSheet,
-          handleKey: _tourTrayHandleKey,
-          onDragStarted: () {
-            HapticFeedback.selectionClick();
-            if (_trayController.isAttached) {
-              _trayController.jumpTo(kTrayDragging);
-            }
-          },
-          onDragEnd: () {
-            _gridStateKey.currentState?.clearHover();
-            if (_trayController.isAttached) {
-              _trayController.animateTo(
-                kTrayCollapsed,
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-              );
-            }
-          },
-        ),
+        if (!_isPastDay)
+          _TaskTray(
+            controller: _trayController,
+            templates: ranked.ordered,
+            quickTemplates: ranked.quick,
+            isPastDay: _isPastDay,
+            onTapChip: _onTapTrayChip,
+            onTapTimeForMe: _onTapTimeForMe,
+            onExpand: _openScheduleSheet,
+            handleKey: _tourTrayHandleKey,
+            onDragStarted: () {
+              HapticFeedback.selectionClick();
+              if (_trayController.isAttached) {
+                _trayController.jumpTo(kTrayDragging);
+              }
+            },
+            onDragEnd: () {
+              _gridStateKey.currentState?.clearHover();
+              if (_trayController.isAttached) {
+                _trayController.animateTo(
+                  kTrayCollapsed,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
+              }
+            },
+          ),
       ],
     );
   }
