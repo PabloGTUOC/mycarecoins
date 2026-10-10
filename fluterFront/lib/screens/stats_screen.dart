@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,11 @@ import '../utils/json.dart';
 import '../widgets/charts.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
+
+/// Economy (coin flow by ledger reason, activity status) is the developer's view,
+/// not the family's: debug builds only. Tests flip it.
+@visibleForTesting
+bool statsShowEconomy = kDebugMode;
 
 /// Stats — ten panels rendered as dependency-free charts: KPI row, income trend,
 /// category balance, task frequency, leaderboard, completion rates, bounty stats,
@@ -52,7 +58,8 @@ class _StatsScreenState extends State<StatsScreen> {
   bool _compareBalances = false;
   bool _compareCompletion = false;
   bool _compareBounties = false;
-  int _tab = 0; // mobile: 0 overview, 1 members, 2 economy
+  bool _compareRewards = false;
+  int _tab = 0; // mobile: 0 overview, 1 members, 2 economy (debug only)
 
   static const _caregiverColors = [
     AppColors.primary,
@@ -146,6 +153,7 @@ class _StatsScreenState extends State<StatsScreen> {
   bool get _comparingBalances => _compareBalances && _caregivers.length > 1;
   bool get _comparingCompletion => _compareCompletion && _caregivers.length > 1;
   bool get _comparingBounties => _compareBounties && _caregivers.length > 1;
+  bool get _comparingRewards => _compareRewards && _caregivers.length > 1;
 
   Widget? _compareChip({
     Key? key,
@@ -202,18 +210,24 @@ class _StatsScreenState extends State<StatsScreen> {
             ...overview,
             _SectionDivider(l.sectionMembers),
             ...members,
-            _SectionDivider(l.sectionEconomy),
-            ...economy,
+            if (statsShowEconomy) ...[
+              _SectionDivider(l.sectionEconomy),
+              ...economy,
+            ],
           ] else ...[
             SegmentedTabs(
-              tabs: [l.tabOverview, l.sectionMembers, l.tabEconomy],
+              tabs: [
+                l.tabOverview,
+                l.sectionMembers,
+                if (statsShowEconomy) l.tabEconomy,
+              ],
               selected: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
             const SizedBox(height: 20),
             if (_tab == 0) ...overview,
             if (_tab == 1) ...members,
-            if (_tab == 2) ...economy,
+            if (_tab == 2 && statsShowEconomy) ...economy,
           ],
         ],
       ),
@@ -618,6 +632,8 @@ class _StatsScreenState extends State<StatsScreen> {
     final balances = _listOf('memberBalances');
     final completion = _listOf('completionRates');
     final bounties = _listOf('bountyStats');
+    final rewardsByUser = _listOf('rewardsByUser');
+    final topRewards = _listOf('topRewards');
 
     return [
       if (balances.isNotEmpty)
@@ -762,6 +778,62 @@ class _StatsScreenState extends State<StatsScreen> {
                   ),
           );
         }),
+      if (topRewards.isNotEmpty)
+        Builder(builder: (_) {
+          final claimedRewards = topRewards
+              .where((r) => toNum(r['redemptions']) > 0)
+              .toList();
+          final sortedUsers = List<Map<String, dynamic>>.from(rewardsByUser)
+            ..sort((a, b) => (a['name'] ?? '')
+                .toString()
+                .toLowerCase()
+                .compareTo((b['name'] ?? '').toString().toLowerCase()));
+          return VCard(
+            title: l.chartTopRewards,
+            subtitle: l.statsPeriodAllTime,
+            action: _compareChip(
+              selected: _compareRewards,
+              onSelected: (v) => setState(() => _compareRewards = v),
+            ),
+            child: _comparingRewards
+                ? Column(
+                    children: [
+                      for (final r in sortedUsers)
+                        _BarRow(
+                          label: (r['name'] ?? '').toString(),
+                          valueLabel: '${toNum(r['redemptions'])}×',
+                          fraction: _fractionOfMax(toNum(r['redemptions']), [
+                            for (final x in rewardsByUser) toNum(x['redemptions'])
+                          ]),
+                          color: AppColors.primary,
+                        ),
+                    ],
+                  )
+                : (claimedRewards.isNotEmpty
+                    ? Column(
+                        children: [
+                          for (final r in claimedRewards)
+                            _BarRow(
+                              label: (r['title'] ?? '').toString(),
+                              valueLabel: '${toNum(r['redemptions'])}×',
+                              fraction: _fractionOfMax(toNum(r['redemptions']), [
+                                for (final x in claimedRewards)
+                                  toNum(x['redemptions'])
+                              ]),
+                              color: AppColors.primary,
+                            ),
+                        ],
+                      )
+                    : Text(
+                        l.rewardsNoneClaimed,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.4,
+                          color: AppColors.textPrimary,
+                        ),
+                      )),
+          );
+        }),
     ];
   }
 
@@ -771,8 +843,6 @@ class _StatsScreenState extends State<StatsScreen> {
     final l = AppLocalizations.of(context);
     final loc = l.localeName;
     final coinFlow = _listOf('coinFlowByReason');
-    final rewardsByUser = _listOf('rewardsByUser');
-    final topRewards = _listOf('topRewards');
     final statuses = _listOf('statusDistribution');
 
     final flowMeta = [
@@ -780,7 +850,7 @@ class _StatsScreenState extends State<StatsScreen> {
       ('bounty_earned', l.flowBountiesEarned, AppColors.success),
       ('bounty_escrow', l.flowBountiesPaid, AppColors.danger),
       ('redeemed', l.flowRewardsRedeemed, AppColors.warning),
-      ('bounty_refunded', l.flowBountiesRefunded, const Color(0xFF94A3B8)),
+      ('bounty_refunded', l.flowBountiesRefunded, AppColors.inkMuted),
       ('coverage_earned', l.flowCoverage, AppColors.accentSecondary),
     ];
     final flowMonths =
@@ -832,47 +902,6 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
           );
         }),
-      if (rewardsByUser.isNotEmpty)
-        VCard(
-          title: l.chartRewardsByMember,
-          subtitle: l.summaryRewardsByMember(
-            (rewardsByUser.first['name'] ?? '').toString(),
-            toNum(rewardsByUser.first['redemptions']).toInt(),
-          ),
-          child: Column(
-            children: [
-              for (final r in rewardsByUser)
-                _BarRow(
-                  label: (r['name'] ?? '').toString(),
-                  valueLabel: '${toNum(r['redemptions'])}',
-                  fraction: _fractionOfMax(toNum(r['redemptions']), [
-                    for (final x in rewardsByUser) toNum(x['redemptions'])
-                  ]),
-                  color: AppColors.primary,
-                ),
-            ],
-          ),
-        ),
-      if (topRewards.isNotEmpty)
-        VCard(
-          title: l.chartTopRewards,
-          subtitle: l.summaryTopRewards(
-            (topRewards.first['title'] ?? '').toString(),
-            toNum(topRewards.first['redemptions']).toInt(),
-          ),
-          child: Column(
-            children: [
-              for (final r in topRewards)
-                _BarRow(
-                  label: (r['title'] ?? '').toString(),
-                  valueLabel: '${toNum(r['redemptions'])}',
-                  fraction: _fractionOfMax(toNum(r['redemptions']),
-                      [for (final x in topRewards) toNum(x['redemptions'])]),
-                  color: AppColors.primary,
-                ),
-            ],
-          ),
-        ),
       if (statuses.isNotEmpty)
         Builder(builder: (_) {
           final tot = statuses.fold<num>(0, (s, x) => s + toNum(x['count']));
@@ -889,7 +918,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 DonutSegment(
                   (statusMeta[s['status']]?.$1 ?? s['status'].toString()),
                   toNum(s['count']).toDouble(),
-                  statusMeta[s['status']]?.$2 ?? const Color(0xFF94A3B8),
+                  statusMeta[s['status']]?.$2 ?? AppColors.inkMuted,
                 ),
             ]),
           );

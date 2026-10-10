@@ -1469,22 +1469,6 @@
       "coins": {}
     }
   },
-  "summaryRewardsByMember": "Most rewards claimed: {name} ({count})",
-  "@summaryRewardsByMember": {
-    "description": "Summary line under rewards by member chart",
-    "placeholders": {
-      "name": {},
-      "count": {}
-    }
-  },
-  "summaryTopRewards": "Top reward: {reward} ({count} claimed)",
-  "@summaryTopRewards": {
-    "description": "Summary line under top rewards chart",
-    "placeholders": {
-      "reward": {},
-      "count": {}
-    }
-  },
   "summaryStatusDistribution": "Activities completed: {percent}",
   "@summaryStatusDistribution": {
     "description": "Summary line under status distribution chart",
@@ -1504,16 +1488,16 @@
   "@flowActivities": { "description": "Coin flow series label" },
   "flowBountiesEarned": "Bounties earned",
   "@flowBountiesEarned": { "description": "Coin flow series label" },
-  "flowBountiesPaid": "Bounties paid",
+  "flowBountiesPaid": "Bounties offered",
   "@flowBountiesPaid": { "description": "Coin flow series label" },
   "flowRewardsRedeemed": "Rewards redeemed",
   "@flowRewardsRedeemed": { "description": "Coin flow series label" },
   "flowBountiesRefunded": "Bounties refunded",
   "@flowBountiesRefunded": { "description": "Coin flow series label" },
-  "chartRewardsByMember": "Rewards claimed by member",
-  "@chartRewardsByMember": { "description": "Chart title" },
   "chartTopRewards": "Most popular rewards",
   "@chartTopRewards": { "description": "Chart title" },
+  "rewardsNoneClaimed": "No rewards claimed yet.",
+  "@rewardsNoneClaimed": { "description": "Fallback text when no rewards have been claimed yet" },
   "chartStatusDist": "Activity status distribution",
   "@chartStatusDist": { "description": "Chart title" },
   "statusCompleted": "Completed",

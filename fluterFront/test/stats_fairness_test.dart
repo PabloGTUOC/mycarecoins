@@ -351,8 +351,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Most active month: October (80 cc)'), findsOneWidget);
-      expect(find.text('Most rewards claimed: Ati (5)'), findsOneWidget);
-      expect(find.text('Top reward: Ice cream (8 claimed)'), findsOneWidget);
       expect(find.text('Activities completed: 70%'), findsOneWidget);
 
       // Screen readers get the summary once, from the visible line.
