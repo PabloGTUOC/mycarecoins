@@ -164,6 +164,7 @@ void main() {
       expect(find.textContaining('%'), findsNothing);
 
       // Tap Completion "By caregiver" chip
+      await tester.ensureVisible(chips.at(1));
       await tester.tap(chips.at(1));
       await tester.pumpAndSettle();
 
@@ -175,6 +176,7 @@ void main() {
       expect(find.text(l.bountiesSentence(45, 30, 15)), findsOneWidget);
 
       // Tap Bounties "By caregiver" chip
+      await tester.ensureVisible(chips.at(2));
       await tester.tap(chips.at(2));
       await tester.pumpAndSettle();
 
