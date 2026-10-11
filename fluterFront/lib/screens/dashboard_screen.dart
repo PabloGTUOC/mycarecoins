@@ -401,7 +401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       for (final a in _scheduled)
         if (a['status'] == 'completed')
           _FeedItem(
-            icon: '✓',
+            icon: Icons.check_rounded,
             color: AppColors.primaryInk,
             background: AppColors.primarySoft,
             actor: (a['assigned_to_name'] ?? l.fallbackSomeone).toString(),
@@ -413,7 +413,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
       for (final r in _claimed)
         _FeedItem(
-          icon: '🛍️',
+          icon: Icons.shopping_bag_rounded,
           color: AppColors.dangerInk,
           background: AppColors.dangerSoft,
           actor: (r['buyer_name'] ?? l.fallbackSomeone).toString(),
@@ -877,11 +877,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                               color: item.background, shape: BoxShape.circle),
-                          child: Text(item.icon,
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: item.color)),
+                          child: Icon(item.icon, size: 18, color: item.color),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -943,7 +939,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 /// One row of the Recent Activity feed (activity completed / reward claimed).
 class _FeedItem {
-  final String icon;
+  final IconData icon;
   final Color color;
   final Color background;
   final String actor;
@@ -1109,7 +1105,8 @@ class _DayColumn extends StatelessWidget {
                   const Positioned(
                       top: -2,
                       right: -34,
-                      child: Text('✈️', style: TextStyle(fontSize: 13))),
+                      child: Icon(Icons.flight_rounded,
+                          size: 14, color: AppColors.dangerInk)),
               ],
             ),
             const SizedBox(height: 8),
@@ -1174,14 +1171,23 @@ class _AbsenceChip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('✈️ ${who.toUpperCase()}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                  color: AppColors.dangerInk)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.flight_rounded,
+                  size: 12, color: AppColors.dangerInk),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(who,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.dangerInk)),
+              ),
+            ],
+          ),
           Text((abs['title'] ?? '').toString(),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -1265,8 +1271,10 @@ class _DayRow extends StatelessWidget {
                       children: [
                         for (final abs in absences)
                           PillBadge(
-                              text:
-                                  '✈️ ${(abs['user_alias'] ?? abs['user_name'] ?? '').toString().toUpperCase()}',
+                              text: (abs['user_alias'] ??
+                                      abs['user_name'] ??
+                                      '')
+                                  .toString(),
                               fontSize: 12,
                               color: AppColors.danger,
                               background: Colors.white),
@@ -1378,9 +1386,13 @@ class _ActChip extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (status == 'rejected') ...[
+                Icon(Icons.error_outline_rounded, size: 14, color: fg),
+                const SizedBox(width: 4),
+              ],
               Expanded(
                 child: Text(
-                  '${status == 'rejected' ? '⚠️ ' : ''}${displayTitle(l, a)}',
+                  displayTitle(l, a),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

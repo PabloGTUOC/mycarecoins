@@ -281,7 +281,7 @@
     "description": "Language picker option that follows the device language"
   },
 
-  "welcomeTitle": "Welcome to CareCoins! 👋",
+  "welcomeTitle": "Welcome to CareCoins!",
   "@welcomeTitle": {
     "description": "Title of the one-time welcome dialog after first landing in the app"
   },
@@ -845,7 +845,7 @@
   "@tourMktTitle": { "description": "Marketplace coach-mark title" },
   "tourMktBody": "The Store holds rewards your family agreed on; History shows every redemption. Caregivers stock the store from Create.",
   "@tourMktBody": { "description": "Marketplace coach-mark body" },
-  "toastRewardRedeemed": "Reward redeemed! Enjoy 🎉",
+  "toastRewardRedeemed": "Reward redeemed! Enjoy",
   "@toastRewardRedeemed": { "description": "Toast after redeeming a reward" },
   "toastRewardCreated": "Reward created!",
   "@toastRewardCreated": { "description": "Toast after creating a reward" },
@@ -1015,26 +1015,21 @@
   "@createTemplateBtn": { "description": "Create-template submit button" },
   "budgetUnavailable": "Budget information is unavailable.",
   "@budgetUnavailable": { "description": "Budget tab when the endpoint failed" },
-  "budgetTitle": "Family budget health",
-  "@budgetTitle": { "description": "Budget card title" },
-  "remainingThisMonth": "Remaining this month",
-  "@remainingThisMonth": { "description": "Gauge caption (uppercase)" },
-  "totalMonthlyPool": "Total monthly pool",
-  "@totalMonthlyPool": { "description": "Budget row label" },
-  "scheduledUsed": "Scheduled or used",
-  "@scheduledUsed": { "description": "Budget row label" },
-  "budgetScheduledProgress": "{used} of {pool} cc scheduled this month",
-  "@budgetScheduledProgress": {
-    "description": "Budget progress indicator label",
+  "budgetSentence": "This month: {used} of {pool} cc paid out for tasks. The rest is shared between caregivers at the end of the month.",
+  "@budgetSentence": {
+    "description": "Sentence summarizing monthly care coins paid out and pool remainder",
     "placeholders": {
-      "used": {},
-      "pool": {}
+      "used": { "type": "String" },
+      "pool": { "type": "String" }
     }
   },
-  "estimatedRate": "Estimated rate",
-  "@estimatedRate": { "description": "Budget row label" },
-  "ratePerHour": "~{rate} cc / hr",
-  "@ratePerHour": { "description": "Budget rate value", "placeholders": { "rate": {} } },
+  "budgetRateLine": "About {rate} cc per hour of care.",
+  "@budgetRateLine": {
+    "description": "Estimated coin rate per hour of care",
+    "placeholders": {
+      "rate": { "type": "String" }
+    }
+  },
   "durMins": "{count} mins",
   "@durMins": { "description": "Duration under an hour", "placeholders": { "count": {} } },
   "durHours": "{count, plural, one{1 hour} other{{count} hours}}",
@@ -1115,7 +1110,7 @@
   "@fallbackMember": { "description": "Lowercase fallback for the banner alias" },
   "familyIdLabel": "Family ID",
   "@familyIdLabel": { "description": "Family banner id chip (uppercase)" },
-  "deletionBannerTitle": "⚠️ Pending family deletion request",
+  "deletionBannerTitle": "Pending family deletion request",
   "@deletionBannerTitle": { "description": "Deletion request banner title" },
   "deletionBannerBody": "{name} has requested to permanently delete this family.",
   "@deletionBannerBody": {
@@ -1152,6 +1147,8 @@
   "@updateProfileBtn": { "description": "Profile form submit button" },
   "deleteAccountBtn": "Delete account",
   "@deleteAccountBtn": { "description": "Profile danger button" },
+  "changePhoto": "Change photo",
+  "@changePhoto": { "description": "Semantics label for avatar camera badge" },
   "pushNotifications": "Push notifications",
   "@pushNotifications": { "description": "Notifications section title" },
   "enableNotifications": "Enable notifications",
@@ -1167,13 +1164,13 @@
   "@ledgerActivityCompleted": { "description": "Ledger fallback label" },
   "ledgerActivityReverted": "Activity reverted",
   "@ledgerActivityReverted": { "description": "Ledger fallback label" },
-  "ledgerPaidNotDoing": "You paid for not doing: {title}",
-  "@ledgerPaidNotDoing": {
+  "ledgerBountyOfferedT": "Offered for: {title}",
+  "@ledgerBountyOfferedT": {
     "description": "Ledger label for bounty escrow",
     "placeholders": { "title": {} }
   },
-  "ledgerBountyPaid": "Bounty paid",
-  "@ledgerBountyPaid": { "description": "Ledger fallback label" },
+  "ledgerBountyOffered": "Bounty offered",
+  "@ledgerBountyOffered": { "description": "Ledger fallback label" },
   "ledgerBountyEarnedT": "Bounty earned: {title}",
   "@ledgerBountyEarnedT": { "description": "Ledger label", "placeholders": { "title": {} } },
   "ledgerBountyEarned": "Bounty earned",
@@ -1233,11 +1230,11 @@
   "@dependentNameHint": { "description": "Dependent name input hint" },
   "typeLabel": "Type",
   "@typeLabel": { "description": "Dependent type dropdown label" },
-  "typeChild": "👶 Child / Baby",
+  "typeChild": "Child / Baby",
   "@typeChild": { "description": "Dependent type option" },
-  "typePet": "🐾 Pet",
+  "typePet": "Pet",
   "@typePet": { "description": "Dependent type option" },
-  "typeElderly": "👴 Elderly",
+  "typeElderly": "Elderly",
   "@typeElderly": { "description": "Dependent type option" },
   "careTimeLabel": "Care time",
   "@careTimeLabel": { "description": "Care time dropdown label" },
@@ -1280,7 +1277,7 @@
   "@familyCircleTitle": { "description": "Family circle card title" },
   "addDependentBtn": "＋ Add dependent",
   "@addDependentBtn": { "description": "Family circle action button" },
-  "inviteCaregiverBtn": "✉️ Invite caregiver",
+  "inviteCaregiverBtn": "Invite caregiver",
   "@inviteCaregiverBtn": { "description": "Family circle action button" },
   "pendingInvitations": "Pending invitations",
   "@pendingInvitations": { "description": "Section caption (uppercase)" },
@@ -1292,7 +1289,7 @@
   "@inviteLinkTitle": { "description": "Invite link section title" },
   "generating": "Generating…",
   "@generating": { "description": "Invite link button while loading" },
-  "generateLink": "🔗 Generate link",
+  "generateLink": "Generate link",
   "@generateLink": { "description": "Invite link button, no link yet" },
   "newLink": "↻ New link",
   "@newLink": { "description": "Invite link button, link exists" },
@@ -1323,6 +1320,38 @@
   "@tabOverview": { "description": "Stats mobile tab" },
   "tabEconomy": "Economy",
   "@tabEconomy": { "description": "Stats mobile tab" },
+  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
+  "@statsAllTimeSentence": {
+    "description": "All-time overview sentence replacing the 2x2 KPI grid on phones",
+    "placeholders": {
+      "coins": { "type": "String" },
+      "tasks": { "type": "int" },
+      "bounties": { "type": "int" },
+      "rewards": { "type": "int" }
+    }
+  },
+  "statsPeriodAllTime": "All time",
+  "@statsPeriodAllTime": {
+    "description": "Period prefix for stats card subtitles"
+  },
+  "categoryBalanceNote": "Care and household tasks by current members. Covering shifts are not counted.",
+  "@categoryBalanceNote": {
+    "description": "Note under category balance donut"
+  },
+  "categoryAllCare": "{count, plural, one{The only task was care.} other{All {count} tasks were care.}}",
+  "@categoryAllCare": {
+    "description": "Replaces donut when 100% of tasks are care",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "categoryAllHousehold": "{count, plural, one{The only task was household.} other{All {count} tasks were household.}}",
+  "@categoryAllHousehold": {
+    "description": "Replaces donut when 100% of tasks are household",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "kpiLifetimeCoins": "Coins from tasks",
   "@kpiLifetimeCoins": { "description": "Stats KPI label" },
   "kpiTasksCompleted": "Tasks completed",
@@ -1335,16 +1364,18 @@
   "@chartIncomeTrend": { "description": "Chart title" },
   "chartCategoryBalance": "Category balance",
   "@chartCategoryBalance": { "description": "Chart title" },
-  "catCareEmoji": "❤️ Care",
-  "@catCareEmoji": { "description": "Category group header in compare mode" },
-  "catHouseholdEmoji": "🍽️ Household",
-  "@catHouseholdEmoji": { "description": "Category group header in compare mode" },
+  "catCareLabel": "Care",
+  "@catCareLabel": { "description": "Category group header in compare mode" },
+  "catHouseholdLabel": "Household",
+  "@catHouseholdLabel": { "description": "Category group header in compare mode" },
   "chartTaskFrequency": "Task frequency",
   "@chartTaskFrequency": { "description": "Chart title" },
   "chartLeaderboard": "Coin balance leaderboard",
   "@chartLeaderboard": { "description": "Chart title" },
-  "legendRoles": "🟡 Caregiver · 🔵 Member",
-  "@legendRoles": { "description": "Leaderboard color legend" },
+  "legendCaregiver": "Caregiver",
+  "@legendCaregiver": { "description": "Leaderboard color legend caregiver label" },
+  "legendMember": "Member",
+  "@legendMember": { "description": "Leaderboard color legend member label" },
   "chartCompletionRate": "Completion rate",
   "@chartCompletionRate": { "description": "Chart title" },
   "chartBounties": "Bounties: offered vs earned vs refunded",

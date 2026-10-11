@@ -438,7 +438,7 @@ void main() {
       await tester.tap(find.text('Budget'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Family budget health'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
   });
 }

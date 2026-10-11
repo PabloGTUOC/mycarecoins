@@ -219,8 +219,8 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                     Row(
                       children: [
                         for (final (value, label) in [
-                          ('care', l.catCareEmoji),
-                          ('household', l.catHouseholdEmoji)
+                          ('care', l.catCareLabel),
+                          ('household', l.catHouseholdLabel)
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -669,20 +669,20 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     final fraction =
         monthly > 0 ? (used / monthly).clamp(0.0, 1.0) : 0.0;
 
+    final usedStr = (used % 1 == 0 ? used.toInt() : used).toString();
+    final monthlyStr = (monthly % 1 == 0 ? monthly.toInt() : monthly).toString();
+    final rateStr = (rate % 1 == 0 ? rate.toInt() : rate).toString();
+
     return VCard(
-      title: l.budgetTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.budgetScheduledProgress('$used', '$monthly'),
+            l.budgetSentence(usedStr, monthlyStr),
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
+                fontSize: 15, height: 1.4, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadii.pill),
             child: LinearProgressIndicator(
@@ -692,37 +692,11 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
               valueColor: const AlwaysStoppedAnimation(AppColors.primary),
             ),
           ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: AppColors.bg,
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                for (final (label, value, color) in [
-                  (l.totalMonthlyPool, '$monthly cc', AppColors.textPrimary),
-                  (l.scheduledUsed, '$used cc', AppColors.textPrimary),
-                  (l.estimatedRate, l.ratePerHour('$rate'), AppColors.warning),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(label,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary)),
-                        Text(value,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800, color: color)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Text(
+            l.budgetRateLine(rateStr),
+            style: const TextStyle(
+                fontSize: 13, color: AppColors.textSecondary),
           ),
         ],
       ),

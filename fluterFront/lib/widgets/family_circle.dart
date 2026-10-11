@@ -349,8 +349,15 @@ class _FamilyCircleState extends State<FamilyCircle> {
                 VButton(
                     type: VButtonType.secondary,
                     onPressed: _inviteByEmail,
-                    child: Text(l.inviteCaregiverBtn,
-                        style: const TextStyle(fontSize: 14))),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.mail_outline_rounded, size: 18),
+                        const SizedBox(width: 8),
+                        Text(l.inviteCaregiverBtn,
+                            style: const TextStyle(fontSize: 14)),
+                      ],
+                    )),
               ],
             ),
             if (_invitations.isNotEmpty) ...[
@@ -399,13 +406,21 @@ class _FamilyCircleState extends State<FamilyCircle> {
                   type: VButtonType.outline,
                   disabled: _generatingLink,
                   onPressed: _generateInviteLink,
-                  child: Text(
-                      _generatingLink
-                          ? l.generating
-                          : _inviteLink.isEmpty
-                              ? l.generateLink
-                              : l.newLink,
-                      style: const TextStyle(fontSize: 13)),
+                  child: _generatingLink
+                      ? Text(l.generating,
+                          style: const TextStyle(fontSize: 13))
+                      : _inviteLink.isEmpty
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.link_rounded, size: 18),
+                                const SizedBox(width: 8),
+                                Text(l.generateLink,
+                                    style: const TextStyle(fontSize: 13)),
+                              ],
+                            )
+                          : Text(l.newLink,
+                              style: const TextStyle(fontSize: 13)),
                 ),
               ],
             ),
@@ -472,6 +487,7 @@ class _CircleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       width: 132,
       padding: const EdgeInsets.all(14),
@@ -499,13 +515,18 @@ class _CircleCard extends StatelessWidget {
                 Positioned(
                   bottom: -4,
                   left: -4,
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                        color: badge.$2, shape: BoxShape.circle),
-                    child: const Text('📷', style: TextStyle(fontSize: 12)),
+                  child: Semantics(
+                    label: l.changePhoto,
+                    button: true,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          color: badge.$2, shape: BoxShape.circle),
+                      child: const Icon(Icons.photo_camera_rounded,
+                          size: 12, color: Colors.white),
+                    ),
                   ),
                 ),
               if (onRemove != null)

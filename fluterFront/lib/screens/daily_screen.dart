@@ -851,8 +851,16 @@ class _DailyScreenState extends State<DailyScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.lg)),
-        title: Text('✈️ ${abs['title']}',
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Row(children: [
+          const Icon(Icons.flight_rounded, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${abs['title']}',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ]),
         content: Text(
             '${l.absenceAway((abs['user_alias'] ?? abs['user_name'] ?? l.fallbackACaregiver).toString())}\n'
             '${DateFormat('d MMM HH:mm', loc).format(DateTime.parse(abs['start_time'].toString()).toLocal())}'
@@ -3758,9 +3766,9 @@ class _DayHourGridState extends State<_DayHourGrid> {
             : l.ptAwaiting(req['requested_of_name'].toString()))
         : l.ptAskedYouToCover(requester);
     final title = displayTitle(l, req);
-    final glyph = personalTimeTypeGlyph(req['type']?.toString() ?? '');
+    final typeLabel = personalTimeTypeLabel(l, req['type']?.toString() ?? '');
     final semanticsLabel =
-        '$glyph $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
+        '$typeLabel: $title, $requester, $reqState, ${DateFormat('HH:mm').format(start)}';
 
     return Positioned(
       top: top,
@@ -4043,7 +4051,18 @@ class DayActivityBlock extends StatelessWidget {
 
           final titleText = Text.rich(
             TextSpan(children: [
-              if (status == 'rejected') const TextSpan(text: '⚠️ '),
+              if (status == 'rejected')
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 14,
+                      color: fg,
+                    ),
+                  ),
+                ),
               TextSpan(text: displayTitle(l, a)),
               if (a['is_recurrent'] == true) ...[
                 const TextSpan(text: ' '),
@@ -4518,7 +4537,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                 child: Tappable(
                   onTap: widget.onTapTimeForMe,
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
+                    margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
@@ -4548,65 +4567,82 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                   ),
                 ),
               ),
-              for (final t in filtered) ...[
-                Builder(
-                  builder: (ctx) {
-                    final title = displayTitle(l, t);
-                    final isCare = t['type'] == 'care';
-                    final coins = toNum(t['coin_value']).toInt();
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(AppRadii.md),
-                      ),
-                      child: Tappable(
-                        onTap: () => widget.onTapTemplate(t),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              ActivityTypeIcon(
-                                type: t['type']?.toString(),
-                                category: t['category']?.toString(),
-                                title: t['title']?.toString(),
-                                size: 34,
-                                iconSize: 18,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800),
-                                    ),
-                                    Text(
-                                      '${isCare ? l.filterCare : l.filterHousehold}'
-                                      '${coins > 0 ? ' · $coins cc' : ''}',
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textSecondary),
-                                    ),
-                                  ],
+              if (filtered.isNotEmpty)
+                Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < filtered.length; i++) ...[
+                        if (i > 0)
+                          const Divider(
+                              height: 1, thickness: 1, color: AppColors.border),
+                        Builder(
+                          builder: (ctx) {
+                            final t = filtered[i];
+                            final title = displayTitle(l, t);
+                            final isCare = t['type'] == 'care';
+                            final coins = toNum(t['coin_value']).toInt();
+                            return Semantics(
+                              button: true,
+                              label: title,
+                              child: Tappable(
+                                onTap: () => widget.onTapTemplate(t),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                  child: Row(
+                                    children: [
+                                      ActivityTypeIcon(
+                                        type: t['type']?.toString(),
+                                        category: t['category']?.toString(),
+                                        title: t['title']?.toString(),
+                                        size: 34,
+                                        iconSize: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              title,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800),
+                                            ),
+                                            Text(
+                                              '${isCare ? l.filterCare : l.filterHousehold}'
+                                              '${coins > 0 ? ' · $coins cc' : ''}',
+                                              style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppColors.textSecondary),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(
+                                          Icons.add_circle_outline_rounded,
+                                          size: 20,
+                                          color: AppColors.primary),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const Icon(Icons.add_circle_outline_rounded,
-                                  size: 20, color: AppColors.primary),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      ),
-                    );
-                  },
+                      ],
+                    ],
+                  ),
                 ),
-              ],
               if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),

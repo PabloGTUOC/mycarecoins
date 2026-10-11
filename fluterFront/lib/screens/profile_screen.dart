@@ -367,11 +367,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         const FamilyCircle(),
         if (app.isCaregiver && family != null) ...[
-          const SizedBox(height: 16),
-          VButton(
-              type: VButtonType.danger,
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
               onPressed: _deleteFamily,
-              child: Text(l.deleteFamilyBtn)),
+              child: Text(
+                l.deleteFamilyBtn,
+                style: const TextStyle(color: AppColors.danger),
+              ),
+            ),
+          ),
         ],
       ],
     );
@@ -402,10 +408,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l.deletionBannerTitle,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.dangerInk)),
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 18, color: AppColors.dangerInk),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(l.deletionBannerTitle,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.dangerInk)),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                       l.deletionBannerBody(
@@ -417,7 +432,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       .cast<Map>()
                       .map((m) => m.cast<String, dynamic>()))
                     Text(
-                        '${a['caregiver_name']}: ${(a['status'] ?? '').toString().toUpperCase()}',
+                        '${a['caregiver_name']}: ${switch (a['status']) {
+                          'approved' => l.statusApproved,
+                          'rejected' => l.statusRejected,
+                          _ => l.statusPending,
+                        }}',
                         style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w700,
@@ -530,15 +549,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Positioned(
                         bottom: -2,
                         right: -2,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                              color: AppColors.indigo,
-                              shape: BoxShape.circle),
-                          child: const Text('📷',
-                              style: TextStyle(fontSize: 12)),
+                        child: Semantics(
+                          label: l.changePhoto,
+                          button: true,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                                color: AppColors.indigo,
+                                shape: BoxShape.circle),
+                            child: const Icon(Icons.photo_camera_rounded,
+                                size: 12, color: Colors.white),
+                          ),
                         ),
                       ),
                     ],
@@ -562,10 +585,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: PillBadge(
-                            text: family!['role']
-                                .toString()
-                                .replaceAll('_', ' ')
-                                .toUpperCase(),
+                            text: family!['role'] == 'caregiver'
+                                ? l.roleCaregiver
+                                : l.roleMember,
                             fontSize: 12,
                             color: AppColors.indigo,
                             background: AppColors.primarySoft),
@@ -831,7 +853,9 @@ class _WalletPanel extends StatelessWidget {
         return title ?? l.ledgerActivityReverted;
       case 'bounty_escrow':
       case 'bounty_paid':
-        return title != null ? l.ledgerPaidNotDoing(title) : l.ledgerBountyPaid;
+        return title != null
+            ? l.ledgerBountyOfferedT(title)
+            : l.ledgerBountyOffered;
       case 'bounty_earned':
         return title != null
             ? l.ledgerBountyEarnedT(title)

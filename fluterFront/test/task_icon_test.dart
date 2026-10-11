@@ -131,6 +131,15 @@ void main() {
       expect(taskIconFor('Wäsche waschen'), Icons.local_laundry_service_rounded);
     });
 
+    test('Paperwork and bills in all languages map to receipt_long_rounded', () {
+      expect(taskIconFor('Paperwork and bills'), Icons.receipt_long_rounded);
+      expect(taskIconFor('Papeleo y facturas'), Icons.receipt_long_rounded);
+      expect(taskIconFor('Papiers et factures'), Icons.receipt_long_rounded);
+      expect(taskIconFor('Papierkram und Rechnungen'), Icons.receipt_long_rounded);
+      expect(taskIconFor('Pay the gas bill'), Icons.receipt_long_rounded);
+      expect(taskIconFor('File taxes'), Icons.receipt_long_rounded);
+    });
+
     test('accents are stripped before matching', () {
       expect(taskIconFor('médicament'), Icons.medication_rounded);
       expect(taskIconFor('clínica'), Icons.medical_services_rounded);
@@ -181,7 +190,7 @@ void main() {
 
       // Unknown title falls back to base type icon
       expect(activityTypeIcon('care', category: 'care', title: 'Unknown task xyz'), Icons.favorite_rounded);
-      expect(activityTypeIcon('household', category: 'care', title: 'Unknown task xyz'), Icons.restaurant_rounded);
+      expect(activityTypeIcon('household', category: 'care', title: 'Unknown task xyz'), Icons.home_rounded);
       expect(activityTypeIcon('care', category: 'care', title: null), Icons.favorite_rounded);
 
       // Coverage always shows home_rounded regardless of title
@@ -308,9 +317,9 @@ void main() {
       expect(find.text('Bath time'), findsOneWidget);
       expect(find.byIcon(Icons.bathtub_rounded), findsOneWidget);
 
-      // "Unknown task xyz" household template displays restaurant_rounded (household fallback)
+      // "Unknown task xyz" household template displays home_rounded (household fallback)
       expect(find.text('Unknown task xyz'), findsOneWidget);
-      expect(find.byIcon(Icons.restaurant_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.home_rounded), findsOneWidget);
     });
   });
 

@@ -78,6 +78,11 @@ class _FakeProfileApi extends ApiClient {
   Future<dynamic> put(String path, [Object? body]) async {
     return {'success': true};
   }
+
+  @override
+  Future<dynamic> delete(String path, [Object? body]) async {
+    return {'success': true};
+  }
 }
 
 Widget _wrap(Widget child, AppState app, {ThemeData? theme}) {
@@ -370,6 +375,145 @@ void main() {
       expect(find.text('Wallet'), findsOneWidget);
       expect(find.text('Your balance'), findsOneWidget);
       expect(find.text('488 cc'), findsOneWidget);
+    });
+  });
+
+  group('P4-1: Delete family is not a button', () {
+    testWidgets('on a phone-sized screen, Me contains no VButton with VButtonType.danger',
+        (tester) async {
+      tester.view.physicalSize = const Size(500, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final api = _FakeProfileApi();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      final dangerButtons = find.byWidgetPredicate(
+        (w) => w is VButton && w.type == VButtonType.danger,
+      );
+      expect(dangerButtons, findsNothing);
+    });
+
+    testWidgets('a caregiver sees a "Delete family" TextButton; a member does not',
+        (tester) async {
+      tester.view.physicalSize = const Size(500, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final api = _FakeProfileApi();
+      final caregiverApp = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), caregiverApp));
+      await tester.pumpAndSettle();
+
+      final caregiverDeleteBtn = find.widgetWithText(TextButton, 'Delete family');
+      expect(caregiverDeleteBtn, findsOneWidget);
+
+      final memberApp = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'member',
+            'alias': 'Kid',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 2, 'display_name': 'Kid'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), memberApp));
+      await tester.pumpAndSettle();
+
+      final memberDeleteBtn = find.widgetWithText(TextButton, 'Delete family');
+      expect(memberDeleteBtn, findsNothing);
+    });
+
+    testWidgets('tapping "Delete family" opens the existing confirmation dialog',
+        (tester) async {
+      tester.view.physicalSize = const Size(500, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final api = _FakeProfileApi();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      final deleteBtn = find.widgetWithText(TextButton, 'Delete family');
+      expect(deleteBtn, findsOneWidget);
+
+      await tester.ensureVisible(deleteBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(deleteBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Delete family'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('If there are other caregivers this sends them a deletion request'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a caregiver\'s Me shows a chip reading exactly "Caregiver", and CAREGIVER is not shown', (tester) async {
+      final api = _FakeProfileApi();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester.pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Caregiver'), findsOneWidget);
+      expect(find.text('CAREGIVER'), findsNothing);
     });
   });
 }
