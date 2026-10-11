@@ -104,6 +104,29 @@ void main() {
       // Shows single all-time sentence with KPIs
       final expectedSentence = l.statsAllTimeSentence('120', 15, 2, 3);
       expect(find.text(expectedSentence), findsOneWidget);
+      expect(expectedSentence, contains('covering shifts and former members included'));
+    });
+
+    testWidgets('taskFrequencyNote is shown under Task frequency', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final app = AppState(api: _FakeStatsApi(_mockStats()))
+        ..families = [
+          {'family_id': 1, 'coin_balance': 500, 'role': 'caregiver', 'alias': 'Pablo'}
+        ]
+        ..profile = {'id': 1, 'display_name': 'Pablo'};
+
+      await tester.pumpWidget(_wrap(const StatsScreen(active: true), app));
+      await tester.pumpAndSettle();
+
+      final l = lookupAppLocalizations(const Locale('en'));
+
+      await tester.scrollUntilVisible(find.text(l.taskFrequencyNote), 300);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l.taskFrequencyNote), findsOneWidget);
     });
 
     testWidgets('Wide size (1280x800): renders four KpiCards', (tester) async {
@@ -186,6 +209,12 @@ void main() {
       expect(find.byType(DonutChart), findsNothing);
       // Explanatory note is present
       expect(find.text(l.categoryBalanceNote), findsOneWidget);
+      // Subtitle is exactly l.statsPeriodAllTime (no "Most work in")
+      final categoryCard = find.widgetWithText(VCard, l.chartCategoryBalance);
+      expect(categoryCard, findsOneWidget);
+      final vcardWidget = tester.widget<VCard>(categoryCard);
+      expect(vcardWidget.subtitle, l.statsPeriodAllTime);
+      expect(find.textContaining('Most work in'), findsNothing);
     });
 
     testWidgets('typeSplit with mixed categories renders DonutChart and categoryBalanceNote',
@@ -299,6 +328,17 @@ void main() {
           reason: 'charts.dart must not contain LinearGradient');
       expect(source.contains('cubicTo'), isFalse,
           reason: 'charts.dart must not contain cubicTo');
+    });
+
+    test('lib/screens/stats_screen.dart source: _caregiverColors list does not contain AppColors.danger', () {
+      final source = File('lib/screens/stats_screen.dart').readAsStringSync();
+      final match = RegExp(r'_caregiverColors\s*=\s*\[(.*?)\];', dotAll: true).firstMatch(source);
+      expect(match, isNotNull);
+      final listBody = match!.group(1)!;
+      expect(listBody.contains('AppColors.danger'), isFalse,
+          reason: '_caregiverColors must not contain AppColors.danger');
+      expect(listBody.contains('AppColors.violet'), isTrue,
+          reason: '_caregiverColors must contain AppColors.violet');
     });
   });
 }

@@ -33,12 +33,12 @@ class _FamilyCircleState extends State<FamilyCircle> {
   bool _editing = false;
 
   Map<String, (String, Color)> _badges(AppLocalizations l) => {
-        'child': (l.badgeJuniorExplorer, const Color(0xFF6366F1)),
-        'pet': (l.badgeFurryFriend, const Color(0xFF10B981)),
-        'elderly': (l.badgeGuidingStar, const Color(0xFFF59E0B)),
-        'caregiver': (l.fallbackCaregiver, const Color(0xFF059669)),
-        'member': (l.badgeFamilyMember, const Color(0xFF3B82F6)),
-        'person': (l.badgeFamilyMember, const Color(0xFF3B82F6)),
+        'child': (l.badgeJuniorExplorer, AppColors.badgeChild),
+        'pet': (l.badgeFurryFriend, AppColors.badgePet),
+        'elderly': (l.badgeGuidingStar, AppColors.badgeElderly),
+        'caregiver': (l.fallbackCaregiver, AppColors.badgeCaregiver),
+        'member': (l.badgeFamilyMember, AppColors.badgeMember),
+        'person': (l.badgeFamilyMember, AppColors.badgeMember),
       };
 
   @override
@@ -322,7 +322,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
                   badge: badges[item['type']] ??
                       (
                         item['type'].toString().replaceAll('_', ' '),
-                        const Color(0xFF94A3B8)
+                        AppColors.inkMuted,
                       ),
                   onRemove: item['isActor'] == true && app.isCaregiver && isEditing
                       ? () => _removeActor(item['id'], item['name'].toString())

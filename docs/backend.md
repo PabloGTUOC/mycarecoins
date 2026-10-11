@@ -440,6 +440,8 @@ No auth. Returns `{ status: 'ok', service: 'carecoins-backend' }`. Used by Docke
 **Blocks returned:** `kpis`, `activeCaregivers`, `trendByMonth`, `typeSplit`,
 `activityFrequency`, `memberBalances`, `bountyStats`, `rewardsByUser`, `topRewards`,
 `completionRates`, `statusDistribution`, `coinFlowByReason`, `fairnessByMonth`.
+`completionRates` counts scheduled care tasks that have started (no templates, nothing
+later than now), with `waiting` = done and waiting for someone else's validation.
 
 `fairnessByMonth` sets personal time taken against coverage given, per member and month —
 `personal_minutes` / `personal_count` from `category = 'self'`, `coverage_minutes` /

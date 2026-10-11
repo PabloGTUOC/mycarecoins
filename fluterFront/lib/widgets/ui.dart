@@ -28,11 +28,19 @@ class VCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inlineAction = action != null && isWideLayout(context);
+    final standaloneAction = action != null && !inlineAction;
+
     return Card(
       margin: margin,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (title == null && standaloneAction)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+              child: Align(alignment: Alignment.centerLeft, child: action),
+            ),
           if (title != null)
             Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, subtitle != null ? 4 : 8),
@@ -49,13 +57,13 @@ class VCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (action != null) action!,
+                  if (inlineAction) action!,
                 ],
               ),
             ),
           if (subtitle != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              padding: EdgeInsets.fromLTRB(24, 0, 24, (standaloneAction && title != null) ? 8 : 12),
               child: Text(
                 subtitle!,
                 style: const TextStyle(
@@ -64,6 +72,11 @@ class VCard extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+            ),
+          if (title != null && standaloneAction)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Align(alignment: Alignment.centerLeft, child: action),
             ),
           Padding(padding: padding, child: child),
         ],
@@ -268,7 +281,7 @@ class VInput extends StatelessWidget {
             hintText: placeholder,
             // Slate at full opacity: the old 50%-alpha hint fell to ~2:1
             // contrast, below the WCAG AA floor PRODUCT.md commits to.
-            hintStyle: const TextStyle(color: Color(0xFF64748B)),
+            hintStyle: const TextStyle(color: AppColors.textSecondary),
             filled: true,
             fillColor: AppColors.inputBg,
             isDense: true,

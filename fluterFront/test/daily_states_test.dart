@@ -312,7 +312,7 @@ void main() {
       expect(find.textContaining('Nothing planned'), findsNothing);
     });
 
-    testWidgets('past day: tray chips are not draggable and tapping shows snackbar',
+    testWidgets('past day: tray is not rendered and past day banner is shown',
         (tester) async {
       setPhoneSize(tester);
       final template = {
@@ -336,27 +336,12 @@ void main() {
       await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-07', now: now), app, disableAnimations: true));
       await tester.pumpAndSettle();
 
-      final chipFinder = find.text('Vacuuming');
-      expect(chipFinder, findsOneWidget);
+      // No tray chips or tray header on past day
+      expect(find.text('Vacuuming'), findsNothing);
+      expect(find.text('Tasks · drag onto the day'), findsNothing);
 
-      // Not draggable
-      expect(
-        find.ancestor(
-          of: chipFinder,
-          matching: find.byWidgetPredicate((w) => w is Draggable || w is LongPressDraggable),
-        ),
-        findsNothing,
-      );
-
-      // Tapping chip shows SnackBar
-      await tester.tap(chipFinder);
-      await tester.pumpAndSettle();
-
-      expect(
-        find.descendant(of: find.byType(SnackBar), matching: find.text('This day has passed')),
-        findsOneWidget,
-      );
-      expect(api.postCalls.isEmpty, isTrue);
+      // Banner is shown
+      expect(find.text('This day has passed'), findsOneWidget);
     });
 
     testWidgets('past day: quick add on hour tap does not open sheet',

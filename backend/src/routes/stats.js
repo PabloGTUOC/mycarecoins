@@ -161,16 +161,21 @@ statsRouter.get('/:familyId', async (req, res) => {
             );
 
             const { rows: completionRates } = await client.query(
+                // Only scheduled work that has started counts; waiting = done, waiting for someone else to validate.
                 `SELECT COALESCE(fm.alias, u.display_name, 'Unknown') as caregiver,
                         COUNT(*)::int as total,
-                        SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END)::int as completed
+                        SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END)::int as completed,
+                        SUM(CASE WHEN a.status = 'pending_validation' THEN 1 ELSE 0 END)::int as waiting
                  FROM activities a
                  JOIN family_members fm ON fm.user_id = a.assigned_to AND fm.family_id = a.family_id
                  JOIN users u ON u.id = a.assigned_to
                  WHERE a.family_id = $1
                    AND a.category = 'care'
+                   AND a.is_template = false
                    AND a.assigned_to IS NOT NULL
                    AND a.status != 'rejected'
+                   AND a.starts_at IS NOT NULL
+                   AND a.starts_at <= NOW()
                  GROUP BY caregiver`,
                 [familyId]
             );

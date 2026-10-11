@@ -149,7 +149,7 @@ void main() {
 
       // Single sentence shows both parts joined by " · "
       expect(
-        find.text('2 of your tasks wait for validation · 10 cc up for grabs'),
+        find.text('2 of your tasks wait for someone else to confirm them · 10 cc up for grabs'),
         findsOneWidget,
       );
     });
@@ -187,7 +187,7 @@ void main() {
 
       expect(find.byType(KpiCard), findsNothing);
       expect(
-        find.text('1 of your tasks waits for validation'),
+        find.text('1 of your tasks waits for someone else to confirm it'),
         findsOneWidget,
       );
     });

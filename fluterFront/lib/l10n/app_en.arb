@@ -366,7 +366,7 @@
   "@dashThisWeek": { "description": "Week strip label on wide layouts (calendar week)" },
   "dashComingUp": "Coming up",
   "@dashComingUp": { "description": "Week strip label on phones (rolling window from today)" },
-  "dashMyTasksWaiting": "{count, plural, =1{1 of your tasks waits for validation} other{{count} of your tasks wait for validation}}",
+  "dashMyTasksWaiting": "{count, plural, =1{1 of your tasks waits for someone else to confirm it} other{{count} of your tasks wait for someone else to confirm them}}",
   "@dashMyTasksWaiting": {
     "description": "Family hub phone sentence: user tasks pending validation",
     "placeholders": { "count": { "type": "num" } }
@@ -439,7 +439,7 @@
 
   "caredFor": "Cared for",
   "@caredFor": { "description": "Badge on dependent cards (children/pets/elderly) instead of a balance" },
-  "dayToday": "TODAY",
+  "dayToday": "Today",
   "@dayToday": { "description": "Short uppercase label replacing the weekday for today in the agenda; must stay very short" },
   "freeDay": "Free day",
   "@freeDay": { "description": "Agenda row with no tasks or absences" },
@@ -1320,7 +1320,7 @@
   "@tabOverview": { "description": "Stats mobile tab" },
   "tabEconomy": "Economy",
   "@tabEconomy": { "description": "Stats mobile tab" },
-  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
+  "statsAllTimeSentence": "All time: {coins} cc from {tasks, plural, one{1 completed task} other{{tasks} completed tasks}}, covering shifts and former members included. Bounties offered: {bounties}. Rewards claimed: {rewards}.",
   "@statsAllTimeSentence": {
     "description": "All-time overview sentence replacing the 2x2 KPI grid on phones",
     "placeholders": {
@@ -1337,6 +1337,10 @@
   "categoryBalanceNote": "Care and household tasks by current members. Covering shifts are not counted.",
   "@categoryBalanceNote": {
     "description": "Note under category balance donut"
+  },
+  "taskFrequencyNote": "Completed tasks by current members, covering shifts included.",
+  "@taskFrequencyNote": {
+    "description": "Note under task frequency bars"
   },
   "categoryAllCare": "{count, plural, one{The only task was care.} other{All {count} tasks were care.}}",
   "@categoryAllCare": {
@@ -1370,15 +1374,55 @@
   "@catHouseholdLabel": { "description": "Category group header in compare mode" },
   "chartTaskFrequency": "Task frequency",
   "@chartTaskFrequency": { "description": "Chart title" },
-  "chartLeaderboard": "Coin balance leaderboard",
-  "@chartLeaderboard": { "description": "Chart title" },
-  "legendCaregiver": "Caregiver",
-  "@legendCaregiver": { "description": "Leaderboard color legend caregiver label" },
-  "legendMember": "Member",
-  "@legendMember": { "description": "Leaderboard color legend member label" },
-  "chartCompletionRate": "Completion rate",
+  "chartBalances": "Balances",
+  "@chartBalances": { "description": "Balances card title replacing leaderboard" },
+  "statsPeriodNow": "Right now",
+  "@statsPeriodNow": { "description": "Period label for balances card" },
+  "balancesSentence": "{count, plural, one{1 person holds {coins} cc.} other{{count} people hold {coins} cc between them.}}",
+  "@balancesSentence": {
+    "description": "Summary sentence for balances card",
+    "placeholders": {
+      "coins": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "balancesNote": "A balance goes down when someone claims a reward, so it is not a score.",
+  "@balancesNote": { "description": "Footnote clarifying that balance is not a score" },
+  "completionSentence": "{total, plural, one{{done} of 1 task that was due is done.} other{{done} of {total} tasks that were due are done.}}",
+  "@completionSentence": {
+    "description": "Summary sentence for completed tasks",
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "completionWaiting": "{count, plural, one{1 more waits for someone else to confirm it.} other{{count} more wait for someone else to confirm them.}}",
+  "@completionWaiting": {
+    "description": "Sentence fragment for tasks waiting validation",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "completionRow": "{done} of {total}",
+  "@completionRow": {
+    "description": "Per-caregiver completion value label",
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "bountiesSentence": "{offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
+  "@bountiesSentence": {
+    "description": "Summary sentence for bounties card",
+    "placeholders": {
+      "offered": { "type": "int" },
+      "earned": { "type": "int" },
+      "refunded": { "type": "int" }
+    }
+  },
+  "chartCompletionRate": "Tasks done",
   "@chartCompletionRate": { "description": "Chart title" },
-  "chartBounties": "Bounties: offered vs earned vs refunded",
+  "chartBounties": "Bounties",
   "@chartBounties": { "description": "Chart title" },
   "chartFairness": "Time given and taken",
   "fairnessNoDeclines": "Saying no is never counted. Not here, not anywhere.",
@@ -1421,50 +1465,12 @@
       "count": {}
     }
   },
-  "summaryLeaderboard": "Highest balance: {name} ({coins} cc)",
-  "@summaryLeaderboard": {
-    "description": "Summary line under leaderboard chart",
-    "placeholders": {
-      "name": {},
-      "coins": {}
-    }
-  },
-  "summaryCompletionRate": "Overall completion rate: {rate}",
-  "@summaryCompletionRate": {
-    "description": "Summary line under completion rate chart",
-    "placeholders": {
-      "rate": {}
-    }
-  },
-  "summaryBounties": "Total bounties offered: {coins} cc",
-  "@summaryBounties": {
-    "description": "Summary line under bounties chart",
-    "placeholders": {
-      "coins": {}
-    }
-  },
   "summaryCoinFlow": "Most active month: {month} ({coins} cc)",
   "@summaryCoinFlow": {
     "description": "Summary line under coin flow chart",
     "placeholders": {
       "month": {},
       "coins": {}
-    }
-  },
-  "summaryRewardsByMember": "Most rewards claimed: {name} ({count})",
-  "@summaryRewardsByMember": {
-    "description": "Summary line under rewards by member chart",
-    "placeholders": {
-      "name": {},
-      "count": {}
-    }
-  },
-  "summaryTopRewards": "Top reward: {reward} ({count} claimed)",
-  "@summaryTopRewards": {
-    "description": "Summary line under top rewards chart",
-    "placeholders": {
-      "reward": {},
-      "count": {}
     }
   },
   "summaryStatusDistribution": "Activities completed: {percent}",
@@ -1486,16 +1492,16 @@
   "@flowActivities": { "description": "Coin flow series label" },
   "flowBountiesEarned": "Bounties earned",
   "@flowBountiesEarned": { "description": "Coin flow series label" },
-  "flowBountiesPaid": "Bounties paid",
+  "flowBountiesPaid": "Bounties offered",
   "@flowBountiesPaid": { "description": "Coin flow series label" },
   "flowRewardsRedeemed": "Rewards redeemed",
   "@flowRewardsRedeemed": { "description": "Coin flow series label" },
   "flowBountiesRefunded": "Bounties refunded",
   "@flowBountiesRefunded": { "description": "Coin flow series label" },
-  "chartRewardsByMember": "Rewards claimed by member",
-  "@chartRewardsByMember": { "description": "Chart title" },
   "chartTopRewards": "Most popular rewards",
   "@chartTopRewards": { "description": "Chart title" },
+  "rewardsNoneClaimed": "No rewards claimed yet.",
+  "@rewardsNoneClaimed": { "description": "Fallback text when no rewards have been claimed yet" },
   "chartStatusDist": "Activity status distribution",
   "@chartStatusDist": { "description": "Chart title" },
   "statusCompleted": "Completed",

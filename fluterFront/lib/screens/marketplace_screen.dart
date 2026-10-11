@@ -40,7 +40,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     AppColors.successSoft,
     AppColors.warningSoft,
     AppColors.dangerSoft,
-    Color(0xFFEDE9FE), // violet-soft, 5th banner variant
+    AppColors.violetSoft,
   ];
 
   final _tourTabsKey = GlobalKey();

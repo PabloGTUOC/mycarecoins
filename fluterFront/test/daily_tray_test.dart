@@ -489,7 +489,7 @@ void main() {
       expect(find.text('Undo'), findsOneWidget);
     });
 
-    testWidgets('7. Past day chips are not draggable and tapping shows "This day has passed"',
+    testWidgets('7. Past day shows no tray and shows past day banner',
         (tester) async {
       tester.view.physicalSize = const Size(500, 900);
       tester.view.devicePixelRatio = 1.0;
@@ -519,27 +519,14 @@ void main() {
       await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-05', now: now), app));
       await tester.pumpAndSettle();
 
-      // Tray is visible
-      expect(find.text('Tasks · drag onto the day'), findsOneWidget);
+      // Tray is NOT visible on a past day
+      expect(find.text('Tasks · drag onto the day'), findsNothing);
 
-      // Chip 'Bath' is rendered
-      final chip = find.text('Bath');
-      expect(chip, findsOneWidget);
+      // Chip 'Bath' is NOT rendered
+      expect(find.text('Bath'), findsNothing);
 
-      // Chip is NOT a LongPressDraggable
-      expect(find.byType(LongPressDraggable), findsNothing);
-
-      // Tapping the chip shows SnackBar "This day has passed"
-      await tester.tap(chip);
-      await tester.pumpAndSettle();
-
-      expect(
-          find.descendant(
-              of: find.byType(SnackBar),
-              matching: find.text('This day has passed')),
-          findsOneWidget);
-      expect(find.byType(TimePickerDialog), findsNothing);
-      expect(api.postCalls.isEmpty, isTrue);
+      // Past day banner is shown
+      expect(find.text('This day has passed'), findsOneWidget);
     });
   });
 }

@@ -281,7 +281,10 @@ void main() {
       expect(todaySemanticsBefore.label, contains('needs your attention'));
 
       // Tap Today tab to view Today
-      await tester.tap(find.text('Today'));
+      await tester.tap(find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Today'),
+      ));
       await tester.pumpAndSettle();
 
       // Dot is cleared when Today is viewed

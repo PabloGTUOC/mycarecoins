@@ -15,6 +15,9 @@ build or run the app itself; for that see `docs/running-instructions.txt`.
 | Antigravity CLI | current | `agy`, installed in `~/.local/bin/agy` |
 | graphify | current | `graphify`, installed in `~/.local/bin/graphify` |
 
+On a fresh clone run `cd backend && npm ci` before `npm test`; without `node_modules` three
+test files fail on a missing `pg` package, which looks like a code failure but isn't.
+
 ## Skills
 
 ### Project skills (`.claude/skills/`, pinned by `skills-lock.json`)
