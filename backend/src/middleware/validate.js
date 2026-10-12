@@ -46,6 +46,8 @@ export const oneOf = (values) => (v) => {
 
 // ─── Middleware factories ─────────────────────────────────────────────────────
 
+import { sendError } from '../utils/httpError.js';
+
 /**
  * Validates req.body fields against an array of rule functions.
  * Returns 400 with the first failing rule's message.
@@ -56,7 +58,7 @@ export function validateBody(schema) {
       const value = req.body[field];
       for (const rule of rules) {
         const err = rule(value);
-        if (err) return res.status(400).json({ error: `${field}: ${err}` });
+        if (err) return sendError(res, 400, 'invalidInput', `${field}: ${err}`, { field });
       }
     }
     next();
@@ -72,7 +74,7 @@ export function validateParams(...paramNames) {
     for (const name of paramNames) {
       const n = Number(req.params[name]);
       if (!Number.isInteger(n) || n <= 0) {
-        return res.status(400).json({ error: `${name}: must be a positive integer` });
+        return sendError(res, 400, 'invalidInput', `${name}: must be a positive integer`, { field: name });
       }
     }
     next();

@@ -11,3 +11,11 @@ export function sendServiceError(res, err) {
   if (err.params) body.params = err.params;
   return res.status(err.code).json(body);
 }
+
+/** Sends a route-level refusal as { error, code, params }. */
+export function sendError(res, status, key, message, params) {
+  const body = { error: message, code: key };
+  if (params) body.params = params;
+  return res.status(status).json(body);
+}
+

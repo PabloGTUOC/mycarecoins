@@ -4,7 +4,7 @@ import { upsertUserFromAuth } from '../db/users.js';
 import { validateBody, validateParams, required, string, positiveInt, isoDate, oneOf } from '../middleware/validate.js';
 import { notifyUser, notifyFamilyCaregivers } from '../utils/notify.js';
 import * as personalTime from '../services/personalTimeService.js';
-import { sendServiceError } from '../utils/httpError.js';
+import { sendServiceError, sendError } from '../utils/httpError.js';
 
 export const personalTimeRouter = Router();
 
@@ -29,7 +29,7 @@ function announce(request) {
 // GET /api/personal-time?familyId=X
 personalTimeRouter.get('/', async (req, res) => {
   const familyId = Number(req.query.familyId);
-  if (!familyId) return res.status(400).json({ error: 'familyId query param is required.' });
+  if (!familyId) return sendError(res, 400, 'familyIdRequired', 'familyId query param is required.');
   try {
     const result = await withTransaction(async (client) => {
       const user = await upsertUserFromAuth(client, req.auth);
@@ -39,7 +39,7 @@ personalTimeRouter.get('/', async (req, res) => {
     return res.json(result.data);
   } catch (err) {
     console.error('GET /personal-time error:', err);
-    return res.status(500).json({ error: 'Failed to fetch requests.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch requests.');
   }
 });
 
@@ -60,7 +60,7 @@ personalTimeRouter.post('/quote', validateBody({
     return res.json(result.data);
   } catch (err) {
     console.error('POST /personal-time/quote error:', err);
-    return res.status(500).json({ error: 'Failed to price this window.' });
+    return sendError(res, 500, 'internal', 'Failed to price this window.');
   }
 });
 
@@ -85,7 +85,7 @@ personalTimeRouter.post('/', validateBody({
     return res.status(201).json({ request: result.data, warnings: result.warnings });
   } catch (err) {
     console.error('POST /personal-time error:', err);
-    return res.status(500).json({ error: 'Failed to create the request.' });
+    return sendError(res, 500, 'internal', 'Failed to create the request.');
   }
 });
 
@@ -109,7 +109,7 @@ personalTimeRouter.post('/:id/accept', validateParams('id'), async (req, res) =>
     return res.status(201).json(result.data);
   } catch (err) {
     console.error('POST /personal-time/accept error:', err);
-    return res.status(500).json({ error: 'Failed to accept the request.' });
+    return sendError(res, 500, 'internal', 'Failed to accept the request.');
   }
 });
 
@@ -130,7 +130,7 @@ personalTimeRouter.post('/:id/decline', validateParams('id'), async (req, res) =
     return res.json(result.data);
   } catch (err) {
     console.error('POST /personal-time/decline error:', err);
-    return res.status(500).json({ error: 'Failed to decline the request.' });
+    return sendError(res, 500, 'internal', 'Failed to decline the request.');
   }
 });
 
@@ -145,6 +145,6 @@ personalTimeRouter.delete('/:id', validateParams('id'), async (req, res) => {
     return res.json(result.data);
   } catch (err) {
     console.error('DELETE /personal-time error:', err);
-    return res.status(500).json({ error: 'Failed to withdraw the request.' });
+    return sendError(res, 500, 'internal', 'Failed to withdraw the request.');
   }
 });

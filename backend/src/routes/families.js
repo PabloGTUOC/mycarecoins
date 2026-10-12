@@ -14,7 +14,7 @@ import * as familyService from '../services/familyService.js';
 import * as memberService from '../services/memberService.js';
 import { getFamilyEntitlements } from '../services/entitlementService.js';
 import { assertActiveMember } from '../db/users.js';
-import { sendServiceError } from '../utils/httpError.js';
+import { sendServiceError, serviceError, sendError } from '../utils/httpError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,13 +51,13 @@ familiesRouter.get('/', async (req, res) => {
     });
     return res.json(result.data);
   } catch {
-    return res.status(500).json({ error: 'Failed to load families.' });
+    return sendError(res, 500, 'internal', 'Failed to load families.');
   }
 });
 
 familiesRouter.get('/:familyId/budget', async (req, res) => {
   const familyId = Number(req.params.familyId);
-  if (!familyId) return res.status(400).json({ error: 'Invalid familyId.' });
+  if (!familyId) return sendError(res, 400, 'familyIdInvalid', 'Invalid familyId.');
   try {
     const result = await withTransaction(async (client) => {
       const user = await upsertUserFromAuth(client, req.auth);
@@ -67,7 +67,7 @@ familiesRouter.get('/:familyId/budget', async (req, res) => {
     return res.json(result.data);
   } catch (err) {
     console.error('Failed to get family budget:', err);
-    return res.status(500).json({ error: 'Failed to fetch family budget.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch family budget.');
   }
 });
 
@@ -80,7 +80,7 @@ familiesRouter.get('/:familyId/entitlements', validateParams('familyId'), async 
     const result = await withTransaction(async (client) => {
       const user = await upsertUserFromAuth(client, req.auth);
       if (!await assertActiveMember(client, familyId, user.id)) {
-        return { error: { code: 403, message: 'Not a family member.' } };
+        return serviceError(403, 'familyNotMember', 'Not a family member.');
       }
       return { data: await getFamilyEntitlements(client, familyId) };
     });
@@ -88,7 +88,7 @@ familiesRouter.get('/:familyId/entitlements', validateParams('familyId'), async 
     return res.json(result.data);
   } catch (err) {
     console.error('Failed to fetch entitlements:', err);
-    return res.status(500).json({ error: 'Failed to fetch entitlements.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch entitlements.');
   }
 });
 
@@ -98,7 +98,7 @@ familiesRouter.post('/', validateBody({
   alias: [string(1, 50)],
 }), async (req, res) => {
   const { name, mainCaretakerName, caretakers, objectsOfCare, alias, starterTasks } = req.body;
-  if (!name || typeof name !== 'string') return res.status(400).json({ error: 'name is required.' });
+  if (!name || typeof name !== 'string') return sendError(res, 400, 'familyNameRequired', 'name is required.', { field: 'name' });
   try {
     const result = await withTransaction(async (client) => {
       const user = await upsertUserFromAuth(client, req.auth);
@@ -108,7 +108,7 @@ familiesRouter.post('/', validateBody({
     return res.status(201).json({ family: result.data });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to create family.' });
+    return sendError(res, 500, 'internal', 'Failed to create family.');
   }
 });
 
@@ -132,7 +132,7 @@ familiesRouter.post('/join-request', validateBody({
     return res.status(200).json(result.data);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to accept invitation.' });
+    return sendError(res, 500, 'internal', 'Failed to accept invitation.');
   }
 });
 
@@ -156,7 +156,7 @@ familiesRouter.post('/join-by-token', validateBody({
     return res.json(result.data);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to join family.' });
+    return sendError(res, 500, 'internal', 'Failed to join family.');
   }
 });
 
@@ -167,7 +167,7 @@ familiesRouter.patch('/:familyId/members/:userId/role',
     const familyId = Number(req.params.familyId);
     const userId = Number(req.params.userId);
     const { role } = req.body;
-    if (!['caregiver', 'member'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+    if (!['caregiver', 'member'].includes(role)) return sendError(res, 400, 'memberRoleInvalid', 'Invalid role.');
     try {
       const result = await withTransaction(async (client) => {
         await upsertUserFromAuth(client, req.auth);
@@ -176,7 +176,7 @@ familiesRouter.patch('/:familyId/members/:userId/role',
       if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch {
-      return res.status(500).json({ error: 'Failed to update role.' });
+      return sendError(res, 500, 'internal', 'Failed to update role.');
     }
   });
 
@@ -195,7 +195,7 @@ familiesRouter.post('/:familyId/members/:userId/approve',
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to approve member.' });
+      return sendError(res, 500, 'internal', 'Failed to approve member.');
     }
   });
 
@@ -215,7 +215,7 @@ familiesRouter.post('/:familyId/actors',
       return res.status(201).json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to add object of care.' });
+      return sendError(res, 500, 'internal', 'Failed to add object of care.');
     }
   });
 
@@ -234,7 +234,7 @@ familiesRouter.delete('/:familyId/actors/:actorId',
       return res.json({ message: 'Pet removed successfully.' });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to remove pet.' });
+      return sendError(res, 500, 'internal', 'Failed to remove pet.');
     }
   });
 
@@ -242,16 +242,21 @@ familiesRouter.post('/:familyId/actors/:actorId/avatar',
   (req, res, next) => {
     upload.single('avatar')(req, res, (err) => {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: 'File too large. Maximum size is 2 MB.' });
+        return sendError(res, 400, 'fileTooLarge', 'File too large. Maximum size is 2 MB.', { maxSize: '2 MB' });
       }
-      if (err) return res.status(400).json({ error: err.message });
+      if (err) {
+        if (err.message === 'Only JPEG, PNG, and WebP images are allowed.') {
+          return sendError(res, 400, 'fileInvalidType', err.message);
+        }
+        return sendError(res, 400, 'invalidInput', err.message);
+      }
       next();
     });
   },
   validateParams('familyId', 'actorId'),
   requireRole('caregiver', r => r.params.familyId),
   async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No avatar image uploaded.' });
+    if (!req.file) return sendError(res, 400, 'fileNoAvatar', 'No avatar image uploaded.');
     const familyId = Number(req.params.familyId);
     const actorId = Number(req.params.actorId);
     const avatarUrl = `/uploads/families/${req.params.familyId}/actors/${req.params.actorId}/${req.file.filename}`;
@@ -264,7 +269,7 @@ familiesRouter.post('/:familyId/actors/:actorId/avatar',
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to upload actor avatar.' });
+      return sendError(res, 500, 'internal', 'Failed to upload actor avatar.');
     }
   });
 
@@ -279,7 +284,7 @@ familiesRouter.get('/:familyId/invitations', validateParams('familyId'), async (
     return res.json(result.data);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to fetch invitations.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch invitations.');
   }
 });
 
@@ -294,7 +299,7 @@ familiesRouter.get('/:familyId/members', validateParams('familyId'), async (req,
     return res.json(result.data);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to fetch members.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch members.');
   }
 });
 
@@ -306,7 +311,7 @@ familiesRouter.post('/:familyId/invitations',
     const familyId = Number(req.params.familyId);
     const { email, name } = req.body;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: 'Invalid email address.' });
+      return sendError(res, 400, 'invitationEmailInvalid', 'Invalid email address.');
     }
     try {
       const result = await withTransaction(async (client) => {
@@ -323,7 +328,7 @@ familiesRouter.post('/:familyId/invitations',
       return res.status(201).json({ invitation: result.data.invitation });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to create invitation.' });
+      return sendError(res, 500, 'internal', 'Failed to create invitation.');
     }
   });
 
@@ -349,7 +354,7 @@ familiesRouter.delete('/:familyId',
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to delete family.' });
+      return sendError(res, 500, 'internal', 'Failed to delete family.');
     }
   });
 
@@ -366,7 +371,7 @@ familiesRouter.get('/:familyId/deletion-requests',
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to fetch deletion requests.' });
+      return sendError(res, 500, 'internal', 'Failed to fetch deletion requests.');
     }
   });
 
@@ -378,14 +383,14 @@ familiesRouter.post('/:familyId/deletion-requests/:requestId/approve',
     const requestId = Number(req.params.requestId);
     try {
       const result = await withTransaction(async (client) => {
-        const user = await upsertUserFromAuth(client, req.auth);
+        await upsertUserFromAuth(client, req.auth);
         return familyService.approveDeletion(client, user.id, familyId, requestId);
       });
       if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to approve deletion.' });
+      return sendError(res, 500, 'internal', 'Failed to approve deletion.');
     }
   });
 
@@ -397,14 +402,14 @@ familiesRouter.post('/:familyId/deletion-requests/:requestId/reject',
     const requestId = Number(req.params.requestId);
     try {
       const result = await withTransaction(async (client) => {
-        const user = await upsertUserFromAuth(client, req.auth);
+        await upsertUserFromAuth(client, req.auth);
         return familyService.rejectDeletion(client, user.id, familyId, requestId);
       });
       if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Failed to reject deletion.' });
+      return sendError(res, 500, 'internal', 'Failed to reject deletion.');
     }
   });
 

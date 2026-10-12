@@ -13,7 +13,7 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { processWebhookEvent } from '../services/billingService.js';
-import { sendServiceError } from '../utils/httpError.js';
+import { sendServiceError, sendError } from '../utils/httpError.js';
 
 export const billingRouter = Router();
 
@@ -21,11 +21,11 @@ billingRouter.post('/webhook', async (req, res) => {
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
   const header = req.headers.authorization || '';
   if (!secret || (header !== secret && header !== `Bearer ${secret}`)) {
-    return res.status(401).json({ error: 'Unauthorized.' });
+    return sendError(res, 401, 'billingUnauthorized', 'Unauthorized.');
   }
 
   const event = req.body?.event;
-  if (!event) return res.status(400).json({ error: 'Missing event.' });
+  if (!event) return sendError(res, 400, 'billingMissingEvent', 'Missing event.');
 
   try {
     const result = await withTransaction((client) => processWebhookEvent(client, event));
@@ -37,6 +37,6 @@ billingRouter.post('/webhook', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error('RevenueCat webhook processing failed:', err);
-    return res.status(500).json({ error: 'Webhook processing failed.' });
+    return sendError(res, 500, 'internal', 'Webhook processing failed.');
   }
 });

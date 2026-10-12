@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth } from '../db/users.js';
 import { validateBody, required, string } from '../middleware/validate.js';
+import { sendError } from '../utils/httpError.js';
 
 export const eventsRouter = Router();
 
@@ -28,16 +29,16 @@ eventsRouter.post('/', validateBody({
 }), async (req, res) => {
   const { event, detail } = req.body;
   if (!ALLOWED_EVENTS.includes(event)) {
-    return res.status(400).json({ error: 'Unknown event.' });
+    return sendError(res, 400, 'eventUnknown', 'Unknown event.');
   }
   let detailJson = null;
   if (detail !== undefined && detail !== null) {
     if (typeof detail !== 'object' || Array.isArray(detail)) {
-      return res.status(400).json({ error: 'detail must be an object.' });
+      return sendError(res, 400, 'eventDetailNotObject', 'detail must be an object.');
     }
     detailJson = JSON.stringify(detail);
     if (detailJson.length > MAX_DETAIL_BYTES) {
-      return res.status(400).json({ error: 'detail too large.' });
+      return sendError(res, 400, 'eventDetailTooLarge', 'detail too large.');
     }
   }
 
@@ -53,6 +54,6 @@ eventsRouter.post('/', validateBody({
     res.status(204).end();
   } catch (err) {
     console.error('Failed to record onboarding event:', err);
-    res.status(500).json({ error: 'Failed to record event.' });
+    sendError(res, 500, 'internal', 'Failed to record event.');
   }
 });

@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
 import { validateBody, validateParams, required, string, positiveInt, isoDate } from '../middleware/validate.js';
-import { validateAbsenceWindow } from '../services/absenceService.js';
-import { sendServiceError } from '../utils/httpError.js';
+import { absenceWindowError } from '../services/absenceService.js';
+import { sendServiceError, serviceError, sendError } from '../utils/httpError.js';
 
 export const absencesRouter = Router();
 
@@ -13,7 +13,7 @@ export const absencesRouter = Router();
 // ─────────────────────────────────────────────
 absencesRouter.get('/', async (req, res) => {
   const familyId = Number(req.query.familyId);
-  if (!familyId) return res.status(400).json({ error: 'familyId query param is required.' });
+  if (!familyId) return sendError(res, 400, 'familyIdRequired', 'familyId query param is required.');
 
   try {
     const absences = await withTransaction(async (client) => {
@@ -32,11 +32,11 @@ absencesRouter.get('/', async (req, res) => {
       return rows;
     });
 
-    if (absences === null) return res.status(403).json({ error: 'Not a family member.' });
+    if (absences === null) return sendError(res, 403, 'familyNotMember', 'Not a family member.');
     return res.json({ absences });
   } catch (err) {
     console.error('GET /absences error:', err);
-    return res.status(500).json({ error: 'Failed to fetch absences.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch absences.');
   }
 });
 
@@ -52,14 +52,14 @@ absencesRouter.post('/', validateBody({
 }), async (req, res) => {
   const { familyId, startTime, endTime, title } = req.body;
 
-  const windowError = validateAbsenceWindow(startTime, endTime);
-  if (windowError) return res.status(400).json({ error: windowError });
+  const windowError = absenceWindowError(startTime, endTime);
+  if (windowError) return sendError(res, 400, windowError.key, windowError.message, windowError.params);
 
   try {
     const result = await withTransaction(async (client) => {
       const user = await upsertUserFromAuth(client, req.auth);
       if (!await assertActiveMember(client, familyId, user.id)) {
-        return { error: { code: 403, message: 'Not a family member.' } };
+        return serviceError(403, 'familyNotMember', 'Not a family member.');
       }
 
       const { rows: activityOverlap } = await client.query(
@@ -73,12 +73,12 @@ absencesRouter.post('/', validateBody({
       );
 
       if (activityOverlap.length > 0) {
-        return { 
-          error: { 
-            code: 400, 
-            message: `You have scheduled activities ("${activityOverlap[0].title}") during this period. Please cancel or transfer them first.` 
-          } 
-        };
+        return serviceError(
+          400,
+          'absenceActivityConflict',
+          `You have scheduled activities ("${activityOverlap[0].title}") during this period. Please cancel or transfer them first.`,
+          { title: activityOverlap[0].title }
+        );
       }
 
       const { rows } = await client.query(
@@ -94,7 +94,7 @@ absencesRouter.post('/', validateBody({
     return res.status(201).json({ absence: result.data });
   } catch (err) {
     console.error('POST /absences error:', err);
-    return res.status(500).json({ error: 'Failed to create absence.' });
+    return sendError(res, 500, 'internal', 'Failed to create absence.');
   }
 });
 
@@ -114,7 +114,7 @@ absencesRouter.delete('/:id', validateParams('id'), async (req, res) => {
         [absenceId]
       );
 
-      if (!rows.length) return { error: { code: 404, message: 'Absence not found.' } };
+      if (!rows.length) return serviceError(404, 'absenceNotFound', 'Absence not found.');
       const absence = rows[0];
 
       const { rows: memberRows } = await client.query(
@@ -122,13 +122,13 @@ absencesRouter.delete('/:id', validateParams('id'), async (req, res) => {
         [absence.family_id, user.id]
       );
 
-      if (!memberRows.length) return { error: { code: 403, message: 'Not a family member.' } };
+      if (!memberRows.length) return serviceError(403, 'familyNotMember', 'Not a family member.');
 
       const isOwner      = Number(absence.user_id) === Number(user.id);
       const isCaregiver  = memberRows[0].role === 'caregiver';
 
       if (!isOwner && !isCaregiver) {
-        return { error: { code: 403, message: 'You do not have permission to delete this absence.' } };
+        return serviceError(403, 'absenceDeleteForbidden', 'You do not have permission to delete this absence.');
       }
 
       await client.query(`DELETE FROM absences WHERE id = $1`, [absenceId]);
@@ -139,6 +139,6 @@ absencesRouter.delete('/:id', validateParams('id'), async (req, res) => {
     return res.json(result.data);
   } catch (err) {
     console.error('DELETE /absences error:', err);
-    return res.status(500).json({ error: 'Failed to delete absence.' });
+    return sendError(res, 500, 'internal', 'Failed to delete absence.');
   }
 });

@@ -19,6 +19,7 @@ import { personalTimeRouter } from './routes/personalTime.js';
 import { eventsRouter } from './routes/events.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sendError } from './utils/httpError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,9 +95,13 @@ app.use('/api/absences', requireAuth, perUserLimiter, familyHeartbeat, absencesR
 app.use('/api/personal-time', requireAuth, perUserLimiter, familyHeartbeat, personalTimeRouter);
 app.use('/api/events', requireAuth, perUserLimiter, familyHeartbeat, eventsRouter);
 
+app.use((_req, res) => {
+  sendError(res, 404, 'notFound', 'Not found.');
+});
+
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ error: 'Internal server error.' });
+  sendError(res, 500, 'internal', 'Internal server error.');
 });
 
 export default app;
