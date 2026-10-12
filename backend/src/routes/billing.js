@@ -13,6 +13,7 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { processWebhookEvent } from '../services/billingService.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 export const billingRouter = Router();
 
@@ -28,7 +29,7 @@ billingRouter.post('/webhook', async (req, res) => {
 
   try {
     const result = await withTransaction((client) => processWebhookEvent(client, event));
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     if (result.data.unattributed) {
       // Logged for follow-up; 200 so RevenueCat doesn't retry forever.
       console.warn(`RevenueCat event ${event.id} (${event.type}) has no family_id attribute.`);

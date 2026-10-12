@@ -3,6 +3,7 @@ import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
 import { validateBody, validateParams, required, string, positiveInt, isoDate } from '../middleware/validate.js';
 import { validateAbsenceWindow } from '../services/absenceService.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 export const absencesRouter = Router();
 
@@ -89,7 +90,7 @@ absencesRouter.post('/', validateBody({
       return { data: rows[0] };
     });
 
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.status(201).json({ absence: result.data });
   } catch (err) {
     console.error('POST /absences error:', err);
@@ -134,7 +135,7 @@ absencesRouter.delete('/:id', validateParams('id'), async (req, res) => {
       return { data: { success: true } };
     });
 
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('DELETE /absences error:', err);

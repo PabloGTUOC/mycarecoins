@@ -3,6 +3,7 @@ import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth } from '../db/users.js';
 import { requireRole } from '../middleware/rbac.js';
 import { validateParams } from '../middleware/validate.js';
+import { sendServiceError, serviceError } from '../utils/httpError.js';
 
 export const inviteLinksRouter = Router();
 
@@ -74,10 +75,10 @@ inviteLinksRouter.delete('/:familyId/invite-links/:linkId',
           `UPDATE invite_links SET revoked = true WHERE id = $1 AND family_id = $2`,
           [linkId, familyId]
         );
-        if (!rowCount) return { error: { code: 404, message: 'Invite link not found.' } };
+        if (!rowCount) return serviceError(404, 'inviteLinkNotFound', 'Invite link not found.');
         return { data: { revoked: true } };
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);

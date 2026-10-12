@@ -19,6 +19,8 @@
 // RevenueCat entitlement identifier → our plan catalog code. The plan row
 // is created on first sight (ON CONFLICT DO NOTHING) so a webhook never
 // fails on FK; price/limits are then curated via the admin plan API.
+import { serviceError } from '../utils/httpError.js';
+
 const ENTITLEMENT_PLAN_MAP = { 'MyCareCoins Pro': 'pro' };
 const DEFAULT_PAID_PLAN = 'pro';
 
@@ -62,7 +64,7 @@ function planCodeFor(event) {
 
 export async function processWebhookEvent(client, event) {
   if (!event?.type || !event.id) {
-    return { error: { code: 400, message: 'Malformed event.' } };
+    return serviceError(400, 'billingMalformedEvent', 'Malformed event.');
   }
 
   const familyId = attributedFamilyId(event);

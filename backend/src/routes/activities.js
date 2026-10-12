@@ -4,6 +4,7 @@ import { upsertUserFromAuth } from '../db/users.js';
 import { validateBody, validateParams, required, string, positiveInt, isoDate, oneOf } from '../middleware/validate.js';
 import { notifyUser, notifyFamilyCaregivers, notifyFamilyAll } from '../utils/notify.js';
 import * as activityService from '../services/activityService.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 export const activitiesRouter = Router();
 
@@ -15,7 +16,7 @@ activitiesRouter.get('/', async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.listActivities(client, user.id, familyId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('GET /activities error:', err);
@@ -39,7 +40,7 @@ activitiesRouter.post('/', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.createActivity(client, user.id, { familyId, title, type, durationMinutes, coinValue, isRecurrent });
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyFamilyCaregivers(result.data.family_id, result.data.created_by, {
       title: 'New activity pending approval',
       body: `"${result.data.title}" needs your review.`,
@@ -60,7 +61,7 @@ activitiesRouter.post('/:activityId/approve', validateParams('activityId'), asyn
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.approveActivity(client, user.id, activityId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.status(200).json(result.data);
   } catch (err) {
     console.error('POST /approve error:', err);
@@ -78,7 +79,7 @@ activitiesRouter.post('/:activityId/schedule', validateParams('activityId'), val
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.scheduleActivity(client, user.id, activityId, startsAt);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     const act = result.data;
     if (act.assigned_to) {
       const when = new Date(act.starts_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -112,7 +113,7 @@ activitiesRouter.patch('/:id/time', validateParams('id'), validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.rescheduleActivity(client, user.id, Number(req.params.id), req.body.startsAt);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json({ activity: result.data });
   } catch (err) {
     console.error('PATCH /:id/time error:', err);
@@ -131,7 +132,7 @@ activitiesRouter.post('/:activityId/recurrence', validateParams('activityId'), v
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.createRecurrence(client, user.id, instanceId, { frequency, untilDate });
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.status(201).json(result.data);
   } catch (err) {
     console.error('POST /recurrence error:', err);
@@ -147,7 +148,7 @@ activitiesRouter.post('/:activityId/complete', validateParams('activityId'), asy
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.completeActivity(client, user.id, instanceId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyFamilyAll(result.inst.family_id, result.inst.assigned_to, {
       title: 'Activity completed',
       body: `"${result.inst.title}" has just been completed.`,
@@ -168,7 +169,7 @@ activitiesRouter.post('/:id/validate', validateParams('id'), async (req, res) =>
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.validateActivity(client, user.id, activityId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyUser(result.act.assigned_to, {
       title: 'Activity validated!',
       body: `Your activity was approved. You earned ${result.data.coinsAwarded} coins.`,
@@ -193,7 +194,7 @@ activitiesRouter.post('/:id/bounty', validateParams('id'), async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.offerBounty(client, user.id, activityId, bountyAmount);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyFamilyAll(result.act.family_id, result.act.assigned_to, {
       title: 'Bounty offered on a shift!',
       body: `Someone is offering ${result.bountyAmount} coins for someone to take their activity.`,
@@ -214,7 +215,7 @@ activitiesRouter.post('/:id/accept-bounty', validateParams('id'), async (req, re
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.acceptBounty(client, user.id, activityId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('POST /accept-bounty error:', err);
@@ -231,7 +232,7 @@ activitiesRouter.delete('/:id', validateParams('id'), async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.deleteActivity(client, user.id, activityId, isSeries);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('DELETE /activities error:', err);
@@ -246,7 +247,7 @@ activitiesRouter.post('/:id/revert', validateParams('id'), async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return activityService.revertActivity(client, user.id, activityId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('POST /revert error:', err);

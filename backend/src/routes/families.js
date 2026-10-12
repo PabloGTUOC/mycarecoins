@@ -14,6 +14,7 @@ import * as familyService from '../services/familyService.js';
 import * as memberService from '../services/memberService.js';
 import { getFamilyEntitlements } from '../services/entitlementService.js';
 import { assertActiveMember } from '../db/users.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +63,7 @@ familiesRouter.get('/:familyId/budget', async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return familyService.getFamilyBudget(client, user.id, familyId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('Failed to get family budget:', err);
@@ -83,7 +84,7 @@ familiesRouter.get('/:familyId/entitlements', validateParams('familyId'), async 
       }
       return { data: await getFamilyEntitlements(client, familyId) };
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('Failed to fetch entitlements:', err);
@@ -103,7 +104,7 @@ familiesRouter.post('/', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return familyService.createFamily(client, user, { name, mainCaretakerName, alias, caretakers, objectsOfCare, starterTasks });
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.status(201).json({ family: result.data });
   } catch (err) {
     console.error(err);
@@ -121,7 +122,7 @@ familiesRouter.post('/join-request', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return memberService.joinByInvitation(client, user, { familyId, alias });
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyFamilyCaregivers(result.familyId, result.userId, {
       title: 'Invitation accepted',
       body: `${result.displayName} joined your family.`,
@@ -145,7 +146,7 @@ familiesRouter.post('/join-by-token', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return memberService.joinByToken(client, user, { token, alias });
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyFamilyCaregivers(result.familyId, result.userId, {
       title: 'New member joined',
       body: `${result.displayName} joined your family via invite link.`,
@@ -172,7 +173,7 @@ familiesRouter.patch('/:familyId/members/:userId/role',
         await upsertUserFromAuth(client, req.auth);
         return memberService.updateMemberRole(client, familyId, userId, role);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch {
       return res.status(500).json({ error: 'Failed to update role.' });
@@ -190,7 +191,7 @@ familiesRouter.post('/:familyId/members/:userId/approve',
         await upsertUserFromAuth(client, req.auth);
         return memberService.approveMember(client, familyId, userId);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);
@@ -210,7 +211,7 @@ familiesRouter.post('/:familyId/actors',
         await upsertUserFromAuth(client, req.auth);
         return memberService.addActor(client, familyId, { name, actorType, careTime });
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.status(201).json(result.data);
     } catch (err) {
       console.error(err);
@@ -229,7 +230,7 @@ familiesRouter.delete('/:familyId/actors/:actorId',
         await upsertUserFromAuth(client, req.auth);
         return memberService.removeActor(client, familyId, actorId);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json({ message: 'Pet removed successfully.' });
     } catch (err) {
       console.error(err);
@@ -259,7 +260,7 @@ familiesRouter.post('/:familyId/actors/:actorId/avatar',
         await upsertUserFromAuth(client, req.auth);
         return memberService.updateActorAvatar(client, familyId, actorId, avatarUrl);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);
@@ -274,7 +275,7 @@ familiesRouter.get('/:familyId/invitations', validateParams('familyId'), async (
       const user = await upsertUserFromAuth(client, req.auth);
       return memberService.listInvitations(client, user.id, familyId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error(err);
@@ -289,7 +290,7 @@ familiesRouter.get('/:familyId/members', validateParams('familyId'), async (req,
       const user = await upsertUserFromAuth(client, req.auth);
       return memberService.listMembers(client, user.id, familyId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error(err);
@@ -312,7 +313,7 @@ familiesRouter.post('/:familyId/invitations',
         const user = await upsertUserFromAuth(client, req.auth);
         return memberService.createInvitation(client, user, familyId, { email, name });
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       sendInvitationEmail({
         toEmail: result.data.invitation.email,
         toName: result.data.invitation.name,
@@ -336,7 +337,7 @@ familiesRouter.delete('/:familyId',
         const user = await upsertUserFromAuth(client, req.auth);
         return familyService.deleteFamily(client, user, familyId);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       if (result.data.pendingApproval) {
         notifyFamilyCaregivers(result.familyId, result.requesterId, {
           title: 'Family deletion requested',
@@ -380,7 +381,7 @@ familiesRouter.post('/:familyId/deletion-requests/:requestId/approve',
         const user = await upsertUserFromAuth(client, req.auth);
         return familyService.approveDeletion(client, user.id, familyId, requestId);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);
@@ -399,7 +400,7 @@ familiesRouter.post('/:familyId/deletion-requests/:requestId/reject',
         const user = await upsertUserFromAuth(client, req.auth);
         return familyService.rejectDeletion(client, user.id, familyId, requestId);
       });
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.json(result.data);
     } catch (err) {
       console.error(err);

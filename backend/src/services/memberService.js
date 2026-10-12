@@ -1,5 +1,6 @@
 import { assertActiveMember } from '../db/users.js';
 import { getFamilyEntitlements, limitWarning, assertFamilyWritable } from './entitlementService.js';
+import { serviceError } from '../utils/httpError.js';
 
 // Soft enforcement (plan §3.4): computed after the admission so the count
 // reflects the result; the count query is skipped while the limit is
@@ -16,7 +17,7 @@ async function memberLimitWarning(client, familyId) {
 
 export async function listMembers(client, userId, familyId) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   const { rows } = await client.query(
     `SELECT fm.user_id as id, COALESCE(fm.alias, u.display_name, u.email) as name,
@@ -31,7 +32,7 @@ export async function listMembers(client, userId, familyId) {
 
 export async function listInvitations(client, userId, familyId) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   const { rows } = await client.query(
     `SELECT id, email, name, status, created_at FROM family_invitations
@@ -66,7 +67,7 @@ export async function approveMember(client, familyId, userId) {
      WHERE family_id = $1 AND user_id = $2 AND status = 'pending'`,
     [familyId, userId]
   );
-  if (rowCount === 0) return { error: { code: 404, message: 'Pending member not found.' } };
+  if (rowCount === 0) return serviceError(404, 'memberPendingNotFound', 'Pending member not found.');
 
   const warning = await memberLimitWarning(client, familyId);
   return { data: { success: true, ...(warning && { warning }) } };
@@ -78,20 +79,20 @@ export async function updateMemberRole(client, familyId, userId, role) {
      RETURNING family_id, user_id, role`,
     [role, familyId, userId]
   );
-  if (!rowCount) return { error: { code: 404, message: 'Family member not found.' } };
+  if (!rowCount) return serviceError(404, 'familyMemberNotFound', 'Family member not found.');
   return { data: { member: rows[0] } };
 }
 
 export async function joinByInvitation(client, user, { familyId, alias }) {
   if (!user.email) {
-    return { error: { code: 400, message: 'Your account has no email address. Use an invite link instead.' } };
+    return serviceError(400, 'memberNoEmail', 'Your account has no email address. Use an invite link instead.');
   }
   const { rows: invRows } = await client.query(
     `SELECT id FROM family_invitations WHERE family_id = $1 AND email = $2 AND status = 'pending'`,
     [familyId, user.email.toLowerCase()]
   );
   if (!invRows.length) {
-    return { error: { code: 403, message: 'No pending invitation found for your email address.' } };
+    return serviceError(403, 'invitationNotFound', 'No pending invitation found for your email address.');
   }
   const gate = await assertFamilyWritable(client, familyId);
   if (gate) return gate;
@@ -121,21 +122,21 @@ export async function joinByToken(client, user, { token, alias }) {
     `SELECT id, family_id, max_uses, uses, expires_at, revoked FROM invite_links WHERE id = $1 FOR UPDATE`,
     [token]
   );
-  if (!linkRows.length) return { error: { code: 404, message: 'Invalid invite link.' } };
+  if (!linkRows.length) return serviceError(404, 'inviteLinkInvalid', 'Invalid invite link.');
   const link = linkRows[0];
-  if (link.revoked) return { error: { code: 410, message: 'This invite link has been revoked.' } };
+  if (link.revoked) return serviceError(410, 'inviteLinkRevoked', 'This invite link has been revoked.');
   if (link.expires_at && new Date(link.expires_at) < new Date()) {
-    return { error: { code: 410, message: 'This invite link has expired.' } };
+    return serviceError(410, 'inviteLinkExpired', 'This invite link has expired.');
   }
   if (link.max_uses !== null && link.uses >= link.max_uses) {
-    return { error: { code: 410, message: 'This invite link has reached its maximum uses.' } };
+    return serviceError(410, 'inviteLinkMaxUsesReached', 'This invite link has reached its maximum uses.');
   }
   const { rows: existing } = await client.query(
     `SELECT status FROM family_members WHERE family_id = $1 AND user_id = $2`,
     [link.family_id, user.id]
   );
   if (existing.length && existing[0].status === 'active') {
-    return { error: { code: 409, message: 'You are already an active member of this family.' } };
+    return serviceError(409, 'memberAlreadyActive', 'You are already an active member of this family.');
   }
   const gate = await assertFamilyWritable(client, link.family_id);
   if (gate) return gate;
@@ -195,9 +196,9 @@ export async function removeActor(client, familyId, actorId) {
     `SELECT * FROM actors WHERE id = $1 AND family_id = $2`,
     [actorId, familyId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Actor not found.' } };
+  if (!rows.length) return serviceError(404, 'actorNotFound', 'Actor not found.');
   const actor = rows[0];
-  if (actor.actor_type !== 'pet') return { error: { code: 403, message: 'Only pets can be removed.' } };
+  if (actor.actor_type !== 'pet') return serviceError(403, 'actorOnlyPetsRemovable', 'Only pets can be removed.');
 
   const budgetDecrease = actor.care_time === 'full_time' ? 720 : 360;
   await client.query(`DELETE FROM actors WHERE id = $1`, [actorId]);
@@ -213,6 +214,6 @@ export async function updateActorAvatar(client, familyId, actorId, avatarUrl) {
     `UPDATE actors SET avatar_url = $1 WHERE id = $2 AND family_id = $3 RETURNING *`,
     [avatarUrl, actorId, familyId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Actor not found.' } };
+  if (!rows.length) return serviceError(404, 'actorNotFound', 'Actor not found.');
   return { data: { avatar_url: rows[0].avatar_url } };
 }

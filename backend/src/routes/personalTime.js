@@ -4,6 +4,7 @@ import { upsertUserFromAuth } from '../db/users.js';
 import { validateBody, validateParams, required, string, positiveInt, isoDate, oneOf } from '../middleware/validate.js';
 import { notifyUser, notifyFamilyCaregivers } from '../utils/notify.js';
 import * as personalTime from '../services/personalTimeService.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 export const personalTimeRouter = Router();
 
@@ -34,7 +35,7 @@ personalTimeRouter.get('/', async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.listRequests(client, user.id, familyId);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('GET /personal-time error:', err);
@@ -55,7 +56,7 @@ personalTimeRouter.post('/quote', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.quoteRequest(client, user.id, req.body);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('POST /personal-time/quote error:', err);
@@ -79,7 +80,7 @@ personalTimeRouter.post('/', validateBody({
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.createRequest(client, user.id, req.body);
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     if (result.data.status === 'pending') announce(result.data);
     return res.status(201).json({ request: result.data, warnings: result.warnings });
   } catch (err) {
@@ -95,7 +96,7 @@ personalTimeRouter.post('/:id/accept', validateParams('id'), async (req, res) =>
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.acceptRequest(client, user.id, Number(req.params.id));
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     const { created, skipped } = result.data;
     notifyUser(result.request.requester_id, {
       title: 'Your personal time is covered',
@@ -119,7 +120,7 @@ personalTimeRouter.post('/:id/decline', validateParams('id'), async (req, res) =
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.declineRequest(client, user.id, Number(req.params.id));
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     notifyUser(result.request.requester_id, {
       title: 'Personal time declined',
       body: `Nobody can cover "${result.request.title}" on ${when(result.request.starts_at)}.`,
@@ -140,7 +141,7 @@ personalTimeRouter.delete('/:id', validateParams('id'), async (req, res) => {
       const user = await upsertUserFromAuth(client, req.auth);
       return personalTime.cancelRequest(client, user.id, Number(req.params.id));
     });
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error('DELETE /personal-time error:', err);

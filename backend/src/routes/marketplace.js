@@ -4,6 +4,7 @@ import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
 import { validateBody, required, string, positiveInt, isoDate } from '../middleware/validate.js';
 import { requireRole } from '../middleware/rbac.js';
 import { getFamilyEntitlements, limitWarning, assertFamilyWritable } from '../services/entitlementService.js';
+import { sendServiceError } from '../utils/httpError.js';
 
 export const marketplaceRouter = Router();
 
@@ -99,7 +100,7 @@ marketplaceRouter.post('/rewards',
         return { reward: rows[0], warning };
       });
 
-      if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+      if (result.error) return sendServiceError(res, result.error);
       return res.status(201).json({ reward: result.reward, ...(result.warning && { warning: result.warning }) });
     } catch (err) {
       console.error(err);
@@ -157,7 +158,7 @@ marketplaceRouter.post('/rewards/:rewardId/redeem', async (req, res) => {
       return { data: { redeemed: true, cost: reward.cost } };
     });
 
-    if (result.error) return res.status(result.error.code).json({ error: result.error.message });
+    if (result.error) return sendServiceError(res, result.error);
     return res.json(result.data);
   } catch (err) {
     console.error(err);

@@ -18,6 +18,7 @@
  * whose notice started the process.
  */
 import { logAdminAction } from './adminService.js';
+import { serviceError } from '../utils/httpError.js';
 
 export async function findRetentionCandidates(client, { inactiveDays = 365, noticeDays = 30 } = {}) {
   const { rows } = await client.query(
@@ -50,7 +51,7 @@ export async function deleteRetainedFamily(client, candidate, { inactiveDays = 3
     [candidate.id, inactiveDays]
   );
   if (!rowCount) {
-    return { error: { code: 409, message: 'Family became active again — skipped.' } };
+    return serviceError(409, 'retentionFamilyBecameActive', 'Family became active again — skipped.');
   }
 
   await logAdminAction(client, candidate.noticedBy, 'family.retention_delete', {
