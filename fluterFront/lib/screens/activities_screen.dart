@@ -561,28 +561,46 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // The repeat icon rides on the title's last
+                                // line, so a wrapped name keeps it beside
+                                // the final word.
                                 Flexible(
-                                  child: Text(
-                                      filtered[i]['title']?.toString() ?? '',
-                                      maxLines: 1,
+                                  child: Text.rich(
+                                      TextSpan(
+                                        text: filtered[i]['title']
+                                                ?.toString() ??
+                                            '',
+                                        children: [
+                                          if (showRepeatIcon &&
+                                              filtered[i]['is_recurrent'] ==
+                                                  true)
+                                            WidgetSpan(
+                                              alignment:
+                                                  PlaceholderAlignment.middle,
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(
+                                                    left: 4),
+                                                child: Semantics(
+                                                  label: l.repeatsLabel,
+                                                  child: const Icon(
+                                                    Icons.repeat_rounded,
+                                                    size: 16,
+                                                    color: AppColors
+                                                        .textSecondary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w800)),
                                 ),
-                                if (showRepeatIcon &&
-                                    filtered[i]['is_recurrent'] == true) ...[
-                                  const SizedBox(width: 4),
-                                  Semantics(
-                                    label: l.repeatsLabel,
-                                    child: const Icon(
-                                      Icons.repeat_rounded,
-                                      size: 16,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
                                 if (filtered[i]['status'] == 'pending') ...[
                                   const SizedBox(width: 6),
                                   PillBadge(

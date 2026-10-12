@@ -55,10 +55,7 @@ class _StatsScreenState extends State<StatsScreen> {
   bool _compareIncome = false;
   bool _compareCategory = false;
   bool _compareTasks = false;
-  bool _compareBalances = false;
-  bool _compareCompletion = false;
-  bool _compareBounties = false;
-  bool _compareRewards = false;
+  bool _compareMembers = false;
   int _tab = 0; // mobile: 0 overview, 1 members, 2 economy (debug only)
 
   static const _caregiverColors = [
@@ -150,10 +147,7 @@ class _StatsScreenState extends State<StatsScreen> {
   bool get _comparingIncome => _compareIncome && _caregivers.length > 1;
   bool get _comparingCategory => _compareCategory && _caregivers.length > 1;
   bool get _comparingTasks => _compareTasks && _caregivers.length > 1;
-  bool get _comparingBalances => _compareBalances && _caregivers.length > 1;
-  bool get _comparingCompletion => _compareCompletion && _caregivers.length > 1;
-  bool get _comparingBounties => _compareBounties && _caregivers.length > 1;
-  bool get _comparingRewards => _compareRewards && _caregivers.length > 1;
+  bool get _comparingMembers => _compareMembers && _caregivers.length > 1;
 
   Widget? _compareChip({
     Key? key,
@@ -648,205 +642,259 @@ class _StatsScreenState extends State<StatsScreen> {
     final rewardsByUser = _listOf('rewardsByUser');
     final topRewards = _listOf('topRewards');
 
+    if (balances.isEmpty &&
+        completion.isEmpty &&
+        bounties.isEmpty &&
+        topRewards.isEmpty) {
+      return const [];
+    }
+
+    const sentenceStyle = TextStyle(
+      fontSize: 15,
+      height: 1.4,
+      color: AppColors.textPrimary,
+    );
+
+    final sentences = <Widget>[];
+
+    if (balances.isNotEmpty) {
+      final total = balances.fold<num>(0, (s, b) => s + toNum(b['coin_balance']));
+      final count = balances.length;
+      sentences.add(Text(
+        l.balancesSentence(fmt.format(total), count),
+        style: sentenceStyle,
+      ));
+    }
+
+    if (completion.isNotEmpty) {
+      final total = completion.fold<num>(0, (s, r) => s + toNum(r['total'])).toInt();
+      final done = completion.fold<num>(0, (s, r) => s + toNum(r['completed'])).toInt();
+      final waiting = completion.fold<num>(0, (s, r) => s + toNum(r['waiting'])).toInt();
+      sentences.add(Text(
+        '${l.completionSentence(done, total)}${waiting > 0 ? ' ${l.completionWaiting(waiting)}' : ''}',
+        style: sentenceStyle,
+      ));
+    }
+
+    if (bounties.isNotEmpty) {
+      final offered = bounties.fold<num>(0, (s, b) => s + toNum(b['offered'])).toInt();
+      final earned = bounties.fold<num>(0, (s, b) => s + toNum(b['earned'])).toInt();
+      final refunded = bounties.fold<num>(0, (s, b) => s + toNum(b['refunded'])).toInt();
+      final open = offered - earned - refunded;
+      sentences.add(Text(
+        '${l.bountiesSentence(offered, earned, refunded)}${open > 0 ? ' ${l.bountiesOpen(open)}' : ''}',
+        style: sentenceStyle,
+      ));
+    }
+
+    if (topRewards.isNotEmpty) {
+      Map<String, dynamic>? bestReward;
+      int maxRedemptions = 0;
+      for (final r in topRewards) {
+        final count = toNum(r['redemptions']).toInt();
+        if (count > maxRedemptions) {
+          maxRedemptions = count;
+          bestReward = r;
+        }
+      }
+      sentences.add(Text(
+        (bestReward != null && maxRedemptions > 0)
+            ? l.rewardsTopSentence((bestReward['title'] ?? '').toString(), maxRedemptions)
+            : l.rewardsNoneClaimed,
+        style: sentenceStyle,
+      ));
+    }
+
+    final subSections = <Widget>[];
+
+    if (balances.isNotEmpty) {
+      final sorted = List<Map<String, dynamic>>.from(balances)
+        ..sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .toLowerCase()
+            .compareTo((b['name'] ?? '').toString().toLowerCase()));
+      subSections.add(Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Text(
+                l.chartBalances,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          for (final b in sorted)
+            _BarRow(
+              label: (b['name'] ?? '').toString(),
+              valueLabel: '${b['coin_balance'] ?? 0} cc',
+              fraction: _fractionOfMax(toNum(b['coin_balance']),
+                  [for (final x in balances) toNum(x['coin_balance'])]),
+              color: AppColors.primary,
+            ),
+          const SizedBox(height: 8),
+          Text(
+            l.balancesNote,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ));
+    }
+
+    if (completion.isNotEmpty) {
+      subSections.add(Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Text(
+                l.chartCompletionRate,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          for (final r in completion)
+            Builder(builder: (_) {
+              final rDone = toNum(r['completed']).toInt();
+              return _BarRow(
+                label: (r['caregiver'] ?? '').toString(),
+                valueLabel: l.completionRowDone(rDone),
+                fraction: _fractionOfMax(
+                  rDone,
+                  [for (final x in completion) toNum(x['completed'])],
+                ),
+                color: AppColors.primary,
+              );
+            }),
+        ],
+      ));
+    }
+
+    if (bounties.isNotEmpty) {
+      subSections.add(Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Text(
+                l.chartBounties,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          for (final b in bounties) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8, top: 4),
+                child: Text((b['name'] ?? '').toString(),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
+              ),
+            ),
+            for (final (label, key, color) in [
+              (l.offered, 'offered', AppColors.primary),
+              (l.earned, 'earned', AppColors.success),
+              (l.refunded, 'refunded', AppColors.inkMuted),
+            ])
+              _BarRow(
+                label: label,
+                valueLabel: '${toNum(b[key])} cc',
+                fraction: _fractionOfMax(toNum(b[key]), [
+                  for (final x in bounties) ...[
+                    toNum(x['offered']),
+                    toNum(x['earned']),
+                    toNum(x['refunded'])
+                  ]
+                ]),
+                color: color,
+              ),
+          ],
+        ],
+      ));
+    }
+
+    if (rewardsByUser.any((r) => toNum(r['redemptions']) > 0)) {
+      final sortedUsers = List<Map<String, dynamic>>.from(rewardsByUser)
+        ..sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .toLowerCase()
+            .compareTo((b['name'] ?? '').toString().toLowerCase()));
+      subSections.add(Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Text(
+                l.membersRewardsClaimed,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          for (final r in sortedUsers)
+            _BarRow(
+              label: (r['name'] ?? '').toString(),
+              valueLabel: '${toNum(r['redemptions'])}×',
+              fraction: _fractionOfMax(toNum(r['redemptions']), [
+                for (final x in rewardsByUser) toNum(x['redemptions'])
+              ]),
+              color: AppColors.primary,
+            ),
+        ],
+      ));
+    }
+
     return [
-      if (balances.isNotEmpty)
-        Builder(builder: (_) {
-          final total = balances.fold<num>(0, (s, b) => s + toNum(b['coin_balance']));
-          final count = balances.length;
-          final sorted = List<Map<String, dynamic>>.from(balances)
-            ..sort((a, b) => (a['name'] ?? '')
-                .toString()
-                .toLowerCase()
-                .compareTo((b['name'] ?? '').toString().toLowerCase()));
-          return VCard(
-            title: l.chartBalances,
-            subtitle: l.statsPeriodNow,
-            action: _compareChip(
-              selected: _compareBalances,
-              onSelected: (v) => setState(() => _compareBalances = v),
-            ),
-            child: _comparingBalances
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final b in sorted)
-                        _BarRow(
-                          label: (b['name'] ?? '').toString(),
-                          valueLabel: '${b['coin_balance'] ?? 0} cc',
-                          fraction: _fractionOfMax(toNum(b['coin_balance']),
-                              [for (final x in balances) toNum(x['coin_balance'])]),
-                          color: AppColors.primary,
-                        ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l.balancesNote,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
-                    l.balancesSentence(fmt.format(total), count),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-          );
-        }),
-      if (completion.isNotEmpty)
-        Builder(builder: (_) {
-          final total = completion.fold<num>(0, (s, r) => s + toNum(r['total'])).toInt();
-          final done = completion.fold<num>(0, (s, r) => s + toNum(r['completed'])).toInt();
-          final waiting = completion.fold<num>(0, (s, r) => s + toNum(r['waiting'])).toInt();
-          return VCard(
-            title: l.chartCompletionRate,
-            subtitle: l.statsPeriodAllTime,
-            action: _compareChip(
-              selected: _compareCompletion,
-              onSelected: (v) => setState(() => _compareCompletion = v),
-            ),
-            child: _comparingCompletion
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final r in completion)
-                        Builder(builder: (_) {
-                          final rTotal = toNum(r['total']).toInt();
-                          final rDone = toNum(r['completed']).toInt();
-                          return _BarRow(
-                            label: (r['caregiver'] ?? '').toString(),
-                            valueLabel: l.completionRow(rDone, rTotal),
-                            fraction: rTotal > 0 ? rDone / rTotal : 0,
-                            color: AppColors.primary,
-                          );
-                        }),
-                    ],
-                  )
-                : Text(
-                    '${l.completionSentence(done, total)}${waiting > 0 ? ' ${l.completionWaiting(waiting)}' : ''}',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-          );
-        }),
-      if (bounties.isNotEmpty)
-        Builder(builder: (_) {
-          final offered = bounties.fold<num>(0, (s, b) => s + toNum(b['offered'])).toInt();
-          final earned = bounties.fold<num>(0, (s, b) => s + toNum(b['earned'])).toInt();
-          final refunded = bounties.fold<num>(0, (s, b) => s + toNum(b['refunded'])).toInt();
-          return VCard(
-            title: l.chartBounties,
-            subtitle: l.statsPeriodAllTime,
-            action: _compareChip(
-              selected: _compareBounties,
-              onSelected: (v) => setState(() => _compareBounties = v),
-            ),
-            child: _comparingBounties
-                ? Column(
-                    children: [
-                      for (final b in bounties) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 8, top: 4),
-                            child: Text((b['name'] ?? '').toString(),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w800, fontSize: 14)),
-                          ),
-                        ),
-                        for (final (label, key, color) in [
-                          (l.offered, 'offered', AppColors.primary),
-                          (l.earned, 'earned', AppColors.success),
-                          (l.refunded, 'refunded', AppColors.inkMuted),
-                        ])
-                          _BarRow(
-                            label: label,
-                            valueLabel: '${toNum(b[key])} cc',
-                            fraction: _fractionOfMax(toNum(b[key]), [
-                              for (final x in bounties) ...[
-                                toNum(x['offered']),
-                                toNum(x['earned']),
-                                toNum(x['refunded'])
-                              ]
-                            ]),
-                            color: color,
-                          ),
-                      ],
-                    ],
-                  )
-                : Text(
-                    l.bountiesSentence(offered, earned, refunded),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      height: 1.4,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-          );
-        }),
-      if (topRewards.isNotEmpty)
-        Builder(builder: (_) {
-          final claimedRewards = topRewards
-              .where((r) => toNum(r['redemptions']) > 0)
-              .toList();
-          final sortedUsers = List<Map<String, dynamic>>.from(rewardsByUser)
-            ..sort((a, b) => (a['name'] ?? '')
-                .toString()
-                .toLowerCase()
-                .compareTo((b['name'] ?? '').toString().toLowerCase()));
-          return VCard(
-            title: l.chartTopRewards,
-            subtitle: l.statsPeriodAllTime,
-            action: _compareChip(
-              selected: _compareRewards,
-              onSelected: (v) => setState(() => _compareRewards = v),
-            ),
-            child: _comparingRewards
-                ? Column(
-                    children: [
-                      for (final r in sortedUsers)
-                        _BarRow(
-                          label: (r['name'] ?? '').toString(),
-                          valueLabel: '${toNum(r['redemptions'])}×',
-                          fraction: _fractionOfMax(toNum(r['redemptions']), [
-                            for (final x in rewardsByUser) toNum(x['redemptions'])
-                          ]),
-                          color: AppColors.primary,
-                        ),
-                    ],
-                  )
-                : (claimedRewards.isNotEmpty
-                    ? Column(
-                        children: [
-                          for (final r in claimedRewards)
-                            _BarRow(
-                              label: (r['title'] ?? '').toString(),
-                              valueLabel: '${toNum(r['redemptions'])}×',
-                              fraction: _fractionOfMax(toNum(r['redemptions']), [
-                                for (final x in claimedRewards)
-                                  toNum(x['redemptions'])
-                              ]),
-                              color: AppColors.primary,
-                            ),
-                        ],
-                      )
-                    : Text(
-                        l.rewardsNoneClaimed,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          height: 1.4,
-                          color: AppColors.textPrimary,
-                        ),
-                      )),
-          );
-        }),
+      VCard(
+        title: l.membersFamilyTitle,
+        subtitle: l.statsPeriodAllTime,
+        action: _compareChip(
+          selected: _compareMembers,
+          onSelected: (v) => setState(() => _compareMembers = v),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < sentences.length; i++) ...[
+              if (i > 0) const SizedBox(height: 10),
+              sentences[i],
+            ],
+            if (_comparingMembers && subSections.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Divider(color: AppColors.border, height: 1),
+              for (var i = 0; i < subSections.length; i++) ...[
+                const SizedBox(height: 16),
+                subSections[i],
+              ],
+            ],
+          ],
+        ),
+      ),
     ];
   }
 
@@ -1008,8 +1056,10 @@ class _BarRow extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
               Text(valueLabel,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 13, color: color)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 6),

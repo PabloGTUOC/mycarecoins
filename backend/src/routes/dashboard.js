@@ -3,12 +3,13 @@ import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
 import { runAutoCompleteSweep } from '../db/autoComplete.js';
 import { runMonthlyDistribution } from '../services/distributionService.js';
+import { sendError } from '../utils/httpError.js';
 
 export const dashboardRouter = Router();
 
 dashboardRouter.get('/:familyId', async (req, res) => {
   const familyId = Number(req.params.familyId);
-  if (!familyId) return res.status(400).json({ error: 'Invalid familyId.' });
+  if (!familyId) return sendError(res, 400, 'familyIdInvalid', 'Invalid familyId.');
 
   try {
     const data = await withTransaction(async (client) => {
@@ -61,10 +62,10 @@ dashboardRouter.get('/:familyId', async (req, res) => {
       return { members, calendar: byDay, objectsOfCare, used_this_month };
     });
 
-    if (!data) return res.status(403).json({ error: 'Not a family member.' });
+    if (!data) return sendError(res, 403, 'familyNotMember', 'Not a family member.');
     return res.json(data);
   } catch (err) {
     console.error('DASHBOARD ERROR:', err);
-    return res.status(500).json({ error: 'Failed to load dashboard.' });
+    return sendError(res, 500, 'internal', 'Failed to load dashboard.');
   }
 });

@@ -3,6 +3,7 @@ import { withTransaction, pool } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
 import { validateBody, string, email } from '../middleware/validate.js';
 import { deleteFirebaseUser } from '../middleware/auth.js';
+import { sendError } from '../utils/httpError.js';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -75,23 +76,26 @@ meRouter.get('/', async (req, res) => {
     return res.json(payload);
   } catch (err) {
     console.error('ME ROUTE ERROR:', err);
-    return res.status(500).json({ error: 'Failed to load current user.' });
+    return sendError(res, 500, 'internal', 'Failed to load current user.');
   }
 });
 
 meRouter.post('/avatar', (req, res, next) => {
   upload.single('avatar')(req, res, (err) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 2 MB.' });
+      return sendError(res, 400, 'fileTooLarge', 'File too large. Maximum size is 2 MB.', { maxSize: '2 MB' });
     }
     if (err) {
-      return res.status(400).json({ error: err.message });
+      if (err.message === 'Only JPEG, PNG, and WebP images are allowed.') {
+        return sendError(res, 400, 'fileInvalidType', err.message);
+      }
+      return sendError(res, 400, 'invalidInput', err.message);
     }
     next();
   });
 }, async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No avatar image uploaded.' });
+    return sendError(res, 400, 'fileNoAvatar', 'No avatar image uploaded.');
   }
 
   const avatarUrl = `/uploads/users/${req.auth.uid}/${req.file.filename}`;
@@ -110,7 +114,7 @@ meRouter.post('/avatar', (req, res, next) => {
     return res.json({ avatar_url: user.avatar_url });
   } catch (err) {
     console.error('Avatar upload error:', err);
-    return res.status(500).json({ error: 'Failed to upload avatar.' });
+    return sendError(res, 500, 'internal', 'Failed to upload avatar.');
   }
 });
 meRouter.post('/login-event', async (req, res) => {
@@ -127,7 +131,7 @@ meRouter.post('/login-event', async (req, res) => {
     });
     return res.json({ eventId });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to record login event.' });
+    return sendError(res, 500, 'internal', 'Failed to record login event.');
   }
 });
 
@@ -155,7 +159,7 @@ meRouter.post('/logout-event', async (req, res) => {
     });
     return res.json({ success: true });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to record logout event.' });
+    return sendError(res, 500, 'internal', 'Failed to record logout event.');
   }
 });
 
@@ -189,7 +193,7 @@ meRouter.patch('/profile', validateBody({
     return res.json({ user });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to update profile.' });
+    return sendError(res, 500, 'internal', 'Failed to update profile.');
   }
 });
 
@@ -211,7 +215,7 @@ meRouter.get('/invites', async (req, res) => {
     return res.json({ invites });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Failed to fetch invitations.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch invitations.');
   }
 });
 
@@ -232,14 +236,14 @@ meRouter.get('/login-history', async (req, res) => {
 
     return res.json({ loginHistory: rows });
   } catch {
-    return res.status(500).json({ error: 'Failed to load login history.' });
+    return sendError(res, 500, 'internal', 'Failed to load login history.');
   }
 });
 
 meRouter.get('/ledger', async (req, res) => {
   const familyId = Number(req.query.familyId);
   const monthStr = req.query.month;
-  if (!familyId || !monthStr) return res.status(400).json({ error: 'familyId and month (YYYY-MM) required.' });
+  if (!familyId || !monthStr) return sendError(res, 400, 'ledgerParamsRequired', 'familyId and month (YYYY-MM) required.');
 
   try {
     const data = await withTransaction(async (client) => {
@@ -263,11 +267,11 @@ meRouter.get('/ledger', async (req, res) => {
       return { ledger };
     });
 
-    if (!data) return res.status(403).json({ error: 'Not a family member.' });
+    if (!data) return sendError(res, 403, 'familyNotMember', 'Not a family member.');
     return res.json(data);
   } catch (err) {
     console.error('Ledger Error:', err);
-    return res.status(500).json({ error: 'Failed to fetch ledger.' });
+    return sendError(res, 500, 'internal', 'Failed to fetch ledger.');
   }
 });
 
@@ -303,7 +307,7 @@ meRouter.delete('/', async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /me error:', err);
-    return res.status(500).json({ error: 'Failed to delete account.' });
+    return sendError(res, 500, 'internal', 'Failed to delete account.');
   }
 });
 
@@ -314,7 +318,7 @@ meRouter.delete('/', async (req, res) => {
 meRouter.post('/fcm-token', async (req, res) => {
   const { token } = req.body;
   if (!token || typeof token !== 'string') {
-    return res.status(400).json({ error: 'token is required.' });
+    return sendError(res, 400, 'tokenRequired', 'token is required.', { field: 'token' });
   }
   try {
     const user = await withTransaction(async (client) => upsertUserFromAuth(client, req.auth));
@@ -326,14 +330,14 @@ meRouter.post('/fcm-token', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error('POST /fcm-token error:', err);
-    return res.status(500).json({ error: 'Failed to save token.' });
+    return sendError(res, 500, 'internal', 'Failed to save token.');
   }
 });
 
 meRouter.delete('/fcm-token', async (req, res) => {
   const { token } = req.body;
   if (!token || typeof token !== 'string') {
-    return res.status(400).json({ error: 'token is required.' });
+    return sendError(res, 400, 'tokenRequired', 'token is required.', { field: 'token' });
   }
   try {
     const user = await withTransaction(async (client) => upsertUserFromAuth(client, req.auth));
@@ -344,7 +348,7 @@ meRouter.delete('/fcm-token', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error('DELETE /fcm-token error:', err);
-    return res.status(500).json({ error: 'Failed to remove token.' });
+    return sendError(res, 500, 'internal', 'Failed to remove token.');
   }
 });
 
@@ -373,20 +377,20 @@ meRouter.get('/notification-preferences', async (req, res) => {
     return res.json(rows[0] ? { ...DEFAULT_PREFS, ...rows[0] } : DEFAULT_PREFS);
   } catch (err) {
     console.error('GET /notification-preferences error:', err);
-    return res.status(500).json({ error: 'Failed to load preferences.' });
+    return sendError(res, 500, 'internal', 'Failed to load preferences.');
   }
 });
 
 meRouter.put('/notification-preferences', async (req, res) => {
   const { activity_assigned, activity_validated, activity_completed, bounty_offered, family_events } = req.body;
   if ([activity_assigned, activity_validated, activity_completed, bounty_offered, family_events].some(v => typeof v !== 'boolean')) {
-    return res.status(400).json({ error: 'All preference fields must be boolean.' });
+    return sendError(res, 400, 'notificationPreferencesBooleanRequired', 'All preference fields must be boolean.');
   }
   // Optional so a client that predates coverage requests keeps working — and,
   // because it is absent rather than false, does not silently switch them back on.
   const { coverage_requests } = req.body;
   if (coverage_requests !== undefined && typeof coverage_requests !== 'boolean') {
-    return res.status(400).json({ error: 'coverage_requests must be boolean.' });
+    return sendError(res, 400, 'notificationPreferencesCoverageRequestsBoolean', 'coverage_requests must be boolean.', { field: 'coverage_requests' });
   }
   try {
     const user = await withTransaction(async (client) => upsertUserFromAuth(client, req.auth));
@@ -408,6 +412,6 @@ meRouter.put('/notification-preferences', async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error('PUT /notification-preferences error:', err);
-    return res.status(500).json({ error: 'Failed to save preferences.' });
+    return sendError(res, 500, 'internal', 'Failed to save preferences.');
   }
 });

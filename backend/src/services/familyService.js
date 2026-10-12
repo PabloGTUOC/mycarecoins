@@ -4,6 +4,7 @@ import {
   insertStarterTasks,
   validateStarterTasks,
 } from '../db/defaultActivities.js';
+import { serviceError } from '../utils/httpError.js';
 
 export async function listFamilies(client, userId) {
   const { rows } = await client.query(
@@ -19,7 +20,7 @@ export async function listFamilies(client, userId) {
 
 export async function getFamilyBudget(client, userId, familyId) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member or family not found.' } };
+    return serviceError(403, 'familyNotFoundOrNotMember', 'Not a family member or family not found.');
   }
   const { rows } = await client.query(`
     SELECT f.monthly_coin_budget,
@@ -30,7 +31,7 @@ export async function getFamilyBudget(client, userId, familyId) {
       ), 0)::int as used_this_month
     FROM families f WHERE f.id = $1
   `, [familyId]);
-  if (!rows.length) return { error: { code: 404, message: 'Family not found.' } };
+  if (!rows.length) return serviceError(404, 'familyNotFound', 'Family not found.');
   const d = rows[0];
   return {
     data: {
@@ -47,7 +48,7 @@ export async function createFamily(client, user, { name, mainCaretakerName, alia
   // function, and withTransaction only rolls back on throw.
   if (starterTasks !== undefined) {
     const invalid = validateStarterTasks(starterTasks);
-    if (invalid) return { error: { code: 400, message: invalid } };
+    if (invalid) return serviceError(400, 'familyStarterTasksInvalid', invalid);
   }
 
   let monthlyCoinBudget = objectsOfCare.reduce((sum, obj) => {
@@ -124,7 +125,7 @@ export async function deleteFamily(client, user, familyId) {
     [familyId]
   );
   const { rows: familyRows } = await client.query(`SELECT name FROM families WHERE id = $1`, [familyId]);
-  if (!familyRows.length) return { error: { code: 404, message: 'Family not found.' } };
+  if (!familyRows.length) return serviceError(404, 'familyNotFound', 'Family not found.');
   const familyName = familyRows[0].name;
 
   if (caregivers.length <= 1) {
@@ -137,7 +138,7 @@ export async function deleteFamily(client, user, familyId) {
     [familyId]
   );
   if (existing.length > 0) {
-    return { error: { code: 409, message: 'A deletion request is already pending.' } };
+    return serviceError(409, 'familyDeletionAlreadyPending', 'A deletion request is already pending.');
   }
 
   const { rows: reqRows } = await client.query(
@@ -182,14 +183,14 @@ export async function approveDeletion(client, userId, familyId, requestId) {
     `SELECT id FROM family_deletion_requests WHERE id = $1 AND family_id = $2`,
     [requestId, familyId]
   );
-  if (!reqCheck.length) return { error: { code: 404, message: 'Deletion request not found.' } };
+  if (!reqCheck.length) return serviceError(404, 'familyDeletionRequestNotFound', 'Deletion request not found.');
 
   const { rows: approvalRows } = await client.query(
     `UPDATE family_deletion_approvals SET status = 'approved', responded_at = NOW()
      WHERE request_id = $1 AND caregiver_id = $2 RETURNING id`,
     [requestId, userId]
   );
-  if (!approvalRows.length) return { error: { code: 404, message: 'Approval record not found or not yours.' } };
+  if (!approvalRows.length) return serviceError(404, 'familyApprovalNotFound', 'Approval record not found or not yours.');
 
   const { rows: pending } = await client.query(
     `SELECT id FROM family_deletion_approvals WHERE request_id = $1 AND status != 'approved'`,
@@ -208,14 +209,14 @@ export async function rejectDeletion(client, userId, familyId, requestId) {
     `SELECT id FROM family_deletion_requests WHERE id = $1 AND family_id = $2`,
     [requestId, familyId]
   );
-  if (!reqCheck.length) return { error: { code: 404, message: 'Deletion request not found.' } };
+  if (!reqCheck.length) return serviceError(404, 'familyDeletionRequestNotFound', 'Deletion request not found.');
 
   const { rows: approvalRows } = await client.query(
     `UPDATE family_deletion_approvals SET status = 'rejected', responded_at = NOW()
      WHERE request_id = $1 AND caregiver_id = $2 RETURNING id`,
     [requestId, userId]
   );
-  if (!approvalRows.length) return { error: { code: 404, message: 'Approval record not found or not yours.' } };
+  if (!approvalRows.length) return serviceError(404, 'familyApprovalNotFound', 'Approval record not found or not yours.');
 
   await client.query(`UPDATE family_deletion_requests SET status = 'rejected' WHERE id = $1`, [requestId]);
   return { data: { success: true } };

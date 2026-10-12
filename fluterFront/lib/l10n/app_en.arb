@@ -478,6 +478,13 @@
   "@toastValidated": { "description": "Toast after validating a completed activity" },
   "toastSeriesRemoved": "Entire recurring series removed.",
   "@toastSeriesRemoved": { "description": "Toast after removing a whole recurring series" },
+  "toastTaskRemoved": "Removed \"{title}\".",
+  "@toastTaskRemoved": {
+    "description": "Toast after removing a single task, with undo option",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
   "toastActivityRemoved": "Activity removed from schedule.",
   "@toastActivityRemoved": { "description": "Toast after unscheduling one activity" },
   "toastBountyAdded": "Bounty added! Another caretaker can now take this task.",
@@ -1374,11 +1381,13 @@
   "@catHouseholdLabel": { "description": "Category group header in compare mode" },
   "chartTaskFrequency": "Task frequency",
   "@chartTaskFrequency": { "description": "Chart title" },
+  "membersFamilyTitle": "This family",
+  "@membersFamilyTitle": { "description": "Title of the combined family statistics card" },
   "chartBalances": "Balances",
   "@chartBalances": { "description": "Balances card title replacing leaderboard" },
   "statsPeriodNow": "Right now",
   "@statsPeriodNow": { "description": "Period label for balances card" },
-  "balancesSentence": "{count, plural, one{1 person holds {coins} cc.} other{{count} people hold {coins} cc between them.}}",
+  "balancesSentence": "{count, plural, one{Right now 1 person holds {coins} cc.} other{Right now {count} people hold {coins} cc between them.}}",
   "@balancesSentence": {
     "description": "Summary sentence for balances card",
     "placeholders": {
@@ -1388,7 +1397,7 @@
   },
   "balancesNote": "A balance goes down when someone claims a reward, so it is not a score.",
   "@balancesNote": { "description": "Footnote clarifying that balance is not a score" },
-  "completionSentence": "{total, plural, one{{done} of 1 task that was due is done.} other{{done} of {total} tasks that were due are done.}}",
+  "completionSentence": "{total, plural, one{{done} of 1 due task done.} other{{done} of {total} due tasks done.}}",
   "@completionSentence": {
     "description": "Summary sentence for completed tasks",
     "placeholders": {
@@ -1403,21 +1412,27 @@
       "count": { "type": "int" }
     }
   },
-  "completionRow": "{done} of {total}",
-  "@completionRow": {
+  "completionRowDone": "{count, plural, one{1 done} other{{count} done}}",
+  "@completionRowDone": {
     "description": "Per-caregiver completion value label",
     "placeholders": {
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "count": { "type": "int" }
     }
   },
-  "bountiesSentence": "{offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
+  "bountiesSentence": "Bounties: {offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
   "@bountiesSentence": {
     "description": "Summary sentence for bounties card",
     "placeholders": {
       "offered": { "type": "int" },
       "earned": { "type": "int" },
       "refunded": { "type": "int" }
+    }
+  },
+  "bountiesOpen": "{open} cc still open.",
+  "@bountiesOpen": {
+    "description": "Sentence fragment for open bounties remaining",
+    "placeholders": {
+      "open": { "type": "int" }
     }
   },
   "chartCompletionRate": "Tasks done",
@@ -1498,10 +1513,18 @@
   "@flowRewardsRedeemed": { "description": "Coin flow series label" },
   "flowBountiesRefunded": "Bounties refunded",
   "@flowBountiesRefunded": { "description": "Coin flow series label" },
-  "chartTopRewards": "Most popular rewards",
-  "@chartTopRewards": { "description": "Chart title" },
+  "rewardsTopSentence": "{count, plural, one{Most claimed reward: {title}, once.} other{Most claimed reward: {title}, {count} times.}}",
+  "@rewardsTopSentence": {
+    "description": "Summary sentence for the most claimed reward",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "rewardsNoneClaimed": "No rewards claimed yet.",
   "@rewardsNoneClaimed": { "description": "Fallback text when no rewards have been claimed yet" },
+  "membersRewardsClaimed": "Rewards claimed",
+  "@membersRewardsClaimed": { "description": "Sub-section label for rewards claimed per member" },
   "chartStatusDist": "Activity status distribution",
   "@chartStatusDist": { "description": "Chart title" },
   "statusCompleted": "Completed",
@@ -1804,7 +1827,11 @@
   "@errTimeout": { "description": "API client: request exceeded the timeout" },
   "errNetwork": "Network error. Check your connection.",
   "@errNetwork": { "description": "API client: connection or host lookup failed" },
-  "errRequestFailed": "Request failed ({code})",
+  "errServerTrouble": "Something went wrong on our side. Try again in a moment.",
+  "@errServerTrouble": {
+    "description": "API client: 5xx server error or server trouble"
+  },
+  "errRequestFailed": "That didn't work (error {code}). Try again, or reload the screen.",
   "@errRequestFailed": { "description": "API client: HTTP error with no server-provided message", "placeholders": { "code": { "type": "int" } } },
   "errUploadTimeout": "Upload timed out",
   "@errUploadTimeout": { "description": "API client: file upload exceeded the timeout" },
@@ -2214,5 +2241,519 @@
     "placeholders": {
       "title": { "type": "String" }
     }
+  },
+
+  "srvErrAbsenceActivityConflict": "You have scheduled activities (\"{title}\") during this period. Please cancel or transfer them first.",
+  "@srvErrAbsenceActivityConflict": {
+    "description": "Server error: absenceActivityConflict",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrAbsenceDeleteForbidden": "You do not have permission to delete this absence.",
+  "@srvErrAbsenceDeleteForbidden": {
+    "description": "Server error: absenceDeleteForbidden"
+  },
+  "srvErrAbsenceNotFound": "Absence not found.",
+  "@srvErrAbsenceNotFound": {
+    "description": "Server error: absenceNotFound"
+  },
+  "srvErrAbsenceTooShort": "{hours, plural, one{Absences must be at least 1 hour. For shorter breaks, use Personal Time.} other{Absences must be at least {hours} hours. For shorter breaks, use Personal Time.}}",
+  "@srvErrAbsenceTooShort": {
+    "description": "Server error: absenceTooShort",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "srvErrAbsentDuringTime": "You are marked as absent (\"{title}\") during this time.",
+  "@srvErrAbsentDuringTime": {
+    "description": "Server error: absentDuringTime",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrActivityAlreadyOwnShift": "You cannot accept your own shift.",
+  "@srvErrActivityAlreadyOwnShift": {
+    "description": "Server error: activityAlreadyOwnShift"
+  },
+  "srvErrActivityApprovedTemplateNotFound": "Approved template not found.",
+  "@srvErrActivityApprovedTemplateNotFound": {
+    "description": "Server error: activityApprovedTemplateNotFound"
+  },
+  "srvErrActivityBountyAmountRequired": "bountyAmount must be a positive integer.",
+  "@srvErrActivityBountyAmountRequired": {
+    "description": "Server error: activityBountyAmountRequired"
+  },
+  "srvErrActivityBountyAssigneeOnly": "Only the assigned caregiver can claim the bounty upon completion.",
+  "@srvErrActivityBountyAssigneeOnly": {
+    "description": "Server error: activityBountyAssigneeOnly"
+  },
+  "srvErrActivityBountyCompletedOrPendingValidation": "Cannot offer bounty on an activity that is completed or pending validation.",
+  "@srvErrActivityBountyCompletedOrPendingValidation": {
+    "description": "Server error: activityBountyCompletedOrPendingValidation"
+  },
+  "srvErrActivityBountyInsufficientCoins": "Insufficient coin balance to offer this bounty.",
+  "@srvErrActivityBountyInsufficientCoins": {
+    "description": "Server error: activityBountyInsufficientCoins"
+  },
+  "srvErrActivityCannotValidateOwn": "You cannot validate your own completed activity.",
+  "@srvErrActivityCannotValidateOwn": {
+    "description": "Server error: activityCannotValidateOwn"
+  },
+  "srvErrActivityCoverageOrPersonalCannotBounty": "Cannot add a bounty to a coverage shift or personal time.",
+  "@srvErrActivityCoverageOrPersonalCannotBounty": {
+    "description": "Server error: activityCoverageOrPersonalCannotBounty"
+  },
+  "srvErrActivityIdInvalid": "activityId: must be a positive integer",
+  "@srvErrActivityIdInvalid": {
+    "description": "Server error: activityIdInvalid"
+  },
+  "srvErrActivityIdRequired": "activityId is required.",
+  "@srvErrActivityIdRequired": {
+    "description": "Server error: activityIdRequired"
+  },
+  "srvErrActivityInstanceNotFoundOrCompleted": "Activity instance not found or already completed.",
+  "@srvErrActivityInstanceNotFoundOrCompleted": {
+    "description": "Server error: activityInstanceNotFoundOrCompleted"
+  },
+  "srvErrActivityMinDuration": "Activity duration must be at least 5 minutes.",
+  "@srvErrActivityMinDuration": {
+    "description": "Server error: activityMinDuration"
+  },
+  "srvErrActivityMoveNotYours": "You can only move activities assigned to you.",
+  "@srvErrActivityMoveNotYours": {
+    "description": "Server error: activityMoveNotYours"
+  },
+  "srvErrActivityMoveOnlyUpcoming": "Only upcoming (approved) activities can be moved.",
+  "@srvErrActivityMoveOnlyUpcoming": {
+    "description": "Server error: activityMoveOnlyUpcoming"
+  },
+  "srvErrActivityNoBountyAvailable": "No bounty available on this activity.",
+  "@srvErrActivityNoBountyAvailable": {
+    "description": "Server error: activityNoBountyAvailable"
+  },
+  "srvErrActivityNotCompleted": "Activity is not completed.",
+  "@srvErrActivityNotCompleted": {
+    "description": "Server error: activityNotCompleted"
+  },
+  "srvErrActivityNotFound": "Activity not found.",
+  "@srvErrActivityNotFound": {
+    "description": "Server error: activityNotFound"
+  },
+  "srvErrActivityNotPendingValidation": "Activity is not pending validation.",
+  "@srvErrActivityNotPendingValidation": {
+    "description": "Server error: activityNotPendingValidation"
+  },
+  "srvErrActivityNotUpcoming": "Only upcoming (approved) activities can be reverted to pool.",
+  "@srvErrActivityNotUpcoming": {
+    "description": "Server error: activityNotUpcoming"
+  },
+  "srvErrActivityNotYours": "You can only complete activities assigned to you.",
+  "@srvErrActivityNotYours": {
+    "description": "Server error: activityNotYours"
+  },
+  "srvErrActivityRecurrentInstanceNotFound": "Recurrent instance not found.",
+  "@srvErrActivityRecurrentInstanceNotFound": {
+    "description": "Server error: activityRecurrentInstanceNotFound"
+  },
+  "srvErrActivityRescheduleAbsent": "You are marked as absent (\"{title}\") during the new time.",
+  "@srvErrActivityRescheduleAbsent": {
+    "description": "Server error: activityRescheduleAbsent",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrActivityRescheduleOverlap": "You already have \"{title}\" scheduled during the new time.",
+  "@srvErrActivityRescheduleOverlap": {
+    "description": "Server error: activityRescheduleOverlap",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrActivityRevertNotYours": "You can only revert your own assignments.",
+  "@srvErrActivityRevertNotYours": {
+    "description": "Server error: activityRevertNotYours"
+  },
+  "srvErrActivityTemplateDeleteUnauthorized": "You do not have permission to delete this template.",
+  "@srvErrActivityTemplateDeleteUnauthorized": {
+    "description": "Server error: activityTemplateDeleteUnauthorized"
+  },
+  "srvErrActivityTemplateNotFound": "Template not found.",
+  "@srvErrActivityTemplateNotFound": {
+    "description": "Server error: activityTemplateNotFound"
+  },
+  "srvErrActivityTemplateNotPending": "Template is not pending approval.",
+  "@srvErrActivityTemplateNotPending": {
+    "description": "Server error: activityTemplateNotPending"
+  },
+  "srvErrActivityTimeInPast": "Cannot schedule activity in the past.",
+  "@srvErrActivityTimeInPast": {
+    "description": "Server error: activityTimeInPast"
+  },
+  "srvErrActorNotFound": "Actor not found.",
+  "@srvErrActorNotFound": {
+    "description": "Server error: actorNotFound"
+  },
+  "srvErrActorOnlyPetsRemovable": "Only pets can be removed. Human members must leave or be deleted.",
+  "@srvErrActorOnlyPetsRemovable": {
+    "description": "Server error: actorOnlyPetsRemovable"
+  },
+  "srvErrAuthInvalidToken": "Invalid token.",
+  "@srvErrAuthInvalidToken": {
+    "description": "Server error: authInvalidToken"
+  },
+  "srvErrAuthMissingToken": "No token provided.",
+  "@srvErrAuthMissingToken": {
+    "description": "Server error: authMissingToken"
+  },
+  "srvErrBillingMalformedEvent": "Webhook error: Malformed event payload.",
+  "@srvErrBillingMalformedEvent": {
+    "description": "Server error: billingMalformedEvent"
+  },
+  "srvErrBillingMissingEvent": "No event provided.",
+  "@srvErrBillingMissingEvent": {
+    "description": "Server error: billingMissingEvent"
+  },
+  "srvErrBillingUnauthorized": "Unauthorized.",
+  "@srvErrBillingUnauthorized": {
+    "description": "Server error: billingUnauthorized"
+  },
+  "srvErrCoverageAlreadyPaid": "Coverage shifts cannot be moved once completed.",
+  "@srvErrCoverageAlreadyPaid": {
+    "description": "Server error: coverageAlreadyPaid"
+  },
+  "srvErrCoverageEndsWithPersonalTime": "Coverage ends when the personal time ends; delete the personal time instead.",
+  "@srvErrCoverageEndsWithPersonalTime": {
+    "description": "Server error: coverageEndsWithPersonalTime"
+  },
+  "srvErrCoverageMovesWithPersonalTime": "Coverage shifts move with their personal time - move the personal time instead.",
+  "@srvErrCoverageMovesWithPersonalTime": {
+    "description": "Server error: coverageMovesWithPersonalTime"
+  },
+  "srvErrEventDetailNotObject": "detail must be an object.",
+  "@srvErrEventDetailNotObject": {
+    "description": "Server error: eventDetailNotObject"
+  },
+  "srvErrEventDetailTooLarge": "detail payload too large.",
+  "@srvErrEventDetailTooLarge": {
+    "description": "Server error: eventDetailTooLarge"
+  },
+  "srvErrEventUnknown": "Unknown event name.",
+  "@srvErrEventUnknown": {
+    "description": "Server error: eventUnknown"
+  },
+  "srvErrFamilyApprovalNotFound": "Pending approval not found.",
+  "@srvErrFamilyApprovalNotFound": {
+    "description": "Server error: familyApprovalNotFound"
+  },
+  "srvErrFamilyDeletionAlreadyPending": "A deletion request is already pending for this family.",
+  "@srvErrFamilyDeletionAlreadyPending": {
+    "description": "Server error: familyDeletionAlreadyPending"
+  },
+  "srvErrFamilyDeletionRequestNotFound": "Deletion request not found or already processed.",
+  "@srvErrFamilyDeletionRequestNotFound": {
+    "description": "Server error: familyDeletionRequestNotFound"
+  },
+  "srvErrFamilyIdInvalid": "Invalid family ID.",
+  "@srvErrFamilyIdInvalid": {
+    "description": "Server error: familyIdInvalid"
+  },
+  "srvErrFamilyIdRequired": "familyId query param is required.",
+  "@srvErrFamilyIdRequired": {
+    "description": "Server error: familyIdRequired"
+  },
+  "srvErrFamilyMemberNotFound": "Member not found.",
+  "@srvErrFamilyMemberNotFound": {
+    "description": "Server error: familyMemberNotFound"
+  },
+  "srvErrFamilyNameRequired": "name is required.",
+  "@srvErrFamilyNameRequired": {
+    "description": "Server error: familyNameRequired"
+  },
+  "srvErrFamilyNotFound": "Family not found.",
+  "@srvErrFamilyNotFound": {
+    "description": "Server error: familyNotFound"
+  },
+  "srvErrFamilyNotFoundOrNotMember": "Family not found or not a member.",
+  "@srvErrFamilyNotFoundOrNotMember": {
+    "description": "Server error: familyNotFoundOrNotMember"
+  },
+  "srvErrFamilyNotMember": "Not a family member.",
+  "@srvErrFamilyNotMember": {
+    "description": "Server error: familyNotMember"
+  },
+  "srvErrFamilyNotMemberOrForbidden": "Not a family member or forbidden.",
+  "@srvErrFamilyNotMemberOrForbidden": {
+    "description": "Server error: familyNotMemberOrForbidden"
+  },
+  "srvErrFamilyStarterTasksInvalid": "starterTasks[{index}] is invalid: {reason}",
+  "@srvErrFamilyStarterTasksInvalid": {
+    "description": "Server error: familyStarterTasksInvalid",
+    "placeholders": {
+      "index": { "type": "int" },
+      "reason": { "type": "String" }
+    }
+  },
+  "srvErrFileInvalidType": "Only JPEG, PNG, and WebP images are allowed.",
+  "@srvErrFileInvalidType": {
+    "description": "Server error: fileInvalidType"
+  },
+  "srvErrFileNoAvatar": "No avatar file provided.",
+  "@srvErrFileNoAvatar": {
+    "description": "Server error: fileNoAvatar"
+  },
+  "srvErrFileTooLarge": "Avatar must be under 2 MB.",
+  "@srvErrFileTooLarge": {
+    "description": "Server error: fileTooLarge"
+  },
+  "srvErrInvalidInput": "Something in the form isn't right. Check it and try again.",
+  "@srvErrInvalidInput": {
+    "description": "Server error: invalidInput"
+  },
+  "srvErrInvitationEmailInvalid": "A valid email is required.",
+  "@srvErrInvitationEmailInvalid": {
+    "description": "Server error: invitationEmailInvalid"
+  },
+  "srvErrInvitationNotFound": "No pending invitation found for your email address.",
+  "@srvErrInvitationNotFound": {
+    "description": "Server error: invitationNotFound"
+  },
+  "srvErrInviteLinkExpired": "This invite link has expired.",
+  "@srvErrInviteLinkExpired": {
+    "description": "Server error: inviteLinkExpired"
+  },
+  "srvErrInviteLinkInvalid": "Invalid invite link.",
+  "@srvErrInviteLinkInvalid": {
+    "description": "Server error: inviteLinkInvalid"
+  },
+  "srvErrInviteLinkMaxUsesReached": "This invite link has reached its maximum uses.",
+  "@srvErrInviteLinkMaxUsesReached": {
+    "description": "Server error: inviteLinkMaxUsesReached"
+  },
+  "srvErrInviteLinkNotFound": "Invite link not found.",
+  "@srvErrInviteLinkNotFound": {
+    "description": "Server error: inviteLinkNotFound"
+  },
+  "srvErrInviteLinkRevoked": "This invite link has been revoked.",
+  "@srvErrInviteLinkRevoked": {
+    "description": "Server error: inviteLinkRevoked"
+  },
+  "srvErrLedgerParamsRequired": "familyId and memberId query parameters are required.",
+  "@srvErrLedgerParamsRequired": {
+    "description": "Server error: ledgerParamsRequired"
+  },
+  "srvErrMemberAlreadyActive": "You are already an active member of this family.",
+  "@srvErrMemberAlreadyActive": {
+    "description": "Server error: memberAlreadyActive"
+  },
+  "srvErrMemberNoEmail": "Your account must have an email address to accept an invitation.",
+  "@srvErrMemberNoEmail": {
+    "description": "Server error: memberNoEmail"
+  },
+  "srvErrMemberPendingNotFound": "Pending member not found.",
+  "@srvErrMemberPendingNotFound": {
+    "description": "Server error: memberPendingNotFound"
+  },
+  "srvErrMemberRoleInvalid": "Invalid role.",
+  "@srvErrMemberRoleInvalid": {
+    "description": "Server error: memberRoleInvalid"
+  },
+  "srvErrNotFound": "Not found.",
+  "@srvErrNotFound": {
+    "description": "Server error: notFound"
+  },
+  "srvErrNotificationPreferencesBooleanRequired": "push_enabled and email_enabled must be booleans.",
+  "@srvErrNotificationPreferencesBooleanRequired": {
+    "description": "Server error: notificationPreferencesBooleanRequired"
+  },
+  "srvErrNotificationPreferencesCoverageRequestsBoolean": "notify_coverage_requests must be a boolean.",
+  "@srvErrNotificationPreferencesCoverageRequestsBoolean": {
+    "description": "Server error: notificationPreferencesCoverageRequestsBoolean"
+  },
+  "srvErrPersonalTimeAddressedToOther": "This request was addressed to someone else.",
+  "@srvErrPersonalTimeAddressedToOther": {
+    "description": "Server error: personalTimeAddressedToOther"
+  },
+  "srvErrPersonalTimeCannotAskSelf": "You cannot ask yourself to cover.",
+  "@srvErrPersonalTimeCannotAskSelf": {
+    "description": "Server error: personalTimeCannotAskSelf"
+  },
+  "srvErrPersonalTimeCannotCoverSelf": "You cannot cover your own personal time.",
+  "@srvErrPersonalTimeCannotCoverSelf": {
+    "description": "Server error: personalTimeCannotCoverSelf"
+  },
+  "srvErrPersonalTimeCaregiverNotFound": "That person is not an active caregiver in this family.",
+  "@srvErrPersonalTimeCaregiverNotFound": {
+    "description": "Server error: personalTimeCaregiverNotFound"
+  },
+  "srvErrPersonalTimeCovererAway": "You are away (\"{title}\") during this time.",
+  "@srvErrPersonalTimeCovererAway": {
+    "description": "Server error: personalTimeCovererAway",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrPersonalTimeHasCoverageCannotMove": "Personal time with confirmed coverage cannot be moved.",
+  "@srvErrPersonalTimeHasCoverageCannotMove": {
+    "description": "Server error: personalTimeHasCoverageCannotMove"
+  },
+  "srvErrPersonalTimeInPast": "Personal time must be in the future.",
+  "@srvErrPersonalTimeInPast": {
+    "description": "Server error: personalTimeInPast"
+  },
+  "srvErrPersonalTimeInvalidType": "type must be one of: sport, social, rest, appointment, other.",
+  "@srvErrPersonalTimeInvalidType": {
+    "description": "Server error: personalTimeInvalidType"
+  },
+  "srvErrPersonalTimeNoOneToCover": "There is no one else to cover for you.",
+  "@srvErrPersonalTimeNoOneToCover": {
+    "description": "Server error: personalTimeNoOneToCover"
+  },
+  "srvErrPersonalTimeOnlyCaregiversCanCover": "Only caregivers can cover.",
+  "@srvErrPersonalTimeOnlyCaregiversCanCover": {
+    "description": "Server error: personalTimeOnlyCaregiversCanCover"
+  },
+  "srvErrPersonalTimeOwnerCanMove": "Only the owner can move personal time.",
+  "@srvErrPersonalTimeOwnerCanMove": {
+    "description": "Server error: personalTimeOwnerCanMove"
+  },
+  "srvErrPersonalTimeOwnerOnly": "Only the owner can delete personal time.",
+  "@srvErrPersonalTimeOwnerOnly": {
+    "description": "Server error: personalTimeOwnerOnly"
+  },
+  "srvErrPersonalTimeRequestAlreadySettled": "This request is no longer pending.",
+  "@srvErrPersonalTimeRequestAlreadySettled": {
+    "description": "Server error: personalTimeRequestAlreadySettled"
+  },
+  "srvErrPersonalTimeRequestExpired": "This request has expired.",
+  "@srvErrPersonalTimeRequestExpired": {
+    "description": "Server error: personalTimeRequestExpired"
+  },
+  "srvErrPersonalTimeRequestNotFound": "Request not found.",
+  "@srvErrPersonalTimeRequestNotFound": {
+    "description": "Server error: personalTimeRequestNotFound"
+  },
+  "srvErrPersonalTimeRequesterBusy": "You already have \"{title}\" during this time.",
+  "@srvErrPersonalTimeRequesterBusy": {
+    "description": "Server error: personalTimeRequesterBusy",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrPersonalTimeRequesterConflict": "They already have \"{title}\" during this time.",
+  "@srvErrPersonalTimeRequesterConflict": {
+    "description": "Server error: personalTimeRequesterConflict",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrPersonalTimeSeriesBlocked": "{occurrences, plural, one{None of the 1 occurrence works - {reason}} other{None of the {occurrences} occurrences work - {reason}}}",
+  "@srvErrPersonalTimeSeriesBlocked": {
+    "description": "Server error: personalTimeSeriesBlocked",
+    "placeholders": {
+      "occurrences": { "type": "int" },
+      "reason": { "type": "String" }
+    }
+  },
+  "srvErrPersonalTimeSweetenerInsufficientCoins": "You do not have enough coins to sweeten this offer.",
+  "@srvErrPersonalTimeSweetenerInsufficientCoins": {
+    "description": "Server error: personalTimeSweetenerInsufficientCoins"
+  },
+  "srvErrPersonalTimeSweetenerSeriesTooExpensive": "{occurrences, plural, one{Sweetening 1 occurrence costs {escrow} coins, which is more than you have.} other{Sweetening all {occurrences} occurrences costs {escrow} coins, which is more than you have.}}",
+  "@srvErrPersonalTimeSweetenerSeriesTooExpensive": {
+    "description": "Server error: personalTimeSweetenerSeriesTooExpensive",
+    "placeholders": {
+      "occurrences": { "type": "int" },
+      "escrow": { "type": "int" }
+    }
+  },
+  "srvErrPersonalTimeTooLong": "{hours, plural, one{Personal time cannot exceed 1 hour - log time off instead.} other{Personal time cannot exceed {hours} hours - log time off instead.}}",
+  "@srvErrPersonalTimeTooLong": {
+    "description": "Server error: personalTimeTooLong",
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "srvErrPersonalTimeTooShort": "{minutes, plural, one{Personal time must last at least 1 minute.} other{Personal time must last at least {minutes} minutes.}}",
+  "@srvErrPersonalTimeTooShort": {
+    "description": "Server error: personalTimeTooShort",
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "srvErrPersonalTimeWithdrawInsteadOfDecline": "Withdraw your own request instead of declining it.",
+  "@srvErrPersonalTimeWithdrawInsteadOfDecline": {
+    "description": "Server error: personalTimeWithdrawInsteadOfDecline"
+  },
+  "srvErrPersonalTimeWithdrawOwnerOnly": "Only the person who asked can withdraw a request.",
+  "@srvErrPersonalTimeWithdrawOwnerOnly": {
+    "description": "Server error: personalTimeWithdrawOwnerOnly"
+  },
+  "srvErrRecurrenceEndBeforeStart": "The repeat end date is before the first occurrence.",
+  "@srvErrRecurrenceEndBeforeStart": {
+    "description": "Server error: recurrenceEndBeforeStart"
+  },
+  "srvErrRecurrenceInvalidDate": "The repeat end date is not a valid date.",
+  "@srvErrRecurrenceInvalidDate": {
+    "description": "Server error: recurrenceInvalidDate"
+  },
+  "srvErrRecurrenceInvalidType": "Repeat must be one of: daily, weekdays, weekly.",
+  "@srvErrRecurrenceInvalidType": {
+    "description": "Server error: recurrenceInvalidType"
+  },
+  "srvErrRecurrenceMissingUntil": "A repeating request needs a date to repeat until.",
+  "@srvErrRecurrenceMissingUntil": {
+    "description": "Server error: recurrenceMissingUntil"
+  },
+  "srvErrRecurrenceTooManyOccurrences": "{max, plural, one{A repeating request cannot cover more than 1 occurrence - pick a nearer end date.} other{A repeating request cannot cover more than {max} occurrences - pick a nearer end date.}}",
+  "@srvErrRecurrenceTooManyOccurrences": {
+    "description": "Server error: recurrenceTooManyOccurrences",
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "srvErrRecurrenceWeekdaysOnWeekend": "A weekdays repeat has to start on a weekday.",
+  "@srvErrRecurrenceWeekdaysOnWeekend": {
+    "description": "Server error: recurrenceWeekdaysOnWeekend"
+  },
+  "srvErrRetentionFamilyBecameActive": "Family became active again - skipped.",
+  "@srvErrRetentionFamilyBecameActive": {
+    "description": "Server error: retentionFamilyBecameActive"
+  },
+  "srvErrRewardExpired": "Reward has expired.",
+  "@srvErrRewardExpired": {
+    "description": "Server error: rewardExpired"
+  },
+  "srvErrRewardFieldsRequired": "familyId, title and cost are required.",
+  "@srvErrRewardFieldsRequired": {
+    "description": "Server error: rewardFieldsRequired"
+  },
+  "srvErrRewardIdInvalidUuid": "rewardId: must be a valid UUID",
+  "@srvErrRewardIdInvalidUuid": {
+    "description": "Server error: rewardIdInvalidUuid"
+  },
+  "srvErrRewardInsufficientCoins": "Insufficient coins.",
+  "@srvErrRewardInsufficientCoins": {
+    "description": "Server error: rewardInsufficientCoins"
+  },
+  "srvErrRewardNotActive": "Reward is no longer active.",
+  "@srvErrRewardNotActive": {
+    "description": "Server error: rewardNotActive"
+  },
+  "srvErrRewardNotFound": "Reward not found.",
+  "@srvErrRewardNotFound": {
+    "description": "Server error: rewardNotFound"
+  },
+  "srvErrRewardNotYetAvailable": "Reward is not yet available.",
+  "@srvErrRewardNotYetAvailable": {
+    "description": "Server error: rewardNotYetAvailable"
+  },
+  "srvErrRewardSoldOut": "Reward is sold out.",
+  "@srvErrRewardSoldOut": {
+    "description": "Server error: rewardSoldOut"
+  },
+  "srvErrRoleRequired": "Requires {role} role.",
+  "@srvErrRoleRequired": {
+    "description": "Server error: roleRequired",
+    "placeholders": { "role": { "type": "String" } }
+  },
+  "srvErrScheduleOverlap": "You already have \"{title}\" scheduled during this time.",
+  "@srvErrScheduleOverlap": {
+    "description": "Server error: scheduleOverlap",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrSubscriptionPaymentPastDue": "Payment for this family's subscription is past due. Please update payment method to continue.",
+  "@srvErrSubscriptionPaymentPastDue": {
+    "description": "Server error: subscriptionPaymentPastDue"
+  },
+  "srvErrTimeWindowEndBeforeStart": "End time must be after start time.",
+  "@srvErrTimeWindowEndBeforeStart": {
+    "description": "Server error: timeWindowEndBeforeStart"
+  },
+  "srvErrTimeWindowInvalidDates": "Start and end must be valid date/time values.",
+  "@srvErrTimeWindowInvalidDates": {
+    "description": "Server error: timeWindowInvalidDates"
+  },
+  "srvErrTokenRequired": "token is required.",
+  "@srvErrTokenRequired": {
+    "description": "Server error: tokenRequired"
   }
 }

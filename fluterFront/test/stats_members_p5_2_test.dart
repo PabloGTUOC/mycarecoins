@@ -134,53 +134,47 @@ void main() {
       await tester.tap(find.text('Members'));
       await tester.pumpAndSettle();
 
-      // 1. Balances card
+      // 1. One card for This family
       expect(find.text('Coin balance leaderboard'), findsNothing);
-      expect(find.text(l.chartBalances), findsOneWidget);
+      expect(find.text(l.membersFamilyTitle), findsOneWidget);
       expect(find.text(l.balancesSentence('250', 2)), findsOneWidget);
       // Names "Ati" and "Pablo" are not shown as bar row labels yet
       expect(find.text('150 cc'), findsNothing);
       expect(find.text('100 cc'), findsNothing);
       expect(find.text(l.balancesNote), findsNothing);
 
-      // Tap Balances "By caregiver" chip
-      final chips = find.byType(FilterChip);
-      expect(chips, findsNWidgets(3));
-      await tester.tap(chips.at(0));
-      await tester.pumpAndSettle();
-
-      // Now "Ati" and "Pablo" appear sorted alphabetically
-      expect(find.text('150 cc'), findsOneWidget);
-      expect(find.text('100 cc'), findsOneWidget);
-      final atiY = tester.getTopLeft(find.text('Ati')).dy;
-      final pabloY = tester.getTopLeft(find.text('Pablo')).dy;
-      expect(atiY, lessThan(pabloY));
-      expect(find.text(l.balancesNote), findsOneWidget);
-
-      // 2. Completion card
+      // 2. Sentences present
       final expectedCompletion =
           '${l.completionSentence(14, 20)} ${l.completionWaiting(2)}';
       expect(find.text(expectedCompletion), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
-
-      // Tap Completion "By caregiver" chip
-      await tester.ensureVisible(chips.at(1));
-      await tester.tap(chips.at(1));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l.completionRow(8, 10)), findsOneWidget);
-      expect(find.text(l.completionRow(6, 10)), findsOneWidget);
-      expect(find.textContaining('%'), findsNothing);
-
-      // 3. Bounties card
       expect(find.text(l.bountiesSentence(45, 30, 15)), findsOneWidget);
 
-      // Tap Bounties "By caregiver" chip
-      await tester.ensureVisible(chips.at(2));
-      await tester.tap(chips.at(2));
+      // Tap single "By caregiver" chip on the family card
+      final chip = find.byType(FilterChip);
+      expect(chip, findsOneWidget);
+      await tester.tap(chip);
       await tester.pumpAndSettle();
 
-      // 4. In the Members tab with every chip on, no LinearProgressIndicator
+      // Now sub-sections appear, with "Ati" and "Pablo" sorted alphabetically
+      expect(find.text(l.chartBalances), findsOneWidget);
+      expect(find.text('150 cc'), findsOneWidget);
+      expect(find.text('100 cc'), findsOneWidget);
+      final atiY = tester.getTopLeft(find.text('Ati').first).dy;
+      final pabloY = tester.getTopLeft(find.text('Pablo').first).dy;
+      expect(atiY, lessThan(pabloY));
+      expect(find.text(l.balancesNote), findsOneWidget);
+
+      // Completion sub-section
+      expect(find.text(l.chartCompletionRate), findsOneWidget);
+      expect(find.text(l.completionRowDone(8)), findsOneWidget);
+      expect(find.text(l.completionRowDone(6)), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing);
+
+      // Bounties sub-section
+      expect(find.text(l.chartBounties), findsOneWidget);
+
+      // 3. In the Members tab with chip on, no LinearProgressIndicator
       // has valueColor set to AppColors.danger or AppColors.warning
       final indicators = tester.widgetList<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),

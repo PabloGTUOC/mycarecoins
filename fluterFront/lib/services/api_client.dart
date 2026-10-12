@@ -23,8 +23,14 @@ class ApiException implements Exception {
   /// Backend-provided message (already human-readable); only set for
   /// [ApiErrorKind.server]. Not localizable client-side.
   final String? serverMessage;
+  final String? errorCode;
+  final Map<String, dynamic>? errorParams;
 
-  ApiException(this.kind, {this.statusCode, this.serverMessage});
+  ApiException(this.kind,
+      {this.statusCode,
+      this.serverMessage,
+      this.errorCode,
+      this.errorParams});
 
   /// English fallback for logs and any caller without an AppLocalizations.
   @override
@@ -87,9 +93,15 @@ class ApiClient {
         // Carry the status code even though the message came from the
         // backend: callers need to tell "your session is gone" (401/403)
         // apart from any other refusal.
+        final code = data['code'] is String ? data['code'] as String : null;
+        final params = data['params'] is Map
+            ? Map<String, dynamic>.from(data['params'] as Map)
+            : null;
         throw ApiException(ApiErrorKind.server,
             statusCode: res.statusCode,
-            serverMessage: data['error'].toString());
+            serverMessage: data['error'].toString(),
+            errorCode: code,
+            errorParams: params);
       }
       throw ApiException(ApiErrorKind.requestFailed, statusCode: res.statusCode);
     }
@@ -130,9 +142,15 @@ class ApiClient {
         // Carry the status code even though the message came from the
         // backend: callers need to tell "your session is gone" (401/403)
         // apart from any other refusal.
+        final code = data['code'] is String ? data['code'] as String : null;
+        final params = data['params'] is Map
+            ? Map<String, dynamic>.from(data['params'] as Map)
+            : null;
         throw ApiException(ApiErrorKind.server,
             statusCode: res.statusCode,
-            serverMessage: data['error'].toString());
+            serverMessage: data['error'].toString(),
+            errorCode: code,
+            errorParams: params);
       }
       throw ApiException(ApiErrorKind.uploadFailed, statusCode: res.statusCode);
     }

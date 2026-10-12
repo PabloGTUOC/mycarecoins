@@ -2,10 +2,11 @@ import { assertActiveMember } from '../db/users.js';
 import { runAutoCompleteSweep } from '../db/autoComplete.js';
 import { assertMemberRole } from '../middleware/rbac.js';
 import { payoutReasons } from '../db/ledgerReasons.js';
+import { serviceError } from '../utils/httpError.js';
 
 export async function listActivities(client, userId, familyId) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   await runAutoCompleteSweep(client, familyId);
   const { rows } = await client.query(
@@ -28,12 +29,12 @@ export async function listActivities(client, userId, familyId) {
 
 export async function createActivity(client, userId, { familyId, title, type, durationMinutes, coinValue, isRecurrent }) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   const { rows } = await client.query(
     `INSERT INTO activities
        (family_id, created_by, assigned_to, title, type,
-        starts_at, ends_at, duration_minutes, coin_value, status, is_template, is_recurrent)
+         starts_at, ends_at, duration_minutes, coin_value, status, is_template, is_recurrent)
      VALUES ($1, $2, NULL, $3, $4, NULL, NULL, $5, $6, 'pending', true, $7)
      RETURNING *`,
     [
@@ -54,10 +55,10 @@ export async function approveActivity(client, userId, activityId) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!tmplRows.length) return { error: { code: 404, message: 'Template not found.' } };
+  if (!tmplRows.length) return serviceError(404, 'activityTemplateNotFound', 'Template not found.');
   const tmpl = tmplRows[0];
   if (tmpl.status !== 'pending') {
-    return { error: { code: 409, message: 'Only pending templates can be approved.' } };
+    return serviceError(409, 'activityTemplateNotPending', 'Only pending templates can be approved.');
   }
   const rbacErr = await assertMemberRole(client, userId, tmpl.family_id, 'caregiver');
   if (rbacErr) return rbacErr;
@@ -76,7 +77,7 @@ export async function scheduleActivity(client, userId, activityId, startsAt) {
     [activityId, userId]
   );
   if (!tmpl.length) {
-    return { error: { code: 404, message: 'Approved activity template not found.' } };
+    return serviceError(404, 'activityApprovedTemplateNotFound', 'Approved activity template not found.');
   }
   const t = tmpl[0];
   const start = new Date(startsAt);
@@ -98,7 +99,12 @@ export async function scheduleActivity(client, userId, activityId, startsAt) {
     [userId, t.family_id, start.toISOString(), endsAtDate.toISOString()]
   );
   if (absenceOverlap.length > 0) {
-    return { error: { code: 400, message: `You are marked as absent during this time ("${absenceOverlap[0].title}").` } };
+    return serviceError(
+      400,
+      'absentDuringTime',
+      `You are marked as absent during this time ("${absenceOverlap[0].title}").`,
+      { title: absenceOverlap[0].title }
+    );
   }
 
   // Coverage is deliberately exempt: it is supervision, not busy hands. Someone
@@ -113,7 +119,12 @@ export async function scheduleActivity(client, userId, activityId, startsAt) {
     [userId, t.family_id, start.toISOString(), endsAtDate.toISOString()]
   );
   if (selfOverlap.length > 0) {
-    return { error: { code: 409, message: `You already have "${selfOverlap[0].title}" scheduled during this time.` } };
+    return serviceError(
+      409,
+      'scheduleOverlap',
+      `You already have "${selfOverlap[0].title}" scheduled during this time.`,
+      { title: selfOverlap[0].title }
+    );
   }
 
   const { rows: budgetRows } = await client.query(`
@@ -166,7 +177,7 @@ export async function createRecurrence(client, userId, instanceId, { frequency, 
      AND family_id IN (SELECT family_id FROM family_members WHERE user_id = $2 AND status = 'active')`,
     [instanceId, userId]
   );
-  if (!actRows.length) return { error: { code: 404, message: 'Valid recurrent scheduled instance not found.' } };
+  if (!actRows.length) return serviceError(404, 'activityRecurrentInstanceNotFound', 'Valid recurrent scheduled instance not found.');
   const act = actRows[0];
 
   let current = new Date(act.starts_at);
@@ -223,7 +234,7 @@ export async function completeActivity(client, userId, instanceId) {
     [instanceId, userId]
   );
   if (!instRows.length) {
-    return { error: { code: 404, message: 'Instance not found, not yours, or already completed.' } };
+    return serviceError(404, 'activityInstanceNotFoundOrCompleted', 'Instance not found, not yours, or already completed.');
   }
   const inst = instRows[0];
   await client.query(`UPDATE activities SET status = 'completed' WHERE id = $1`, [inst.id]);
@@ -259,10 +270,10 @@ export async function validateActivity(client, userId, activityId) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!actRows.length) return { error: { code: 404, message: 'Activity not found.' } };
+  if (!actRows.length) return serviceError(404, 'activityNotFound', 'Activity not found.');
   const act = actRows[0];
-  if (act.status !== 'pending_validation') return { error: { code: 409, message: 'Activity is not pending validation.' } };
-  if (act.assigned_to === userId) return { error: { code: 403, message: 'You cannot validate your own retroactive activity.' } };
+  if (act.status !== 'pending_validation') return serviceError(409, 'activityNotPendingValidation', 'Activity is not pending validation.');
+  if (act.assigned_to === userId) return serviceError(403, 'activityCannotValidateOwn', 'You cannot validate your own retroactive activity.');
 
   await client.query(`UPDATE activities SET status = 'completed' WHERE id = $1`, [act.id]);
 
@@ -297,23 +308,23 @@ export async function offerBounty(client, userId, activityId, bountyAmount) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!actRows.length) return { error: { code: 404, message: 'Activity not found.' } };
+  if (!actRows.length) return serviceError(404, 'activityNotFound', 'Activity not found.');
   const act = actRows[0];
   // A coverage shift is someone's agreement to cover a specific person's time,
   // and its bounty fields already carry that person's sweetener; personal time
   // is nobody's shift to hand over. Neither can be put up for a bounty.
   if (act.type === 'coverage' || act.category === 'self') {
-    return { error: { code: 409, message: 'Coverage and personal time cannot be handed over.' } };
+    return serviceError(409, 'activityCoverageOrPersonalCannotBounty', 'Coverage and personal time cannot be handed over.');
   }
   if (act.assigned_to !== userId) {
-    return { error: { code: 403, message: 'Only the assigned caregiver can offer a bounty on this shift.' } };
+    return serviceError(403, 'activityBountyAssigneeOnly', 'Only the assigned caregiver can offer a bounty on this shift.');
   }
   const { rows: memRows } = await client.query(
     `SELECT coin_balance FROM family_members WHERE family_id = $1 AND user_id = $2 AND status = 'active'`,
     [act.family_id, userId]
   );
   if (!memRows.length || memRows[0].coin_balance < bountyAmount) {
-    return { error: { code: 409, message: 'Insufficient personal coins to offer this bounty.' } };
+    return serviceError(409, 'activityBountyInsufficientCoins', 'Insufficient personal coins to offer this bounty.');
   }
   await client.query(
     `UPDATE family_members SET coin_balance = coin_balance - $1 WHERE family_id = $2 AND user_id = $3`,
@@ -338,18 +349,18 @@ export async function acceptBounty(client, userId, activityId) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!actRows.length) return { error: { code: 404, message: 'Activity not found.' } };
+  if (!actRows.length) return serviceError(404, 'activityNotFound', 'Activity not found.');
   const act = actRows[0];
   // A coverage shift's bounty is the requester's sweetener, not an offer:
   // "accepting" it would let them cover their own personal time.
   if (act.type === 'coverage' || act.category === 'self') {
-    return { error: { code: 409, message: 'Coverage and personal time cannot be handed over.' } };
+    return serviceError(409, 'activityCoverageOrPersonalCannotBounty', 'Coverage and personal time cannot be handed over.');
   }
   if (act.status === 'completed' || act.status === 'pending_validation') {
-    return { error: { code: 409, message: 'Cannot accept bounty for a completed or pending validation activity.' } };
+    return serviceError(409, 'activityBountyCompletedOrPendingValidation', 'Cannot accept bounty for a completed or pending validation activity.');
   }
-  if (act.assigned_to === userId) return { error: { code: 409, message: 'You already own this shift.' } };
-  if (!act.bounty_amount || !act.bounty_offered_by) return { error: { code: 409, message: 'No bounty available.' } };
+  if (act.assigned_to === userId) return serviceError(409, 'activityAlreadyOwnShift', 'You already own this shift.');
+  if (!act.bounty_amount || !act.bounty_offered_by) return serviceError(409, 'activityNoBountyAvailable', 'No bounty available.');
   await client.query(`UPDATE activities SET assigned_to = $1 WHERE id = $2`, [userId, activityId]);
   return { data: { success: true } };
 }
@@ -364,13 +375,13 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Activity not found.' } };
+  if (!rows.length) return serviceError(404, 'activityNotFound', 'Activity not found.');
   const act = rows[0];
 
   if (act.is_template) {
     const roleErr = await assertMemberRole(client, userId, act.family_id, 'caregiver');
     if (roleErr && act.created_by !== userId) {
-      return { error: { code: 403, message: 'Only caregivers or the creator can delete an activity template.' } };
+      return serviceError(403, 'activityTemplateDeleteUnauthorized', 'Only caregivers or the creator can delete an activity template.');
     }
     await client.query(`DELETE FROM activities WHERE id = $1`, [activityId]);
     return { data: { success: true } };
@@ -381,14 +392,14 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
   // remove the other on its own. Cancelling personal time takes its coverage
   // with it. Caregiver rights do not override either rule.
   if (act.type === 'coverage') {
-    return { error: { code: 409, message: 'Coverage ends when its personal time is cancelled.' } };
+    return serviceError(409, 'coverageEndsWithPersonalTime', 'Coverage ends when its personal time is cancelled.');
   }
   if (act.category === 'self') {
     if (act.assigned_to !== userId) {
-      return { error: { code: 403, message: 'Only the person taking this time can cancel it.' } };
+      return serviceError(403, 'personalTimeOwnerOnly', 'Only the person taking this time can cancel it.');
     }
     if (!['approved', 'pending_validation', 'pending'].includes(act.status)) {
-      return { error: { code: 409, message: 'Can only un-schedule upcoming activities.' } };
+      return serviceError(409, 'activityNotUpcoming', 'Can only un-schedule upcoming activities.');
     }
     return cancelPersonalTime(client, act, activityId);
   }
@@ -396,10 +407,10 @@ export async function deleteActivity(client, userId, activityId, isSeries) {
   const caregiverCheck = await assertMemberRole(client, userId, act.family_id, 'caregiver');
   const isCaregiver = !caregiverCheck;
   if (act.assigned_to !== userId && !isCaregiver) {
-    return { error: { code: 403, message: 'Cannot delete an activity that is not yours.' } };
+    return serviceError(403, 'activityNotYours', 'Cannot delete an activity that is not yours.');
   }
   if (!['approved', 'pending_validation', 'pending'].includes(act.status)) {
-    return { error: { code: 409, message: 'Can only un-schedule upcoming activities.' } };
+    return serviceError(409, 'activityNotUpcoming', 'Can only un-schedule upcoming activities.');
   }
 
   if (isSeries) {
@@ -459,31 +470,31 @@ export async function rescheduleActivity(client, userId, activityId, startsAt, n
     [activityId, userId]
   );
   if (!rows.length || rows[0].is_template) {
-    return { error: { code: 404, message: 'Activity not found.' } };
+    return serviceError(404, 'activityNotFound', 'Activity not found.');
   }
   const act = rows[0];
 
   if (act.type === 'coverage') {
-    return { error: { code: 409, message: 'Coverage moves only with its personal time.' } };
+    return serviceError(409, 'coverageMovesWithPersonalTime', 'Coverage moves only with its personal time.');
   }
   if (act.category === 'self') {
     if (act.assigned_to !== userId) {
-      return { error: { code: 403, message: 'Only the person taking this time can move it.' } };
+      return serviceError(403, 'personalTimeOwnerCanMove', 'Only the person taking this time can move it.');
     }
     if (act.counterpart_activity_id) {
-      return { error: { code: 409, message: 'Someone is covering this time. Cancel it and ask again to change it.' } };
+      return serviceError(409, 'personalTimeHasCoverageCannotMove', 'Someone is covering this time. Cancel it and ask again to change it.');
     }
   } else if (act.assigned_to !== userId) {
     const roleErr = await assertMemberRole(client, userId, act.family_id, 'caregiver');
-    if (roleErr) return { error: { code: 403, message: 'Cannot move an activity that is not yours.' } };
+    if (roleErr) return serviceError(403, 'activityMoveNotYours', 'Cannot move an activity that is not yours.');
   }
   if (act.status !== 'approved') {
-    return { error: { code: 409, message: 'Only upcoming activities can be moved.' } };
+    return serviceError(409, 'activityMoveOnlyUpcoming', 'Only upcoming activities can be moved.');
   }
 
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime()) || start <= now) {
-    return { error: { code: 400, message: 'Pick a time that has not passed.' } };
+    return serviceError(400, 'activityTimeInPast', 'Pick a time that has not passed.');
   }
   const end = new Date(start.getTime() + Number(act.duration_minutes) * 60000);
 
@@ -493,7 +504,12 @@ export async function rescheduleActivity(client, userId, activityId, startsAt, n
     [act.assigned_to, act.family_id, start.toISOString(), end.toISOString()]
   );
   if (absenceOverlap.length > 0) {
-    return { error: { code: 409, message: `They are away during this time ("${absenceOverlap[0].title}").` } };
+    return serviceError(
+      409,
+      'activityRescheduleAbsent',
+      `They are away during this time ("${absenceOverlap[0].title}").`,
+      { title: absenceOverlap[0].title }
+    );
   }
 
   const { rows: overlap } = await client.query(
@@ -505,7 +521,12 @@ export async function rescheduleActivity(client, userId, activityId, startsAt, n
     [act.assigned_to, act.family_id, start.toISOString(), end.toISOString(), activityId]
   );
   if (overlap.length > 0) {
-    return { error: { code: 409, message: `"${overlap[0].title}" is already scheduled during this time.` } };
+    return serviceError(
+      409,
+      'activityRescheduleOverlap',
+      `"${overlap[0].title}" is already scheduled during this time.`,
+      { title: overlap[0].title }
+    );
   }
 
   const { rows: updated } = await client.query(
@@ -532,7 +553,7 @@ async function cancelPersonalTime(client, act, activityId) {
     const coverage = rows[0];
     if (coverage) {
       if (!['approved', 'pending_validation', 'pending'].includes(coverage.status)) {
-        return { error: { code: 409, message: 'Its coverage has already been paid.' } };
+        return serviceError(409, 'coverageAlreadyPaid', 'Its coverage has already been paid.');
       }
       if (coverage.bounty_amount > 0 && coverage.bounty_offered_by) {
         await client.query(
@@ -560,13 +581,13 @@ export async function revertActivity(client, userId, activityId) {
      FOR UPDATE`,
     [activityId, userId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Activity not found.' } };
+  if (!rows.length) return serviceError(404, 'activityNotFound', 'Activity not found.');
   const act = rows[0];
-  if (act.assigned_to !== userId) return { error: { code: 403, message: "Cannot revert someone else's completion." } };
+  if (act.assigned_to !== userId) return serviceError(403, 'activityRevertNotYours', "Cannot revert someone else's completion.");
   if (act.type === 'coverage') {
-    return { error: { code: 409, message: 'Coverage ends when its personal time is cancelled.' } };
+    return serviceError(409, 'coverageEndsWithPersonalTime', 'Coverage ends when its personal time is cancelled.');
   }
-  if (act.status !== 'completed') return { error: { code: 409, message: 'Activity is not completed.' } };
+  if (act.status !== 'completed') return serviceError(409, 'activityNotCompleted', 'Activity is not completed.');
 
   const bountyAmt = act.bounty_amount || 0;
   const totalAward = (act.coin_value || 0) + bountyAmt;

@@ -242,7 +242,7 @@ void main() {
       await tester.pumpWidget(_wrap(const ActivitiesScreen(), app));
       await tester.pumpAndSettle();
 
-      expect(find.text('Daily Walk'), findsOneWidget);
+      expect(find.textContaining('Daily Walk', findRichText: true), findsOneWidget);
       expect(find.byIcon(Icons.repeat_rounded), findsOneWidget);
 
       final icon = tester.widget<Icon>(find.byIcon(Icons.repeat_rounded));

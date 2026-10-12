@@ -1,4 +1,5 @@
 import { assertActiveMember } from '../db/users.js';
+import { serviceError } from '../utils/httpError.js';
 
 /**
  * Personal-time requests (docs/personal-time-plan.md §3.2, Phase 4).
@@ -28,23 +29,45 @@ const MS_PER_MINUTE = 60_000;
 // ─── Pure rules ───────────────────────────────────────────────────────────────
 
 /**
+ * Validates the window a self activity claims. Returns an error descriptor with
+ * { key, message, params }, or null when usable.
+ */
+export function selfWindowError(startsAt, endsAt, now = new Date()) {
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return { key: 'timeWindowInvalidDates', message: 'Start and end must be valid date/time values.' };
+  }
+  if (end.getTime() <= start.getTime()) {
+    return { key: 'timeWindowEndBeforeStart', message: 'End time must be after start time.' };
+  }
+  const minutes = (end.getTime() - start.getTime()) / MS_PER_MINUTE;
+  if (minutes < MIN_MINUTES) {
+    return {
+      key: 'personalTimeTooShort',
+      message: `Personal time must last at least ${MIN_MINUTES} minutes.`,
+      params: { minutes: MIN_MINUTES },
+    };
+  }
+  if (minutes > MAX_HOURS * 60) {
+    return {
+      key: 'personalTimeTooLong',
+      message: `Personal time cannot exceed ${MAX_HOURS} hours — log time off instead.`,
+      params: { hours: MAX_HOURS },
+    };
+  }
+  if (end.getTime() <= now.getTime()) {
+    return { key: 'personalTimeInPast', message: 'Personal time must be in the future.' };
+  }
+  return null;
+}
+
+/**
  * Validates the window a self activity claims. Returns an error message, or
  * null when usable. Pure, so the rule is unit-testable without a database.
  */
 export function validateSelfWindow(startsAt, endsAt, now = new Date()) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return 'Start and end must be valid date/time values.';
-  }
-  if (end.getTime() <= start.getTime()) return 'End time must be after start time.';
-  const minutes = (end.getTime() - start.getTime()) / MS_PER_MINUTE;
-  if (minutes < MIN_MINUTES) return `Personal time must last at least ${MIN_MINUTES} minutes.`;
-  if (minutes > MAX_HOURS * 60) {
-    return `Personal time cannot exceed ${MAX_HOURS} hours — log time off instead.`;
-  }
-  if (end.getTime() <= now.getTime()) return 'Personal time must be in the future.';
-  return null;
+  return selfWindowError(startsAt, endsAt, now)?.message ?? null;
 }
 
 /**
@@ -83,7 +106,7 @@ function endOfDay(until) {
 }
 
 /**
- * Every window a request covers, as `{ occurrences, error }`. A request with no
+ * Every window a request covers, as `{ occurrences, error, key, params }`. A request with no
  * recurrence yields exactly one — its own window.
  *
  * Unlike `createRecurrence` in activityService, which excludes its seed because
@@ -102,19 +125,19 @@ export function occurrencesFor(startsAt, endsAt, recurrence = null, until = null
   const end = new Date(endsAt);
   const durationMs = end.getTime() - start.getTime();
   const one = { occurrences: [{ start, end }], error: null };
-  const refuse = (error) => ({ occurrences: [], error });
+  const refuse = (key, error, params) => ({ occurrences: [], error, key, ...(params ? { params } : {}) });
 
   if (!recurrence) return one;
   if (!RECURRENCES.includes(recurrence)) {
-    return refuse(`Repeat must be one of: ${RECURRENCES.join(', ')}.`);
+    return refuse('recurrenceInvalidType', `Repeat must be one of: ${RECURRENCES.join(', ')}.`);
   }
-  if (!until) return refuse('A repeating request needs a date to repeat until.');
+  if (!until) return refuse('recurrenceMissingUntil', 'A repeating request needs a date to repeat until.');
 
   const last = endOfDay(until);
-  if (!last) return refuse('The repeat end date is not a valid date.');
-  if (last < start) return refuse('The repeat end date is before the first occurrence.');
+  if (!last) return refuse('recurrenceInvalidDate', 'The repeat end date is not a valid date.');
+  if (last < start) return refuse('recurrenceEndBeforeStart', 'The repeat end date is before the first occurrence.');
   if (recurrence === 'weekdays' && isWeekend(start)) {
-    return refuse('A weekdays repeat has to start on a weekday.');
+    return refuse('recurrenceWeekdaysOnWeekend', 'A weekdays repeat has to start on a weekday.');
   }
 
   const occurrences = [];
@@ -129,7 +152,9 @@ export function occurrencesFor(startsAt, endsAt, recurrence = null, until = null
       // for 60 while the requester believed they had asked for more.
       if (occurrences.length > MAX_OCCURRENCES) {
         return refuse(
-          `A repeating request cannot cover more than ${MAX_OCCURRENCES} occurrences — pick a nearer end date.`
+          'recurrenceTooManyOccurrences',
+          `A repeating request cannot cover more than ${MAX_OCCURRENCES} occurrences — pick a nearer end date.`,
+          { max: MAX_OCCURRENCES }
         );
       }
     }
@@ -158,15 +183,15 @@ async function activeCaregivers(client, familyId) {
 function resolveCounterparty(caregivers, requesterId, requestedOf) {
   if (requestedOf) {
     const match = caregivers.find((c) => Number(c.user_id) === Number(requestedOf));
-    if (!match) return { error: 'That person is not an active caregiver in this family.' };
+    if (!match) return { error: 'That person is not an active caregiver in this family.', key: 'personalTimeCaregiverNotFound' };
     if (Number(requestedOf) === Number(requesterId)) {
-      return { error: 'You cannot ask yourself to cover.' };
+      return { error: 'You cannot ask yourself to cover.', key: 'personalTimeCannotAskSelf' };
     }
     return { requestedOf: Number(requestedOf) };
   }
   const others = caregivers.filter((c) => Number(c.user_id) !== Number(requesterId));
   if (others.length === 1) return { requestedOf: Number(others[0].user_id) };
-  if (others.length === 0) return { error: 'There is no one else to cover for you.' };
+  if (others.length === 0) return { error: 'There is no one else to cover for you.', key: 'personalTimeNoOneToCover' };
   return { requestedOf: null }; // ask anyone
 }
 
@@ -228,15 +253,15 @@ async function refundEscrow(client, req, amount = Number(req.escrowed_coins) || 
 
 export async function quoteRequest(client, userId, { familyId, startsAt, endsAt, requestedOf, coverageNeeded = true, recurrence = null, recurrenceUntil = null }, now = new Date()) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
-  const windowError = validateSelfWindow(startsAt, endsAt, now);
-  if (windowError) return { error: { code: 400, message: windowError } };
+  const windowErr = selfWindowError(startsAt, endsAt, now);
+  if (windowErr) return serviceError(400, windowErr.key, windowErr.message, windowErr.params);
 
   // The sheet must be able to show what a series really costs before it is
   // asked for, and the occurrence count is the server's to decide.
-  const { occurrences, error: repeatError } = occurrencesFor(startsAt, endsAt, recurrence, recurrenceUntil);
-  if (repeatError) return { error: { code: 400, message: repeatError } };
+  const { occurrences, error: repeatError, key: repeatKey, params: repeatParams } = occurrencesFor(startsAt, endsAt, recurrence, recurrenceUntil);
+  if (repeatError) return serviceError(400, repeatKey, repeatError, repeatParams);
 
   const minutes = (new Date(endsAt) - new Date(startsAt)) / MS_PER_MINUTE;
   // The sheet lists candidates whether or not coverage is wanted, so this is
@@ -248,7 +273,7 @@ export async function quoteRequest(client, userId, { familyId, startsAt, endsAt,
   let resolved = { requestedOf: null };
   if (coverageNeeded) {
     resolved = resolveCounterparty(caregivers, userId, requestedOf);
-    if (resolved.error) return { error: { code: 400, message: resolved.error } };
+    if (resolved.error) return serviceError(400, resolved.key, resolved.error);
   }
 
   const baseline = coverageNeeded ? priceCoverage(await baseRateFor(client, familyId), minutes) : 0;
@@ -308,7 +333,7 @@ export async function expireStaleRequests(client, familyId, now = new Date()) {
 
 export async function listRequests(client, userId, familyId, now = new Date()) {
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   await expireStaleRequests(client, familyId, now);
   const { rows } = await client.query(
@@ -336,17 +361,22 @@ export async function createRequest(client, userId, body, now = new Date()) {
   } = body;
 
   if (!await assertActiveMember(client, familyId, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   if (!SELF_TYPES.includes(type)) {
-    return { error: { code: 400, message: `type must be one of: ${SELF_TYPES.join(', ')}.` } };
+    return serviceError(400, 'personalTimeInvalidType', `type must be one of: ${SELF_TYPES.join(', ')}.`);
   }
-  const windowError = validateSelfWindow(startsAt, endsAt, now);
-  if (windowError) return { error: { code: 400, message: windowError } };
+  const windowErr = selfWindowError(startsAt, endsAt, now);
+  if (windowErr) return serviceError(400, windowErr.key, windowErr.message, windowErr.params);
 
   const yourConflicts = await conflictsFor(client, familyId, userId, startsAt, endsAt);
   if (yourConflicts.length) {
-    return { error: { code: 409, message: `You already have "${yourConflicts[0]}" during this time.` } };
+    return serviceError(
+      409,
+      'personalTimeRequesterBusy',
+      `You already have "${yourConflicts[0]}" during this time.`,
+      { title: yourConflicts[0] }
+    );
   }
 
   // Only coverage needs a counterparty. Time booked with `coverageNeeded:
@@ -356,11 +386,11 @@ export async function createRequest(client, userId, body, now = new Date()) {
   if (coverageNeeded) {
     const caregivers = await activeCaregivers(client, familyId);
     resolved = resolveCounterparty(caregivers, userId, requestedOf);
-    if (resolved.error) return { error: { code: 400, message: resolved.error } };
+    if (resolved.error) return serviceError(400, resolved.key, resolved.error);
   }
 
-  const { occurrences, error: repeatError } = occurrencesFor(startsAt, endsAt, recurrence, recurrenceUntil);
-  if (repeatError) return { error: { code: 400, message: repeatError } };
+  const { occurrences, error: repeatError, key: repeatKey, params: repeatParams } = occurrencesFor(startsAt, endsAt, recurrence, recurrenceUntil);
+  if (repeatError) return serviceError(400, repeatKey, repeatError, repeatParams);
 
   const minutes = (new Date(endsAt) - new Date(startsAt)) / MS_PER_MINUTE;
   const baseline = coverageNeeded ? priceCoverage(await baseRateFor(client, familyId), minutes) : 0;
@@ -376,14 +406,14 @@ export async function createRequest(client, userId, body, now = new Date()) {
       [familyId, userId]
     );
     if (!rows.length || rows[0].coin_balance < escrow) {
-      return {
-        error: {
-          code: 409,
-          message: occurrences.length > 1
-            ? `Sweetening all ${occurrences.length} occurrences costs ${escrow} coins, which is more than you have.`
-            : 'You do not have enough coins to sweeten this offer.',
-        },
-      };
+      return occurrences.length > 1
+        ? serviceError(
+            409,
+            'personalTimeSweetenerSeriesTooExpensive',
+            `Sweetening all ${occurrences.length} occurrences costs ${escrow} coins, which is more than you have.`,
+            { occurrences: occurrences.length, escrow }
+          )
+        : serviceError(409, 'personalTimeSweetenerInsufficientCoins', 'You do not have enough coins to sweeten this offer.');
     }
     // Escrowed now, exactly as offerBounty does, so the coins cannot be spent
     // twice while the request is outstanding.
@@ -457,33 +487,33 @@ export async function acceptRequest(client, userId, requestId, now = new Date())
     'SELECT * FROM personal_time_requests WHERE id = $1 FOR UPDATE',
     [requestId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Request not found.' } };
+  if (!rows.length) return serviceError(404, 'personalTimeRequestNotFound', 'Request not found.');
   const request = rows[0];
 
   if (!await assertActiveMember(client, request.family_id, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   if (request.status !== 'pending') {
-    return { error: { code: 409, message: `This request is already ${request.status}.` } };
+    return serviceError(409, 'personalTimeRequestAlreadySettled', `This request is already ${request.status}.`, { status: request.status });
   }
   if (new Date(request.expires_at) <= now) {
-    return { error: { code: 409, message: 'This request has expired.' } };
+    return serviceError(409, 'personalTimeRequestExpired', 'This request has expired.');
   }
   if (Number(request.requester_id) === Number(userId)) {
-    return { error: { code: 403, message: 'You cannot cover your own personal time.' } };
+    return serviceError(403, 'personalTimeCannotCoverSelf', 'You cannot cover your own personal time.');
   }
   if (request.requested_of && Number(request.requested_of) !== Number(userId)) {
-    return { error: { code: 403, message: 'This request was addressed to someone else.' } };
+    return serviceError(403, 'personalTimeAddressedToOther', 'This request was addressed to someone else.');
   }
   const caregivers = await activeCaregivers(client, request.family_id);
   if (!caregivers.some((c) => Number(c.user_id) === Number(userId))) {
-    return { error: { code: 403, message: 'Only caregivers can cover.' } };
+    return serviceError(403, 'personalTimeOnlyCaregiversCanCover', 'Only caregivers can cover.');
   }
 
-  const { occurrences, error: repeatError } = occurrencesFor(
+  const { occurrences, error: repeatError, key: repeatKey, params: repeatParams } = occurrencesFor(
     request.starts_at, request.ends_at, request.recurrence, request.recurrence_until
   );
-  if (repeatError) return { error: { code: 409, message: repeatError } };
+  if (repeatError) return serviceError(409, repeatKey, repeatError, repeatParams);
 
   // The coverage shift is inserted directly rather than through
   // scheduleActivity: it is allowed to overlap whatever else they have on.
@@ -505,7 +535,11 @@ export async function acceptRequest(client, userId, requestId, now = new Date())
       [userId, request.family_id, startIso, endIso]
     );
     if (away.length) {
-      blocked ??= `You are away ("${away[0].title}") during this time.`;
+      blocked ??= {
+        key: 'personalTimeCovererAway',
+        message: `You are away ("${away[0].title}") during this time.`,
+        params: { title: away[0].title },
+      };
       skipped++;
       continue;
     }
@@ -515,7 +549,11 @@ export async function acceptRequest(client, userId, requestId, now = new Date())
       client, request.family_id, request.requester_id, startIso, endIso
     );
     if (theirs.length) {
-      blocked ??= `They already have "${theirs[0]}" during this time.`;
+      blocked ??= {
+        key: 'personalTimeRequesterConflict',
+        message: `They already have "${theirs[0]}" during this time.`,
+        params: { title: theirs[0] },
+      };
       skipped++;
       continue;
     }
@@ -545,14 +583,20 @@ export async function acceptRequest(client, userId, requestId, now = new Date())
   // Nothing usable is a refusal, not an acceptance of nothing: the request stays
   // pending, its escrow untouched, and someone else may still be able to take it.
   if (!pairs.length) {
-    return {
-      error: {
-        code: 409,
-        message: occurrences.length === 1
-          ? blocked
-          : `None of the ${occurrences.length} occurrences work — ${blocked}`,
-      },
-    };
+    if (occurrences.length === 1) {
+      return serviceError(409, blocked.key, blocked.message, blocked.params);
+    }
+    return serviceError(
+      409,
+      'personalTimeSeriesBlocked',
+      `None of the ${occurrences.length} occurrences work — ${blocked.message}`,
+      // The reason travels as its own code so the app can translate both halves.
+      {
+        occurrences: occurrences.length,
+        reasonCode: blocked.key,
+        ...(blocked.params ? { reasonParams: blocked.params } : {}),
+      }
+    );
   }
 
   // The escrow bought favours; the skipped ones will not happen, so that part of
@@ -584,20 +628,20 @@ export async function declineRequest(client, userId, requestId, now = new Date()
     'SELECT * FROM personal_time_requests WHERE id = $1 FOR UPDATE',
     [requestId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Request not found.' } };
+  if (!rows.length) return serviceError(404, 'personalTimeRequestNotFound', 'Request not found.');
   const request = rows[0];
 
   if (!await assertActiveMember(client, request.family_id, userId)) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return serviceError(403, 'familyNotMember', 'Not a family member.');
   }
   if (request.status !== 'pending') {
-    return { error: { code: 409, message: `This request is already ${request.status}.` } };
+    return serviceError(409, 'personalTimeRequestAlreadySettled', `This request is already ${request.status}.`, { status: request.status });
   }
   if (Number(request.requester_id) === Number(userId)) {
-    return { error: { code: 403, message: 'Withdraw your own request instead of declining it.' } };
+    return serviceError(403, 'personalTimeWithdrawInsteadOfDecline', 'Withdraw your own request instead of declining it.');
   }
   if (request.requested_of && Number(request.requested_of) !== Number(userId)) {
-    return { error: { code: 403, message: 'This request was addressed to someone else.' } };
+    return serviceError(403, 'personalTimeAddressedToOther', 'This request was addressed to someone else.');
   }
 
   await refundEscrow(client, request);
@@ -615,14 +659,14 @@ export async function cancelRequest(client, userId, requestId) {
     'SELECT * FROM personal_time_requests WHERE id = $1 FOR UPDATE',
     [requestId]
   );
-  if (!rows.length) return { error: { code: 404, message: 'Request not found.' } };
+  if (!rows.length) return serviceError(404, 'personalTimeRequestNotFound', 'Request not found.');
   const request = rows[0];
 
   if (Number(request.requester_id) !== Number(userId)) {
-    return { error: { code: 403, message: 'Only the person who asked can withdraw a request.' } };
+    return serviceError(403, 'personalTimeWithdrawOwnerOnly', 'Only the person who asked can withdraw a request.');
   }
   if (request.status !== 'pending') {
-    return { error: { code: 409, message: `This request is already ${request.status}.` } };
+    return serviceError(409, 'personalTimeRequestAlreadySettled', `This request is already ${request.status}.`, { status: request.status });
   }
 
   await refundEscrow(client, request);
@@ -632,3 +676,4 @@ export async function cancelRequest(client, userId, requestId) {
   );
   return { data: { cancelled: true }, request };
 }
+

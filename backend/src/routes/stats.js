@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
+import { sendError } from '../utils/httpError.js';
 
 export const statsRouter = Router();
 
 statsRouter.get('/:familyId', async (req, res) => {
     const familyId = Number(req.params.familyId);
-    if (!familyId) return res.status(400).json({ error: 'Invalid familyId.' });
+    if (!familyId) return sendError(res, 400, 'familyIdInvalid', 'Invalid familyId.');
 
     try {
         const data = await withTransaction(async (client) => {
@@ -226,10 +227,10 @@ statsRouter.get('/:familyId', async (req, res) => {
             };
         });
 
-        if (!data) return res.status(403).json({ error: 'Not a family member or forbidden.' });
+        if (!data) return sendError(res, 403, 'familyNotMemberOrForbidden', 'Not a family member or forbidden.');
         return res.json(data);
     } catch (err) {
         console.error('Failed to load stats:', err);
-        return res.status(500).json({ error: 'Failed to load statistics.' });
+        return sendError(res, 500, 'internal', 'Failed to load statistics.');
     }
 });

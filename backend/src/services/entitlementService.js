@@ -20,6 +20,8 @@
  * family in read-only mode via assertFamilyWritable.
  */
 
+import { serviceError } from '../utils/httpError.js';
+
 const GOOD_STANDING = new Set(['trialing', 'active', 'in_grace']);
 
 function mergeLimits(sources) {
@@ -117,12 +119,11 @@ export async function assertFamilyWritable(client, familyId) {
     [familyId]
   );
   if (rows.length && rows[0].status === 'past_due') {
-    return {
-      error: {
-        code: 402,
-        message: 'The family subscription payment is past due. The family is read-only until billing is resolved.',
-      },
-    };
+    return serviceError(
+      402,
+      'subscriptionPaymentPastDue',
+      'The family subscription payment is past due. The family is read-only until billing is resolved.'
+    );
   }
   return null;
 }

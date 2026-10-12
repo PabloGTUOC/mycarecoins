@@ -32,6 +32,7 @@
 
 import { pool } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
+import { sendError } from '../utils/httpError.js';
 
 const ROLE_LEVELS = { caregiver: 2, member: 1 };
 
@@ -54,15 +55,15 @@ export function requireRole(role, getFamilyId) {
       );
 
       if (!rows.length) {
-        return res.status(403).json({ error: 'Not a family member.' });
+        return sendError(res, 403, 'familyNotMember', 'Not a family member.');
       }
       if (!meetsRole(rows[0].role, role)) {
-        return res.status(403).json({ error: `Requires ${role} role.` });
+        return sendError(res, 403, 'roleRequired', `Requires ${role} role.`, { role });
       }
 
       next();
     } catch {
-      return res.status(500).json({ error: 'Authorization check failed.' });
+      return sendError(res, 500, 'internal', 'Authorization check failed.');
     } finally {
       client.release();
     }
@@ -91,12 +92,12 @@ export function requireAdmin(req, res, next) {
     try {
       const result = await checkPlatformAdmin(client, req.auth);
       if (result.error) {
-        return res.status(result.error.code).json({ error: result.error.message });
+        return sendError(res, result.error.code, 'adminOnly', result.error.message);
       }
       req.adminUser = result.user;
       next();
     } catch {
-      return res.status(500).json({ error: 'Authorization check failed.' });
+      return sendError(res, 500, 'internal', 'Authorization check failed.');
     } finally {
       client.release();
     }
@@ -112,10 +113,10 @@ export async function assertMemberRole(client, userId, familyId, role) {
   );
 
   if (!rows.length) {
-    return { error: { code: 403, message: 'Not a family member.' } };
+    return { error: { code: 403, key: 'familyNotMember', message: 'Not a family member.' } };
   }
   if (!meetsRole(rows[0].role, role)) {
-    return { error: { code: 403, message: `Requires ${role} role.` } };
+    return { error: { code: 403, key: 'roleRequired', message: `Requires ${role} role.`, params: { role } } };
   }
 
   return null;

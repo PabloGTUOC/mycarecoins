@@ -23,21 +23,21 @@ function getFirebaseApp() {
   return firebaseApp;
 }
 
+import { sendError } from '../utils/httpError.js';
+
 export async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
   if (!token) {
-    return res.status(401).json({ error: 'Missing Bearer token.' });
+    return sendError(res, 401, 'authMissingToken', 'Missing Bearer token.');
   }
 
   try {
     const app = getFirebaseApp();
 
     if (!app) {
-      return res.status(500).json({
-        error: 'Firebase not configured. Set FIREBASE_PROJECT_ID and credentials.'
-      });
+      return sendError(res, 500, 'internal', 'Firebase not configured. Set FIREBASE_PROJECT_ID and credentials.');
     }
 
     const decoded = await admin.auth().verifyIdToken(token);
@@ -52,7 +52,7 @@ export async function requireAuth(req, res, next) {
 
     return next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token.' });
+    return sendError(res, 401, 'authInvalidToken', 'Invalid or expired token.');
   }
 }
 
