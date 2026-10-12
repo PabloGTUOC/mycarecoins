@@ -11,7 +11,8 @@
 > clean, `cd backend && npm test` clean. **Backend changes** (P6-4, P6-5) reach production
 > only with the next deploy; the app must keep working against today's backend.
 
-> **Status (2026-10-12):** in progress on `mobile-ux-phase6`.
+> **Status (2026-10-12):** done on `mobile-ux-phase6` (not merged). P6-4 and P6-5 need a
+> backend deploy; until then the app falls back to the server's English text, as before.
 
 ## Decisions (2026-10-12)
 
@@ -71,3 +72,12 @@ and taken" use ink colours with enough contrast.
 
 | Ticket | Commit | Notes |
 |---|---|---|
+| P6-1 | `3823bf0` | Section labels 16 px, person names 13 px grey, so the per-person view has two levels. |
+| P6-2 | `8d2ea71` | In this Flutter SDK a SnackBar with an action never times out (`persist` defaults to true), so every Undo SnackBar sets `persist: false`; the schedule and move Undo snackbars had never closed by themselves. |
+| P6-3 | `9d72c9c` | Retry only for timeouts, network errors, 5xx, 408 and 429. `ToastListener` is now public (`@visibleForTesting`). |
+| P6-4 | `93fcebf` | 81 service keys; `personalTimeSeriesBlocked` carries `reasonCode` / `reasonParams` so both halves translate. |
+| P6-5 | `73eea02` | 124 codes in `docs/error-codes.md`; unknown paths answer `notFound` as JSON. |
+| P6-6 | `830fed7` | `adminOnly` falls back to English. es/fr error texts use the app's "tiempo personal" / "temps personnel". |
+| P6-7 | `c5bc3d5` | The repeat icon is an inline span on the title's last line. |
+
+Flutter: 315 tests, analyze clean. Backend: 233 tests.
