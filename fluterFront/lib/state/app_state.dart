@@ -32,6 +32,7 @@ class AppState extends ChangeNotifier {
 
   String success = '';
   String error = '';
+  Future<void> Function()? errorRetry;
   Timer? _dismissTimer;
 
   /// The current localizations, kept up to date by the widget tree (see
@@ -314,6 +315,9 @@ class AppState extends ChangeNotifier {
   String _localizeError(Object e) {
     final l = l10n;
     if (e is ApiException) {
+      if ((e.statusCode ?? 0) >= 500) {
+        return l?.errServerTrouble ?? e.toString();
+      }
       if (e.serverMessage != null) return e.serverMessage!;
       if (l == null) return e.toString();
       switch (e.kind) {
@@ -328,13 +332,30 @@ class AppState extends ChangeNotifier {
         case ApiErrorKind.uploadFailed:
           return l.errUploadFailed(e.statusCode ?? 0);
         case ApiErrorKind.server:
-          return e.toString();
+          return l.errServerTrouble;
       }
     }
     return e.toString();
   }
 
   // ── Toast messages (mirrors setSuccess / setError / runAction) ──
+
+  static bool _isRetryable(Object error) {
+    if (error is TimeoutException) return true;
+    if (error is ApiException) {
+      if (error.kind == ApiErrorKind.timeout ||
+          error.kind == ApiErrorKind.network ||
+          error.kind == ApiErrorKind.uploadTimeout) {
+        return true;
+      }
+      final code = error.statusCode;
+      if (code != null && (code >= 500 || code == 408 || code == 429)) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
 
   Future<bool> runAction(Future<void> Function() fn,
       [String? okMessage]) async {
@@ -344,7 +365,10 @@ class AppState extends ChangeNotifier {
       if (okMessage != null) setSuccess(okMessage);
       return true;
     } catch (e) {
-      setError(_localizeError(e));
+      final retry = _isRetryable(e)
+          ? () => runAction(fn, okMessage).then((_) {})
+          : null;
+      setError(_localizeError(e), retry: retry);
       return false;
     }
   }
@@ -352,6 +376,7 @@ class AppState extends ChangeNotifier {
   void setSuccess(String message) {
     success = message;
     error = '';
+    errorRetry = null;
     _dismissTimer?.cancel();
     _dismissTimer = Timer(const Duration(milliseconds: 3500), () {
       success = '';
@@ -360,12 +385,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setError(String message) {
+  void setError(String message, {Future<void> Function()? retry}) {
     error = message;
+    errorRetry = retry;
     success = '';
     _dismissTimer?.cancel();
-    _dismissTimer = Timer(const Duration(milliseconds: 5000), () {
+    _dismissTimer = Timer(const Duration(seconds: 10), () {
       error = '';
+      errorRetry = null;
       notifyListeners();
     });
     notifyListeners();
@@ -374,6 +401,9 @@ class AppState extends ChangeNotifier {
   void clearMessages() {
     success = '';
     error = '';
+    errorRetry = null;
+    _dismissTimer?.cancel();
+    notifyListeners();
   }
 
   @override

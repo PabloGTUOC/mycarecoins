@@ -34,7 +34,11 @@ void main() {
 
     await app.runAction(
         () async => throw ApiException(ApiErrorKind.requestFailed, statusCode: 500));
-    expect(app.error, 'La solicitud falló (500)');
+    expect(app.error, 'Algo salió mal por nuestra parte. Inténtalo de nuevo en un momento.');
+
+    await app.runAction(
+        () async => throw ApiException(ApiErrorKind.requestFailed, statusCode: 404));
+    expect(app.error, 'Eso no funcionó (error 404). Inténtalo de nuevo o recarga la pantalla.');
 
     app.dispose(); // cancels the pending toast-dismiss timer
   });

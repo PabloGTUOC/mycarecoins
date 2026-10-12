@@ -1827,7 +1827,11 @@
   "@errTimeout": { "description": "API client: request exceeded the timeout" },
   "errNetwork": "Network error. Check your connection.",
   "@errNetwork": { "description": "API client: connection or host lookup failed" },
-  "errRequestFailed": "Request failed ({code})",
+  "errServerTrouble": "Something went wrong on our side. Try again in a moment.",
+  "@errServerTrouble": {
+    "description": "API client: 5xx server error or server trouble"
+  },
+  "errRequestFailed": "That didn't work (error {code}). Try again, or reload the screen.",
   "@errRequestFailed": { "description": "API client: HTTP error with no server-provided message", "placeholders": { "code": { "type": "int" } } },
   "errUploadTimeout": "Upload timed out",
   "@errUploadTimeout": { "description": "API client: file upload exceeded the timeout" },

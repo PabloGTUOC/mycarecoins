@@ -84,7 +84,7 @@ class CareCoinsApp extends StatelessWidget {
               child: child!,
             );
           },
-          home: const _ToastListener(child: _AuthGate()),
+          home: const ToastListener(child: _AuthGate()),
         ),
       ),
     );
@@ -93,15 +93,16 @@ class CareCoinsApp extends StatelessWidget {
 
 /// Shows AppState success/error messages as snackbars app-wide, so toasts
 /// also reach logged-out screens (login errors, password-reset feedback).
-class _ToastListener extends StatefulWidget {
+@visibleForTesting
+class ToastListener extends StatefulWidget {
   final Widget child;
-  const _ToastListener({required this.child});
+  const ToastListener({super.key, required this.child});
 
   @override
-  State<_ToastListener> createState() => _ToastListenerState();
+  State<ToastListener> createState() => _ToastListenerState();
 }
 
-class _ToastListenerState extends State<_ToastListener> {
+class _ToastListenerState extends State<ToastListener> {
   String _lastToast = '';
 
   @override
@@ -110,7 +111,8 @@ class _ToastListenerState extends State<_ToastListener> {
     // Keep AppState's localizations current so context-less layers (auth,
     // API client, push) can localize their toasts. This widget sits under
     // MaterialApp and rebuilds on locale change, so l10n stays fresh.
-    app.l10n = AppLocalizations.of(context);
+    final l = AppLocalizations.of(context);
+    app.l10n = l;
     final msg = app.error.isNotEmpty ? app.error : app.success;
     if (msg.isEmpty) {
       _lastToast = '';
@@ -124,7 +126,21 @@ class _ToastListenerState extends State<_ToastListener> {
           ..showSnackBar(SnackBar(
             content: Text(msg),
             backgroundColor: isError ? AppColors.danger : AppColors.success,
-            duration: Duration(milliseconds: isError ? 5000 : 3500),
+            duration: Duration(milliseconds: isError ? 10000 : 3500),
+            persist: isError ? false : null,
+            showCloseIcon: isError,
+            closeIconColor: isError ? AppColors.surface : null,
+            action: isError && app.errorRetry != null
+                ? SnackBarAction(
+                    label: l.retry,
+                    textColor: AppColors.surface,
+                    onPressed: () {
+                      final r = app.errorRetry;
+                      app.clearMessages();
+                      r?.call();
+                    },
+                  )
+                : null,
           ));
       });
     }

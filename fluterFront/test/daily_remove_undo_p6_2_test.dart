@@ -114,7 +114,7 @@ class _ToastListenerState extends State<_ToastListener> {
           ..showSnackBar(SnackBar(
             content: Text(msg),
             backgroundColor: isError ? AppColors.danger : AppColors.success,
-            duration: Duration(milliseconds: isError ? 5000 : 3500),
+            duration: Duration(milliseconds: isError ? 10000 : 3500),
           ));
       });
     }
