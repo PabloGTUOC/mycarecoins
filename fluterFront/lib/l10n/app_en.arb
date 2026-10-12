@@ -1374,11 +1374,13 @@
   "@catHouseholdLabel": { "description": "Category group header in compare mode" },
   "chartTaskFrequency": "Task frequency",
   "@chartTaskFrequency": { "description": "Chart title" },
+  "membersFamilyTitle": "This family",
+  "@membersFamilyTitle": { "description": "Title of the combined family statistics card" },
   "chartBalances": "Balances",
   "@chartBalances": { "description": "Balances card title replacing leaderboard" },
   "statsPeriodNow": "Right now",
   "@statsPeriodNow": { "description": "Period label for balances card" },
-  "balancesSentence": "{count, plural, one{1 person holds {coins} cc.} other{{count} people hold {coins} cc between them.}}",
+  "balancesSentence": "{count, plural, one{Right now 1 person holds {coins} cc.} other{Right now {count} people hold {coins} cc between them.}}",
   "@balancesSentence": {
     "description": "Summary sentence for balances card",
     "placeholders": {
@@ -1388,7 +1390,7 @@
   },
   "balancesNote": "A balance goes down when someone claims a reward, so it is not a score.",
   "@balancesNote": { "description": "Footnote clarifying that balance is not a score" },
-  "completionSentence": "{total, plural, one{{done} of 1 task that was due is done.} other{{done} of {total} tasks that were due are done.}}",
+  "completionSentence": "{total, plural, one{{done} of 1 due task done.} other{{done} of {total} due tasks done.}}",
   "@completionSentence": {
     "description": "Summary sentence for completed tasks",
     "placeholders": {
@@ -1403,21 +1405,27 @@
       "count": { "type": "int" }
     }
   },
-  "completionRow": "{done} of {total}",
-  "@completionRow": {
+  "completionRowDone": "{count, plural, one{1 done} other{{count} done}}",
+  "@completionRowDone": {
     "description": "Per-caregiver completion value label",
     "placeholders": {
-      "done": { "type": "int" },
-      "total": { "type": "int" }
+      "count": { "type": "int" }
     }
   },
-  "bountiesSentence": "{offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
+  "bountiesSentence": "Bounties: {offered} cc offered, {earned} cc earned by whoever took them, {refunded} cc returned.",
   "@bountiesSentence": {
     "description": "Summary sentence for bounties card",
     "placeholders": {
       "offered": { "type": "int" },
       "earned": { "type": "int" },
       "refunded": { "type": "int" }
+    }
+  },
+  "bountiesOpen": "{open} cc still open.",
+  "@bountiesOpen": {
+    "description": "Sentence fragment for open bounties remaining",
+    "placeholders": {
+      "open": { "type": "int" }
     }
   },
   "chartCompletionRate": "Tasks done",
@@ -1498,10 +1506,18 @@
   "@flowRewardsRedeemed": { "description": "Coin flow series label" },
   "flowBountiesRefunded": "Bounties refunded",
   "@flowBountiesRefunded": { "description": "Coin flow series label" },
-  "chartTopRewards": "Most popular rewards",
-  "@chartTopRewards": { "description": "Chart title" },
+  "rewardsTopSentence": "{count, plural, one{Most claimed reward: {title}, once.} other{Most claimed reward: {title}, {count} times.}}",
+  "@rewardsTopSentence": {
+    "description": "Summary sentence for the most claimed reward",
+    "placeholders": {
+      "title": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "rewardsNoneClaimed": "No rewards claimed yet.",
   "@rewardsNoneClaimed": { "description": "Fallback text when no rewards have been claimed yet" },
+  "membersRewardsClaimed": "Rewards claimed",
+  "@membersRewardsClaimed": { "description": "Sub-section label for rewards claimed per member" },
   "chartStatusDist": "Activity status distribution",
   "@chartStatusDist": { "description": "Chart title" },
   "statusCompleted": "Completed",

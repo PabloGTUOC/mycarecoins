@@ -171,7 +171,7 @@ void main() {
     });
 
     testWidgets(
-        'statsShowEconomy = false, phone, Members tab: chartTopRewards shows Ice cream 8×, and Ati 5× after chip tap',
+        'statsShowEconomy = false, phone, Members tab: rewardsTopSentence shows Ice cream, and Ati 5× after chip tap',
         (tester) async {
       statsShowEconomy = false;
       tester.view.physicalSize = const Size(390, 844);
@@ -193,25 +193,22 @@ void main() {
       await tester.tap(find.text(l.sectionMembers));
       await tester.pumpAndSettle();
 
-      // Scroll to chartTopRewards card
-      final rewardsCard = find.widgetWithText(VCard, l.chartTopRewards);
-      await tester.scrollUntilVisible(rewardsCard, 300);
-      await tester.pumpAndSettle();
+      // Card is "This family"
+      final membersCard = find.widgetWithText(VCard, l.membersFamilyTitle);
+      expect(membersCard, findsOneWidget);
 
-      expect(find.text(l.chartTopRewards), findsOneWidget);
-      expect(find.text('Ice cream'), findsOneWidget);
-      expect(find.text('8×'), findsOneWidget);
+      expect(find.text(l.rewardsTopSentence('Ice cream', 8)), findsOneWidget);
       expect(find.text('5×'), findsNothing);
 
-      // Tap compare chip on the rewards card
-      final chip = find.descendant(of: rewardsCard, matching: find.byType(FilterChip));
+      // Tap compare chip on the members card
+      final chip = find.descendant(of: membersCard, matching: find.byType(FilterChip));
       expect(chip, findsOneWidget);
       await tester.tap(chip);
       await tester.pumpAndSettle();
 
+      expect(find.text(l.membersRewardsClaimed), findsOneWidget);
       expect(find.text('5×'), findsOneWidget);
-      expect(find.text('Ice cream'), findsNothing);
-      expect(find.text('8×'), findsNothing);
+      expect(find.text('Ati'), findsWidgets);
     });
 
     testWidgets('statsShowEconomy = true, phone: Economy tab exists and shows chartCoinFlow',
@@ -266,9 +263,8 @@ void main() {
       await tester.tap(find.text(l.sectionMembers));
       await tester.pumpAndSettle();
 
-      final rewardsCard = find.widgetWithText(VCard, l.chartTopRewards);
-      await tester.scrollUntilVisible(rewardsCard, 300);
-      await tester.pumpAndSettle();
+      final familyCard = find.widgetWithText(VCard, l.membersFamilyTitle);
+      expect(familyCard, findsOneWidget);
 
       expect(find.text(l.rewardsNoneClaimed), findsOneWidget);
       expect(find.text('Ice cream'), findsNothing);
