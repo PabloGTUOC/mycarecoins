@@ -43,6 +43,13 @@ the admin console and the billing webhook are all mounted, and since production 
 on every container start, the seven migrations they need have run with them. The probe does
 not say which `main` commit is live; check the server before assuming the latest one is.
 
+**Waiting for the next backend deploy (as of 2026-10-12, `main` with Phases 5 and 6):**
+the due-task count for Members › Tasks done (P5-1; production still says "15 of 31") and
+the error codes (P6-4, P6-5; until then every server error reaches the app in English).
+The app works against the older backend either way. Probe for the codes:
+`curl -s https://mycarecoins.app/api/nope` answers `{"error":…,"code":"notFound"}` once
+they are live.
+
 Repeat the probe any time you want to know what is actually deployed — an unmounted route
 falls through to the 404 handler, a mounted one answers 401:
 

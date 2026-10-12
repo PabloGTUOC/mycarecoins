@@ -59,6 +59,10 @@ Run `db:init` twice.
   `schema.sql`, and chain it in `init-db.js`. Production runs `db:init` on every container start.
 - **Authorization lives server-side.** Use `requireRole` / `requireAdmin` (`middleware/rbac.js`)
   or the service-level membership check. UI gating is cosmetic.
+- **Every backend error carries a code.** Use `serviceError` / `sendServiceError` /
+  `sendError` (`utils/httpError.js`), list a new key in `docs/error-codes.md`, and add its
+  `srvErr<Key>` to all four ARB files and `lib/l10n/server_errors.dart`. `errorCodes.test.js`
+  enforces the backend half.
 - **Flutter UI is Material 3 on the CareCoins tokens.** Use stock M3 widgets (`NavigationBar`,
   `FilledButton`, `SegmentedButton`, `Card`, `showTimePicker`, sheets) themed in
   `lib/theme/app_theme.dart`; status colours come from `context.careColors` (soft fill → ink

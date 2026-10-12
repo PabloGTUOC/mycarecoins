@@ -186,6 +186,21 @@ router.post('/', validateBody({
 
 `validateParams(...names)` validates that URL params are valid positive integers (prevents injection via NaN or negative IDs).
 
+### Error answers — `utils/httpError.js`
+
+Every non-admin refusal answers `{ error: <English>, code: <key>, params? }`. The app
+translates `code` (ARB key `srvErr<Key>`) and falls back to `error` for unknown codes, so
+**the English text must not change** without updating `docs/error-codes.md`.
+
+- Services return `serviceError(status, key, message, params)`; routes forward it with
+  `sendServiceError(res, result.error)`.
+- Routes and middleware answer with `sendError(res, status, key, message, params)`.
+  Validation failures use `invalidInput` with `{ field }`; every 5xx uses `internal`;
+  unknown paths answer 404 `notFound` (`app.js`).
+- One English message has one key. `docs/error-codes.md` lists every key, its status and
+  params; `tests/errorCodes.test.js` fails on an error without a key, a message with two
+  keys, or a key missing from the catalogue. Admin routes are out of scope.
+
 ---
 
 ## 5. Authentication (Firebase Admin)

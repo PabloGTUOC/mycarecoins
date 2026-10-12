@@ -11,8 +11,12 @@
 > clean, `cd backend && npm test` clean. **Backend changes** (P6-4, P6-5) reach production
 > only with the next deploy; the app must keep working against today's backend.
 
-> **Status (2026-10-12):** done on `mobile-ux-phase6` (not merged). P6-4 and P6-5 need a
-> backend deploy; until then the app falls back to the server's English text, as before.
+> **Status (2026-10-12):** done, merged to `main` and pushed; not deployed. P6-4 and P6-5
+> need a backend deploy; until then the app falls back to the server's English text, as
+> before. Seventh critique: 37/40
+> (`.impeccable/critique/2026-10-12T14-40-00Z__fluterfront-lib-screens.md`); its five P3s
+> (period label on Members, "returned" vs "Refunded", empty bounty bars, orphaned repeat
+> icon, truncated tray chips) are open.
 
 ## Decisions (2026-10-12)
 

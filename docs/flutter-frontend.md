@@ -221,9 +221,17 @@ avoid a charting dependency for what is a handful of bar and stacked-bar forms.
 - JSON in and out; `Authorization: Bearer <Firebase ID token>` on every call.
 - A **20-second timeout** per request.
 - Failures become a typed `ApiException` with an `ApiErrorKind` — `timeout`, `network`,
-  `server`, `requestFailed` — carrying the backend's `data.error` string when there is one.
-  The kind is turned into user-facing text at the display boundary, so error copy stays
-  localized rather than being baked into the client.
+  `server`, `requestFailed` — carrying the backend's `data.error` string when there is one,
+  plus `errorCode` / `errorParams` (`data.code` / `data.params`). The kind is turned into
+  user-facing text at the display boundary, so error copy stays localized rather than
+  being baked into the client.
+- `AppState._localizeError`: any 5xx → `errServerTrouble`; a known `errorCode` →
+  `localizeServerError` (`lib/l10n/server_errors.dart`, one `srvErr<Key>` per code in
+  `docs/error-codes.md`); otherwise the server's English text.
+- Error toasts stay 10 s with a close icon; timeouts, network errors, 5xx, 408 and 429
+  also offer "Try again" (`setError(msg, retry:)`). In this Flutter SDK a SnackBar with an
+  action never closes on its own unless it sets `persist: false` — every Undo / Retry
+  SnackBar does.
 - Base URL comes from `--dart-define=API_BASE`, defaulting to `http://localhost:3000`.
 
 `AppState.runAction()` is the standard call site: it handles the toast, the error mapping and
@@ -233,7 +241,7 @@ the refresh, so screens rarely touch `ApiClient` directly for mutations.
 
 ## 9. Localization
 
-English, Spanish, French and German — **783 keys per language**, in
+English, Spanish, French and German — **981 keys per language** (122 of them `srvErr*` server errors), in
 `lib/l10n/app_{en,es,fr,de}.arb`, compiled by `flutter gen-l10n` (configured in `l10n.yaml`,
 run automatically on `pub get` and build).
 
