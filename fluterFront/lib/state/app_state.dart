@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../l10n/server_errors.dart';
 import '../services/api_client.dart';
 import '../services/purchase_service.dart';
 import '../services/telemetry.dart';
@@ -317,6 +318,11 @@ class AppState extends ChangeNotifier {
     if (e is ApiException) {
       if ((e.statusCode ?? 0) >= 500) {
         return l?.errServerTrouble ?? e.toString();
+      }
+      if (e.errorCode != null && l != null) {
+        final localized = localizeServerError(
+            l, e.errorCode!, e.errorParams ?? const {});
+        if (localized != null) return localized;
       }
       if (e.serverMessage != null) return e.serverMessage!;
       if (l == null) return e.toString();
