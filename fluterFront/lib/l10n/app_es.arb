@@ -146,6 +146,7 @@
 
   "toastValidated": "¡Actividad validada! Monedas entregadas al usuario.",
   "toastSeriesRemoved": "Serie recurrente eliminada por completo.",
+  "toastTaskRemoved": "\"{title}\" eliminada.",
   "toastActivityRemoved": "Actividad quitada de la agenda.",
   "toastBountyAdded": "¡Incentivo añadido! Otro cuidador puede tomar esta tarea.",
   "toastTaskTaken": "¡Tarea tomada! Monedas añadidas a tu cuenta.",

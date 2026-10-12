@@ -146,6 +146,7 @@
 
   "toastValidated": "Activité validée ! Pièces attribuées à l'utilisateur.",
   "toastSeriesRemoved": "Série récurrente entièrement supprimée.",
+  "toastTaskRemoved": "« {title} » supprimée.",
   "toastActivityRemoved": "Activité retirée du planning.",
   "toastBountyAdded": "Prime ajoutée ! Un autre aidant peut maintenant prendre cette tâche.",
   "toastTaskTaken": "Tâche prise ! Pièces ajoutées à votre compte.",

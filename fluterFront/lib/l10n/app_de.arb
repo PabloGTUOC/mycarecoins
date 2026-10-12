@@ -146,6 +146,7 @@
 
   "toastValidated": "Aufgabe bestätigt! Münzen wurden gutgeschrieben.",
   "toastSeriesRemoved": "Ganze Serie entfernt.",
+  "toastTaskRemoved": "„{title}“ entfernt.",
   "toastActivityRemoved": "Aufgabe aus dem Plan entfernt.",
   "toastBountyAdded": "Bonus hinzugefügt! Eine andere Betreuungsperson kann die Aufgabe jetzt übernehmen.",
   "toastTaskTaken": "Aufgabe übernommen! Münzen wurden deinem Konto gutgeschrieben.",

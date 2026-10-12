@@ -132,6 +132,7 @@ bool canMoveActivity(Map<String, dynamic> a, AppState app) {
 
 class _DailyScreenState extends State<DailyScreen> {
   List<Map<String, dynamic>> _activities = [];
+  final Set<String> _pendingRemovals = {};
   List<Map<String, dynamic>> _absences = [];
   List<Map<String, dynamic>> _requests = [];
   List<Map<String, dynamic>> _pendingMembers = [];
@@ -306,10 +307,13 @@ class _DailyScreenState extends State<DailyScreen> {
   DateTime? _startsAt(Map<String, dynamic> a) =>
       DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
 
+  List<Map<String, dynamic>> get _visibleActivities =>
+      _activities.where((a) => !_pendingRemovals.contains('${a['id']}')).toList();
+
   /// Today's scheduled activities, sorted, each annotated with colIndex,
   /// colCount, and gapBeforeMinutes.
   List<Map<String, dynamic>> get _scheduledToday {
-    final acts = _activities.where((a) {
+    final acts = _visibleActivities.where((a) {
       if (a['is_template'] == true) return false;
       final ts = _startsAt(a);
       return ts != null && _sameDay(ts, _day);
@@ -451,7 +455,7 @@ class _DailyScreenState extends State<DailyScreen> {
   ({List<Map<String, dynamic>> ordered, List<Map<String, dynamic>> quick})
       get _ranked => rankTemplates(
             templates: _templates,
-            activities: _activities,
+            activities: _visibleActivities,
             userId: context.read<AppState>().userId?.toString(),
             now: widget.now ?? DateTime.now(),
           );
@@ -584,6 +588,45 @@ class _DailyScreenState extends State<DailyScreen> {
     }, series ? l.toastSeriesRemoved : l.toastActivityRemoved);
   }
 
+  Future<void> _removeWithUndo(Map<String, dynamic> a) async {
+    if (!mounted) return;
+    final app = context.read<AppState>();
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final rawId = a['id'];
+    final id = '$rawId';
+    final title = displayTitle(l, a);
+
+    setState(() => _pendingRemovals.add(id));
+    messenger.hideCurrentSnackBar();
+    final ctrl = messenger.showSnackBar(
+      SnackBar(
+        content: Text(l.toastTaskRemoved(title)),
+        action: SnackBarAction(
+          label: l.actionUndo,
+          onPressed: () {
+            if (mounted) setState(() => _pendingRemovals.remove(id));
+          },
+        ),
+        duration: const Duration(seconds: 5),
+        persist: false,
+      ),
+    );
+    ctrl.closed.then((reason) async {
+      if (reason == SnackBarClosedReason.action) return;
+      try {
+        await app.api.delete('/api/activities/$rawId');
+      } catch (e) {
+        app.setError(app.errorTextFor(e));
+      } finally {
+        if (mounted) {
+          setState(() => _pendingRemovals.remove(id));
+          await _load();
+        }
+      }
+    });
+  }
+
   bool _canRemoveActivity(Map<String, dynamic> a, {AppState? appState}) {
     if (_isPastDay) return false;
     final app = appState ?? context.read<AppState>();
@@ -662,9 +705,13 @@ class _DailyScreenState extends State<DailyScreen> {
         ),
       );
       if (choice == null) return;
-      await _unschedule(a['id'], series: choice == 'series');
+      if (choice == 'series') {
+        await _unschedule(a['id'], series: true);
+      } else if (choice == 'single') {
+        await _removeWithUndo(a);
+      }
     } else {
-      await _unschedule(a['id'], series: false);
+      await _removeWithUndo(a);
     }
   }
 
@@ -1109,6 +1156,7 @@ class _DailyScreenState extends State<DailyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
+            persist: false,
             action: newId != null
                 ? SnackBarAction(
                     label: l.actionUndo,
@@ -1116,7 +1164,14 @@ class _DailyScreenState extends State<DailyScreen> {
                       try {
                         await app.api.delete('/api/activities/$newId');
                         await _load();
-                      } catch (_) {}
+                      } catch (e) {
+                        if (mounted) {
+                          final undoErr = app.errorTextFor(e);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(undoErr)),
+                          );
+                        }
+                      }
                     },
                   )
                 : null,
@@ -1219,6 +1274,7 @@ class _DailyScreenState extends State<DailyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
+            persist: false,
             action: oldStart != null
                 ? SnackBarAction(
                     label: l.actionUndo,
@@ -1549,7 +1605,7 @@ class _DailyScreenState extends State<DailyScreen> {
 
   List<NeedsYouItem> _getNeedsItems(AppState app) => needsYouItems(
         app: app,
-        activities: _activities,
+        activities: _visibleActivities,
         requests: _requests,
         pendingMembers: _pendingMembers,
       );

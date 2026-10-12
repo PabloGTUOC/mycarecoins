@@ -478,6 +478,13 @@
   "@toastValidated": { "description": "Toast after validating a completed activity" },
   "toastSeriesRemoved": "Entire recurring series removed.",
   "@toastSeriesRemoved": { "description": "Toast after removing a whole recurring series" },
+  "toastTaskRemoved": "Removed \"{title}\".",
+  "@toastTaskRemoved": {
+    "description": "Toast after removing a single task, with undo option",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
   "toastActivityRemoved": "Activity removed from schedule.",
   "@toastActivityRemoved": { "description": "Toast after unscheduling one activity" },
   "toastBountyAdded": "Bounty added! Another caretaker can now take this task.",
