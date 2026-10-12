@@ -1056,8 +1056,10 @@ class _BarRow extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
               Text(valueLabel,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 13, color: color)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 6),

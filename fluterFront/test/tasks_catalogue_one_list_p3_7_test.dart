@@ -236,7 +236,7 @@ void main() {
 
       // Verify it's on Daily Walk row with Semantics
       final dailyWalkRow = find.ancestor(
-        of: find.text('Daily Walk'),
+        of: find.textContaining('Daily Walk', findRichText: true),
         matching: find.byType(Row),
       );
       expect(
@@ -246,7 +246,7 @@ void main() {
 
       // Fix fence row does NOT have the repeat icon
       final fixFenceRow = find.ancestor(
-        of: find.text('Fix fence'),
+        of: find.textContaining('Fix fence', findRichText: true),
         matching: find.byType(Row),
       );
       expect(
