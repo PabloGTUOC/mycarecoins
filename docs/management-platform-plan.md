@@ -270,8 +270,10 @@ CREATE TABLE IF NOT EXISTS admin_rc_sync (
 );
 ```
 
-**Existing grants:** a one-off backfill (CLI, dry run first) mirrors every active
-`admin_grants` row.
+**Existing families are test units (owner, 2026-10-15).** Every family in the database today is
+test data, so nothing existing is pushed to RevenueCat: no backfill, no `family_<id>` customers
+for them. Mirroring starts with grants made after Phase 3 ships. Nothing in this plan migrates or
+cleans up those test families.
 
 **Phase 0 findings (2026-10-15, from RevenueCat's current docs and forum):**
 
@@ -454,8 +456,8 @@ it can start in parallel.
 - `src/admin/revenuecat.js`: a small v2 client (customers, subscriptions, entitlements grant and
   revoke, products, offerings, metrics overview), with timeouts and errors mapped to the server
   error codes from Phase 6 of the UX work.
-- Free-plan mirroring (§4): sync on grant and revoke, the retry loop, the Retry button, and the
-  backfill CLI.
+- Free-plan mirroring (§4): sync on grant and revoke, the retry loop, and the Retry button
+  (no backfill: existing families are test data).
 - `billingService`: the `PROMOTIONAL` loop guard + test.
 - Console: RevenueCat state per family and mismatch flags, webhook health and Re-process, the
   overview with metrics, product-to-plan mapping.
