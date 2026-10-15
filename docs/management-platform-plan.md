@@ -1,6 +1,7 @@
 # Management Platform (Operator Console) — Plan
 
-> **Status: Phase 0 in progress** (2026-10-15): research done, console setup waiting on the owner.
+> **Status: Phase 1 in progress** (2026-10-15). Phase 0 research done; console setup (keys,
+> tunnel) still with the owner and runs in parallel.
 > Supersedes the *placement* of the admin console from
 > `docs/admin-family-management-plan.md` Phase 5. That plan's data model, privacy boundary,
 > webhook and entitlement rules stay as they are; this plan moves the console out of the
@@ -293,7 +294,7 @@ cleans up those test families.
    `PROMOTIONAL`, and a user reported never receiving it. The loop guard above stays either
    way. A sandbox grant will show what actually arrives.
 
-**What this means for decision 4 (owner to confirm):** mirroring makes free-plan families
+**Decision 4, confirmed by the owner (2026-10-15): keep the mirror.** mirroring makes free-plan families
 visible in RevenueCat's **Customer List, customer pages and data exports**, but most likely
 **not in its charts or overview numbers**. Free plans would then be counted on the console's own
 overview, which shows paid (from RevenueCat) and free (from our database) side by side. A
