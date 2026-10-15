@@ -58,6 +58,11 @@ void main() {
     final deliberatelyNull = <String, String>{
       'adminOnly':
           'Admin access is web-only / CLI-only and out of scope for mobile (brief decision 3).',
+      // Operator console API only (docs/management-platform-plan.md); the
+      // subscriber app never talks to it.
+      'accessInvalid': 'Operator console API only.',
+      'accessMissing': 'Operator console API only.',
+      'adminReauthRequired': 'Operator console API only.',
     };
 
     final dummyParams = <String, dynamic>{

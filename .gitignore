@@ -18,3 +18,8 @@ scripts/deploy.env
 # Backups deploy.sh writes on the server before it changes anything. Untracked
 # there, they made the next run's "server checkout is clean" gate fail.
 /backups/
+
+# Operator console secrets (docs/management-platform-plan.md); the
+# .example templates are committed, the real files never are.
+backend/admin.env
+backend/admin-db.env

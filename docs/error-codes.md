@@ -51,9 +51,12 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `activityTemplateNotFound` | 404 | — | Template not found. |
 | `activityTemplateNotPending` | 400 | — | Template is not pending approval. |
 | `activityTimeInPast` | 400 | — | Cannot schedule activity in the past. |
+| `accessInvalid` | 403 | — | Invalid Cloudflare Access token. Operator console API only. |
+| `accessMissing` | 403 | — | Missing Cloudflare Access token. Operator console API only. |
 | `actorNotFound` | 404 | — | Actor not found. |
 | `actorOnlyPetsRemovable` | 403 | — | Only pets can be removed. Human members must leave or be deleted. |
 | `adminOnly` | 403 | — | Admin access required. |
+| `adminReauthRequired` | 401 | `maxAgeMinutes` | Sign in again to make changes. Operator console API only. |
 | `authInvalidToken` | 401 | — | Invalid token. |
 | `authMissingToken` | 401 | — | No token provided. |
 | `billingMalformedEvent` | 400 | — | Webhook error: Malformed event payload. |

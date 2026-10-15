@@ -188,11 +188,14 @@ describe('requestInactivityNotice', () => {
     member_count: '2', pending_member_count: '0', actor_count: '0',
   };
 
-  test('audits the notice in the same transaction', async () => {
-    const client = mockClient([ok([familyRow]), empty()]);
+  test('queues the notice and audits it in the same transaction', async () => {
+    const client = mockClient([ok([familyRow]), empty(), empty()]);
     const result = await requestInactivityNotice(client, 1, 3);
     assert.equal(result.data.familyId, 3);
-    const audit = client._calls[1];
+    const queued = client._calls[1];
+    assert.ok(queued.sql.includes('INSERT INTO admin_family_notices'));
+    assert.deepEqual(queued.params, [3, 1]);
+    const audit = client._calls[2];
     assert.ok(audit.sql.includes('INSERT INTO admin_audit_log'));
     assert.equal(audit.params[0], 1);
     assert.equal(audit.params[1], 'family.notify_inactive');

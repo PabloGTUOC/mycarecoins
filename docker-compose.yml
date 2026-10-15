@@ -18,10 +18,33 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgres://carecoins:carecoins@postgres:5432/carecoins
+    env_file:
+      - path: ./backend/admin-db.env
+        required: false
     depends_on:
       postgres:
         condition: service_healthy
     command: npm run db:init
+
+  admin-api:
+    build: ./backend
+    command: node src/admin/server.js
+    profiles: [admin]
+    environment:
+      DATABASE_URL: postgres://carecoins_admin@postgres:5432/carecoins
+      PORT: 3001
+      NODE_ENV: production
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials.json
+    env_file:
+      - ./backend/admin.env
+      - ./backend/admin-db.env
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./firebase-credentials.json:/run/secrets/firebase-credentials.json:ro
 
   backend:
     build: ./backend

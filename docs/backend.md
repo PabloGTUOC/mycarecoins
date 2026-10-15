@@ -24,6 +24,7 @@ CareCoins backend is a **Node.js REST API** built with Express, connected to Pos
 16. [Infrastructure & Docker](#16-infrastructure--docker)
 17. [Testing](#17-testing)
 18. [Platform Admin, Registry & Subscriptions](#18-platform-admin-registry--subscriptions)
+19. [Operator Console API & Notice Outbox](#19-operator-console-api--notice-outbox)
 
 ---
 
@@ -802,7 +803,7 @@ on `/api/admin`. Buckets: active ≤ 30 days, dormant 30–90, inactive > 90.
 | `GET /api/admin/status` | Self-check for the Flutter admin console gate |
 | `GET /api/admin/families?search=&status=&page=&pageSize=` | Paged registry (name/ID search, heartbeat-bucket filter) |
 | `GET /api/admin/families/:id` | Registry detail + pending/actor counts |
-| `POST /api/admin/families/:id/notify-inactive` | Push nudge to caregivers via `notifyFamilyCaregivers` (identities never shown to the admin); audited |
+| `POST /api/admin/families/:id/notify-inactive` | Queue nudge into `admin_family_notices` (public backend outbox sends the push; identities never shown to admin); audited |
 | `GET /api/admin/plans` · `POST /api/admin/plans` · `PATCH /api/admin/plans/:code` | Plan catalog CRUD; audited |
 | `GET /api/admin/families/:id/billing` | Subscription state + grants + billing-event metadata |
 | `POST /api/admin/families/:id/grants` · `DELETE …/grants/:grantId` | Comp/trial grants; revocation stamps `revoked_at`; audited |
@@ -856,3 +857,54 @@ is attributed to the admin whose notice started the process
 `tests/adminFoundation.test.js`, `tests/adminRegistry.test.js`,
 `tests/entitlements.test.js`, `tests/retention.test.js` — mock-client style,
 same as the rest of the suite.
+
+---
+
+## 19. Operator Console API & Notice Outbox
+
+The operator console runs as a separate API server and container (`admin-api`), distinct from the public API (`backend`). Full architecture and phase progression live in `docs/management-platform-plan.md`.
+
+### Entry point and server bootstrap (`src/admin/server.js`)
+
+- Listens on port 3001 (configurable via `PORT`).
+- **Database role verification:** on boot, runs `SELECT current_user AS role` against `pool`. In production (`NODE_ENV === 'production'`), it throws an error and refuses to start if not connected as `carecoins_admin`.
+- **Cloudflare Access check:** requires `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`. In production, refuses to start without them; in development, logs a warning and allows local access without the header.
+- **Environment and secrets:** uses `backend/admin.env` (never read by the public backend) and `backend/admin-db.env` (`ADMIN_DB_PASSWORD`). `src/admin/env.js` maps `ADMIN_DB_PASSWORD` to `PGPASSWORD` so the database URL (`postgres://carecoins_admin@postgres:5432/carecoins`) contains no embedded password.
+
+### Middleware order (`src/admin/app.js` mounting `/admin-api`)
+
+Every request to `/admin-api` must pass the following pipeline in strict order:
+
+```
+Cloudflare Access JWT check (Cf-Access-Jwt-Assertion verified via jose)
+↓
+Firebase Authentication (requireAuth Bearer token verification)
+↓
+Operator rate limiter (300 req / 15 min per Firebase UID)
+↓
+Operator verification (requireOperator via admin_operators view; no user upsert)
+↓
+Recent sign-in check (requireRecentSignIn: reads pass; POST/PATCH/DELETE require authTime ≤ 30 min)
+↓
+adminRouter (src/routes/admin.js)
+```
+
+Error codes emitted specifically by this layer:
+- `accessMissing` (403): missing `Cf-Access-Jwt-Assertion` header.
+- `accessInvalid` (403): invalid signature, expired token, or wrong audience/issuer.
+- `adminOnly` (403): authenticated user not found in `admin_operators`.
+- `adminReauthRequired` (401): mutating request with `authTime` older than 30 minutes.
+
+### Architectural separation rule
+
+**`src/app.js` must NEVER import from `src/admin/`.**
+The public backend and the operator console are separate processes. The public app mounts its own routers and connects as the database owner role `carecoins`, while `admin-api` connects as the restricted `carecoins_admin` role. A test in `backend/tests/adminConsole.test.js` statically scans all files under `src/` to ensure no imports cross into `src/admin/`.
+
+### Notice outbox in the public server (`src/services/noticeOutbox.js`)
+
+Because the `carecoins_admin` role cannot read user identities or family memberships, it cannot send push notifications directly. Instead:
+1. `POST /admin-api/families/:id/notify-inactive` queues an intent into `admin_family_notices` (`kind = 'inactive'`).
+2. The public server (`src/server.js`) starts a background outbox poller via `startNoticeOutbox(pool, { intervalMs: 60000 })`.
+3. Every 60 seconds, `deliverPendingNotices(pool)` queries `admin_family_notices` for unsent notices (`sent_at IS NULL`), atomically claiming them with `FOR UPDATE SKIP LOCKED` by stamping `sent_at = NOW()`.
+4. The worker dispatches push notifications to all active caregivers using `notifyFamilyCaregivers(familyId, 0, message)`. If delivery fails after the claim, the audit row records the event and it is not endlessly retried.
+

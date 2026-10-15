@@ -29,6 +29,10 @@ The schema uses PostgreSQL with the `uuid-ossp` extension loaded. Most tables us
 21. [admin_grants](#21-admin_grants)
 22. [personal_time_requests](#22-personal_time_requests)
 23. [onboarding_events](#23-onboarding_events)
+24. [admin_family_notices](#24-admin_family_notices)
+25. [admin_rc_sync](#25-admin_rc_sync)
+26. [Operator Console Views](#26-operator-console-views)
+27. [The carecoins_admin Role](#27-the-carecoins_admin-role)
 
 ---
 
@@ -569,6 +573,91 @@ reached, and where they stopped. Written by `POST /api/events`; see
 
 ---
 
+## 24. `admin_family_notices`
+
+Queue table for family notices requested by the operator console (see `docs/management-platform-plan.md` §2.3). The console's database role (`carecoins_admin`) cannot see who belongs to a family, so it only queues requests; the public backend sends the push (`src/services/noticeOutbox.js`).
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | BIGSERIAL | PRIMARY KEY | Internal identifier |
+| `family_id` | BIGINT | NOT NULL, FK → families(id) ON DELETE CASCADE | Target family |
+| `kind` | TEXT | NOT NULL, CHECK IN ('inactive') | Notice type |
+| `requested_by` | BIGINT | NOT NULL, FK → users(id) | Admin operator who requested the notice |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Queued timestamp |
+| `sent_at` | TIMESTAMPTZ | — | Timestamp when sent (null = unsent) |
+
+**Logic notes:**
+- `idx_admin_family_notices_unsent` indexes `(id) WHERE sent_at IS NULL` for fast outbox polling.
+- The public backend worker claims batches using `FOR UPDATE SKIP LOCKED` and stamps `sent_at = NOW()` atomically before dispatching pushes.
+
+---
+
+## 25. `admin_rc_sync`
+
+Tracks synchronization of free-plan grants into RevenueCat (plan §4). One row per grant; the operator console's sync loop moves it from pending to synced or failed.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `grant_id` | BIGINT | PRIMARY KEY, FK → admin_grants(id) ON DELETE CASCADE | Associated grant |
+| `rc_customer_id` | TEXT | NOT NULL | Synthetic RevenueCat customer id (`family_<id>`) |
+| `action` | TEXT | NOT NULL, CHECK IN ('grant', 'revoke') | Desired mirror action |
+| `status` | TEXT | NOT NULL, CHECK IN ('pending', 'synced', 'failed') | Sync status |
+| `attempts` | INTEGER | NOT NULL, DEFAULT 0 | Number of sync attempts |
+| `last_error` | TEXT | — | Error message from most recent failed attempt |
+| `synced_at` | TIMESTAMPTZ | — | Successful sync timestamp |
+| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Last update timestamp |
+
+---
+
+## 26. Operator Console Views
+
+Two `security_barrier` views provide the operator console API with necessary registry and authorization data without granting it direct access to underlying content tables (`users`, `family_members`, `actors`).
+
+### `admin_family_registry`
+
+Runs with owner rights over `families` LEFT JOIN `family_plans`, using subqueries for active/pending member counts and actor count.
+
+Columns:
+- `id`: family id
+- `name`: family name
+- `created_at`: creation timestamp
+- `last_active_at`: heartbeat timestamp (used for active/dormant/inactive status calculation)
+- `plan_code`: active plan code
+- `subscription_status`: subscription status
+- `member_count`: count of active family members
+- `pending_member_count`: count of pending family members
+- `actor_count`: count of non-user actors (objects of care)
+
+### `admin_operators`
+
+Filters `users` to active platform administrators (`platform_role = 'admin' AND is_deleted = false`). Used by `requireOperator` (`src/admin/operator.js`) to verify callers without granting `carecoins_admin` read access to the general `users` table and without upserting users.
+
+Columns:
+- `id`: internal user id
+- `firebase_uid`: Firebase Authentication UID
+
+---
+
+## 27. The `carecoins_admin` Role
+
+The Postgres security role used by the operator console API (`admin-api` container). Created and maintained by `backend/scripts/admin-role.js` via `backend/scripts/init-db.js`.
+
+- **Password configuration:** set via `ADMIN_DB_PASSWORD` (read by `db-init` to alter role password and by `admin-api` via `PGPASSWORD` through `src/admin/env.js`).
+- **Privacy boundary:** completely prohibited from accessing any of the 18 content tables defined in `FORBIDDEN_TABLES`:
+  `users`, `families`, `family_members`, `actors`, `activities`, `coin_ledger`, `marketplace_rewards`, `reward_redemptions`, `absences`, `personal_time_requests`, `family_invitations`, `invite_links`, `fcm_tokens`, `notification_preferences`, `login_history`, `onboarding_events`, `family_deletion_requests`, `family_deletion_approvals`.
+- **Allowed capabilities:**
+  - `USAGE` on schema `public`
+  - `SELECT` on views `admin_family_registry` and `admin_operators`
+  - `SELECT` on `plans`, `family_plans`, `admin_grants`, `admin_audit_log`, `admin_rc_sync`, `admin_family_notices`
+  - `SELECT (id, provider, event_id, event_type, family_id, processed, created_at)` on `billing_events` (column-restricted; raw `payload` is blocked)
+  - `INSERT, UPDATE` on `plans` and `admin_rc_sync`
+  - `INSERT, UPDATE (revoked_at)` on `admin_grants`
+  - `INSERT` on `admin_audit_log` and `admin_family_notices`
+  - `USAGE` on sequences `admin_grants_id_seq`, `admin_audit_log_id_seq`, `admin_family_notices_id_seq`
+- **Verification:** verified against a real Postgres 16 instance by `backend/scripts/check-admin-role.js`.
+
+---
+
 ## Indexes Summary
 
 | Index | Table | Columns | Purpose |
@@ -583,3 +672,5 @@ reached, and where they stopped. Written by `POST /api/events`; see
 | `idx_admin_audit_log_admin_time` | `admin_audit_log` | `(admin_id, created_at)` | Audit trail lookups per admin |
 | `idx_billing_events_family` | `billing_events` | `(family_id, created_at)` | Billing history per family |
 | `idx_admin_grants_family` | `admin_grants` | `(family_id)` | Grant lookups during entitlement merges |
+| `idx_admin_family_notices_unsent` | `admin_family_notices` | `(id) WHERE sent_at IS NULL` | Fast polling of unsent notice queue |
+

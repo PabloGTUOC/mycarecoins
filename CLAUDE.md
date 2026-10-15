@@ -9,6 +9,7 @@ shared. `docs/PRODUCT.md` is the product brief; `README.md` is the architecture 
 |---|---|
 | `backend/` | Node 20 + Express 4 REST API, PostgreSQL 16, Firebase Admin (auth + FCM) |
 | `backend/src/routes/` → `services/` | Routes validate and authorize; business logic lives in services that take a `client` |
+| `backend/src/admin/` | Operator console API, separate process, `carecoins_admin` role |
 | `backend/src/db/schema.sql` + `backend/scripts/migrate-*.sql` | Schema; migrations chained in `scripts/init-db.js` |
 | `fluterFront/` | Flutter app — the only frontend — for web, iOS and Android (`provider` + one `AppState`) |
 | `fluterFront/lib/l10n/` | ARB files: en (template), es, fr, de |
@@ -55,6 +56,11 @@ Run `db:init` twice.
   members, activities, coins or rewards, and a test enforces it. Admin is granted only via
   `node backend/scripts/promote-admin.js <email>`. Every admin mutation writes `admin_audit_log`
   in the same transaction.
+- **`src/app.js` never imports `src/admin/`.** The operator console API is a separate process and
+  container (`admin-api`) running under the restricted `carecoins_admin` database role.
+- **A new table goes into `FORBIDDEN_TABLES` or the admin grants in `scripts/admin-role.js`.**
+  The `carecoins_admin` role must never read content tables, and `check-admin-role.js` asserts every
+  table is explicitly classified.
 - **Schema changes:** add an idempotent `backend/scripts/migrate-<name>.sql`, mirror it in
   `schema.sql`, and chain it in `init-db.js`. Production runs `db:init` on every container start.
 - **Authorization lives server-side.** Use `requireRole` / `requireAdmin` (`middleware/rbac.js`)

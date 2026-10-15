@@ -1,6 +1,6 @@
 # Management Platform (Operator Console) — Plan
 
-> **Status: Phase 1 in progress** (2026-10-15). Phase 0 research done; console setup (keys,
+> **Status: Phase 1 done (code, not deployed)** (2026-10-15). Phase 0 research done; console setup (keys,
 > tunnel) still with the owner and runs in parallel.
 > Supersedes the *placement* of the admin console from
 > `docs/admin-family-management-plan.md` Phase 5. That plan's data model, privacy boundary,
@@ -121,33 +121,36 @@ Today the privacy boundary is code: `adminService` lists columns explicitly and 
 the responses. `admin-api` keeps both, and adds a database role that cannot read anything
 else:
 
-- **Views owned by the main role.** Postgres runs a view with its owner's rights, so the views
-  can count rows the admin role itself cannot read:
-  - `admin_family_registry`: family id, name, created_at, last_active_at, heartbeat bucket,
-    member count, caregiver count, actor count, plan code, subscription status. These are the
-    columns `adminService` already returns.
-  - `admin_billing_owner`: family id and billing-owner user id only (no email, no name), for
-    linking RevenueCat customers.
-- **Grants for `carecoins_admin`:**
-  - `SELECT` on those views, plus `plans`, `family_plans`, `billing_events`, `admin_grants`,
-    `admin_audit_log`, and the new `admin_rc_sync` (see §4).
-  - `INSERT`/`UPDATE` on `plans`, `admin_grants`, `admin_rc_sync`, and `INSERT` on
-    `admin_audit_log`.
-  - `UPDATE` on `billing_events.processed`, for re-processing a webhook.
-  - Nothing at all on `family_members`, `activities`, `coin_ledger`, `rewards`, `users` and the
-    other content tables.
-- **The role is created by `init-db.js`**, not by a `.sql` file, because it needs a password from
-  the environment (`ADMIN_DB_PASSWORD`). The step is idempotent: create the role if it is
-  missing, set its password, then apply the grants on every run. Production runs `db:init` on
-  every start, so the grants can never drift.
-- **Test:** an integration test connects as `carecoins_admin` and checks that a `SELECT` on
-  `family_members`, `activities` and `coin_ledger` fails with a permission error. It runs in
-  the existing E2E setup (`docs/automatic-testing-E2E.md`).
-
-`requireAdmin` reads `users.platform_role`, which the admin role cannot read. Two options:
-`admin-api` checks it through a third view, `admin_operators` (`id`, `firebase_uid`, filtered
-to admins); or it keeps a small, separate connection as the main role for this one query.
-**Recommended: the view**, so the whole process runs as one restricted role.
+- **Views owned by the main role (`security_barrier`).** Postgres runs a view with its owner's rights,
+  so the views can count rows the admin role itself cannot read:
+  - `admin_family_registry`: family id, name, created_at, last_active_at, plan_code, subscription_status,
+    member_count, pending_member_count, actor_count. These are the columns `adminService` already returns.
+  - `admin_operators`: id, firebase_uid for platform admins (`platform_role = 'admin' AND is_deleted = false`).
+    `requireOperator` (`src/admin/operator.js`) checks callers here without reading `users` directly or upserting them.
+  - *(Deviation from early draft)*: No `admin_billing_owner` view is needed because `family_plans` is granted whole.
+- **Queue for notices (`admin_family_notices`):**
+  The admin role cannot see who is in a family, so it cannot push directly. `requestInactivityNotice`
+  inserts a row into `admin_family_notices` (`id`, `family_id`, `kind`, `requested_by`, `created_at`, `sent_at`),
+  and the public backend's notice outbox (`src/services/noticeOutbox.js`) periodically claims pending rows
+  (`FOR UPDATE SKIP LOCKED`) and pushes to the family's caregivers.
+- **Grants for `carecoins_admin` (`scripts/admin-role.js`):**
+  - `SELECT` on `admin_family_registry`, `admin_operators`, `plans`, `family_plans`, `admin_grants`,
+    `admin_audit_log`, `admin_rc_sync`, `admin_family_notices`.
+  - Column-restricted `SELECT (id, provider, event_id, event_type, family_id, processed, created_at)`
+    on `billing_events` (raw `payload` is omitted to protect customer attributes; re-processing in Phase 3
+    will need a dedicated route).
+  - `INSERT`, `UPDATE` on `plans` and `admin_rc_sync`.
+  - `INSERT`, `UPDATE (revoked_at)` on `admin_grants`.
+  - `INSERT` on `admin_audit_log` and `admin_family_notices`.
+  - `USAGE` on sequences `admin_grants_id_seq`, `admin_audit_log_id_seq`, `admin_family_notices_id_seq`.
+  - Nothing at all on `family_members`, `activities`, `coin_ledger`, `rewards`, `users` or any other of the 18 content tables in `FORBIDDEN_TABLES`.
+- **The role is created/maintained by `scripts/admin-role.js`**, chained in `init-db.js`, from `ADMIN_DB_PASSWORD`.
+  The step is idempotent: creates the role if missing, sets password, revokes all existing schema grants,
+  then reapplies the allowlist. When `ADMIN_DB_PASSWORD` is absent (local dev without role setup), `init-db.js` skips role creation.
+  In `admin-api`, the password is supplied to `pg` via `PGPASSWORD` (`src/admin/env.js`) from `ADMIN_DB_PASSWORD`
+  (`backend/admin-db.env`), keeping the connection URL password-free.
+- **Test:** `scripts/check-admin-role.js` verifies against a real Postgres container that every content table is refused,
+  payload is refused, grants work, and every table in the schema is classified.
 
 ### 2.4 Secrets
 
@@ -338,30 +341,41 @@ operator opens it, which is harmless, because only the operator ever sees that e
 ## 6. Deployment changes
 
 `docker-compose.yml` gains three services. The existing ones are unchanged, apart from `db-init`
-getting `ADMIN_DB_PASSWORD`.
+getting `ADMIN_DB_PASSWORD` from `./backend/admin-db.env` (using the long `env_file` syntax with
+`required: false` so deploys succeed even without the file).
 
 ```yaml
   admin-api:
     build: ./backend
     command: node src/admin/server.js
-    env_file: [./backend/admin.env]
+    profiles: [admin]
     environment:
+      DATABASE_URL: postgres://carecoins_admin@postgres:5432/carecoins
       PORT: 3001
       NODE_ENV: production
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials.json
+    env_file:
+      - ./backend/admin.env
+      - ./backend/admin-db.env
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     volumes:
       - ./firebase-credentials.json:/run/secrets/firebase-credentials.json:ro
-    depends_on: { db-init: { condition: service_completed_successfully } }
     # no ports: reached only from admin-web on the internal network
 
   admin-web:
     build: { context: ./adminFront }
+    profiles: [admin]
     depends_on: [admin-api]
     # no ports: reached only through cloudflared
 
   cloudflared:
     image: cloudflare/cloudflared:<pinned version>
     command: tunnel --no-autoupdate run
+    profiles: [admin]
     env_file: [./backend/admin.env]   # CLOUDFLARE_TUNNEL_TOKEN
     depends_on: [admin-web]
 ```
@@ -519,4 +533,42 @@ it can start in parallel.
 
 ## As built
 
-*(Filled in per phase.)*
+### Phase 1 — `admin-api` skeleton and the database role (2026-10-15)
+
+The operator console's backend skeleton and the Postgres security boundary are complete in code.
+
+**Files built / touched:**
+- `backend/scripts/migrate-admin-console.sql`: creates views `admin_family_registry` and `admin_operators` (both `security_barrier`), and tables `admin_family_notices` (queue for inactivity notices) and `admin_rc_sync` (free-plan RevenueCat sync tracking).
+- `backend/src/db/schema.sql`: mirrors the migration at the end.
+- `backend/scripts/admin-role.js`: creates/maintains the restricted `carecoins_admin` Postgres role from `ADMIN_DB_PASSWORD`; revokes all schema grants on each run then reapplies explicit allowlist. Defines `FORBIDDEN_TABLES` (18 content tables).
+- `backend/scripts/init-db.js`: chains `migrate-admin-console.sql` and calls `applyAdminRole(pool)`.
+- `backend/scripts/check-admin-role.js`: real-Postgres verification against Postgres 16: verifies role refusal on all 18 content tables, refusal of `billing_events.payload`, refusal of schema mutations, verifies that views and console operations succeed, and confirms every base table is classified.
+- `backend/src/admin/env.js`: loads `.env` and wires `ADMIN_DB_PASSWORD` to `PGPASSWORD` so the database URL stays free of embedded passwords.
+- `backend/src/admin/access.js`: verifies Cloudflare Access JWTs (`cf-access-jwt-assertion`) using `jose` against `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD`. Fails startup in production if unset.
+- `backend/src/admin/operator.js`: `requireOperator` verifies admin status against the `admin_operators` view (no user table reads or upserts); `requireRecentSignIn` enforces `auth_time` within 30 minutes for mutating methods (reads pass).
+- `backend/src/admin/app.js`: Express app mounting `/health` and `/admin-api` with middleware chain: Access check → Firebase Auth → per-operator rate limit (300/15m) → `requireOperator` → `requireRecentSignIn` → `adminRouter`.
+- `backend/src/admin/server.js`: entrypoint on port 3001; verifies connection role is `carecoins_admin` on boot (refuses startup in production otherwise).
+- `backend/src/services/adminService.js`: refactored to read families through `admin_family_registry`; `requestInactivityNotice` queues into `admin_family_notices`.
+- `backend/src/routes/admin.js`: updated to queue inactivity notices rather than pushing directly; mounted under both `/api/admin` (temporary) and `/admin-api`.
+- `backend/src/services/noticeOutbox.js` + `backend/src/server.js`: background worker in public backend polling `admin_family_notices` every 60s, claiming rows with `FOR UPDATE SKIP LOCKED`, and delivering caregiver pushes.
+- `docker-compose.yml`: adds `admin-api` behind `profiles: [admin]`, wires `admin-db.env` to `db-init` with `required: false`.
+- `backend/tests/adminConsole.test.js`: 20 tests covering Access JWT verification, operator authorization, recent sign-in enforcement, separation from public app (`src/app.js` never imports `src/admin/`), grant rules, and notice outbox.
+- `backend/tests/adminRegistry.test.js`: updated for notice queue and view changes.
+- `docs/error-codes.md`: registered `accessInvalid`, `accessMissing`, `adminReauthRequired`.
+- `fluterFront/test/server_errors_p6_6_test.dart`: exempts operator console error codes from app localization.
+- `backend/admin.env.example`, `backend/admin-db.env.example`, `.gitignore`, `backend/.dockerignore`: env templates and ignore rules.
+- `backend/package.json`: added `jose` ^6.
+
+**Decisions & deviations recorded:**
+- *No `admin_billing_owner` view*: `family_plans` is granted whole to `carecoins_admin`, so the view was redundant.
+- *Notice outbox queue (`admin_family_notices`)*: because `carecoins_admin` cannot view family members or users, it queues inactive notices. The public backend claims and sends them.
+- *Column grant on `billing_events`*: granted without `payload` column to protect member attributes in webhooks. Re-processing webhooks (Phase 3) is noted as an open item requiring an alternate route.
+- *`PGPASSWORD` for `carecoins_admin`*: avoids storing DB passwords in connection URLs.
+- *Compose profile `admin`*: ensures regular `docker compose up` / `deploy.sh` does not run `admin-api` until Phase 2 is ready.
+
+**Test & verification results:**
+- Backend unit suite: 253 tests passing (`npm test`).
+- Flutter suite: 315 tests passing, `flutter analyze` clean (`flutter test`).
+- Real-Postgres verification against `postgres:16` container (`check-admin-role.js`): all 31 checks passed; `db:init` verified idempotent twice.
+- Boot check: `GET /health` returned HTTP 200, `GET /admin-api/status` returned HTTP 401 `authMissingToken`.
+- Compose config verified valid both with and without `--profile admin`.

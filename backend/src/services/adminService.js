@@ -8,6 +8,10 @@
  * users.display_name, family_members.alias, …) or family content
  * (activities, coin_ledger, marketplace_rewards, absences).
  * tests/adminService.test.js enforces this on every response shape.
+ *
+ * Family data comes through the admin_family_registry view
+ * (scripts/migrate-admin-console.sql), never the base tables: the operator
+ * console's API runs as a database role that can read nothing else.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -58,12 +62,9 @@ export async function listFamilies(client, { search = '', status = '', page = 1,
   params.push(size, (p - 1) * size);
   const { rows } = await client.query(
     `SELECT f.id, f.name, f.created_at, f.last_active_at,
-            fp.plan_code, fp.status AS subscription_status,
-            (SELECT COUNT(*) FROM family_members fm
-              WHERE fm.family_id = f.id AND fm.status = 'active') AS member_count,
+            f.plan_code, f.subscription_status, f.member_count,
             COUNT(*) OVER() AS total
-     FROM families f
-     LEFT JOIN family_plans fp ON fp.family_id = f.id
+     FROM admin_family_registry f
      ${whereSql}
      ORDER BY f.last_active_at DESC, f.id
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -82,17 +83,10 @@ export async function listFamilies(client, { search = '', status = '', page = 1,
 
 export async function getFamilyRegistry(client, familyId, nowMs = Date.now()) {
   const { rows } = await client.query(
-    `SELECT f.id, f.name, f.created_at, f.last_active_at,
-            fp.plan_code, fp.status AS subscription_status,
-            (SELECT COUNT(*) FROM family_members fm
-              WHERE fm.family_id = f.id AND fm.status = 'active') AS member_count,
-            (SELECT COUNT(*) FROM family_members fm
-              WHERE fm.family_id = f.id AND fm.status = 'pending') AS pending_member_count,
-            (SELECT COUNT(*) FROM actors a
-              WHERE a.family_id = f.id AND a.user_id IS NULL) AS actor_count
-     FROM families f
-     LEFT JOIN family_plans fp ON fp.family_id = f.id
-     WHERE f.id = $1`,
+    `SELECT id, name, created_at, last_active_at, plan_code, subscription_status,
+            member_count, pending_member_count, actor_count
+     FROM admin_family_registry
+     WHERE id = $1`,
     [familyId]
   );
   if (!rows.length) return { error: { code: 404, message: 'Family not found.' } };
@@ -106,12 +100,17 @@ export async function getFamilyRegistry(client, familyId, nowMs = Date.now()) {
   };
 }
 
-// Records the intent to nudge an inactive family. The push itself goes out
-// after the transaction via notifyFamilyCaregivers — the system contacts the
-// caregivers; the admin never sees who they are.
+// Records the intent to nudge an inactive family and queues the notice. The
+// public backend sends the push (src/services/noticeOutbox.js): the system
+// contacts the caregivers; the admin never sees who they are.
 export async function requestInactivityNotice(client, adminId, familyId) {
   const result = await getFamilyRegistry(client, familyId);
   if (result.error) return result;
+
+  await client.query(
+    `INSERT INTO admin_family_notices (family_id, kind, requested_by) VALUES ($1, 'inactive', $2)`,
+    [familyId, adminId]
+  );
 
   await logAdminAction(client, adminId, 'family.notify_inactive', {
     targetType: 'family',
@@ -239,7 +238,7 @@ export async function updatePlan(client, adminId, code, patch) {
 //     metadata only — never raw provider payloads, never member identities) ──
 
 export async function getFamilyBilling(client, familyId) {
-  const { rows: famRows } = await client.query(`SELECT id FROM families WHERE id = $1`, [familyId]);
+  const { rows: famRows } = await client.query(`SELECT id FROM admin_family_registry WHERE id = $1`, [familyId]);
   if (!famRows.length) return { error: { code: 404, message: 'Family not found.' } };
 
   const { rows: planRows } = await client.query(
@@ -293,7 +292,7 @@ export async function getFamilyBilling(client, familyId) {
 // ─── Grants ───────────────────────────────────────────────────────────────────
 
 export async function createGrant(client, adminId, familyId, { planCode, reason, expiresAt }) {
-  const { rows: famRows } = await client.query(`SELECT id FROM families WHERE id = $1`, [familyId]);
+  const { rows: famRows } = await client.query(`SELECT id FROM admin_family_registry WHERE id = $1`, [familyId]);
   if (!famRows.length) return { error: { code: 404, message: 'Family not found.' } };
 
   const { rows: planRows } = await client.query(

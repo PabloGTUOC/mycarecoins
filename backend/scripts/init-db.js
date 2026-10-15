@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pool } from '../src/db/pool.js';
+import { applyAdminRole } from './admin-role.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,6 +60,15 @@ async function main() {
   const ledgerReversalsPath = path.join(__dirname, 'migrate-ledger-reversals.sql');
   await pool.query(await fs.readFile(ledgerReversalsPath, 'utf8'));
   console.log('Reverted payouts have their credits back.');
+
+  const adminConsolePath = path.join(__dirname, 'migrate-admin-console.sql');
+  await pool.query(await fs.readFile(adminConsolePath, 'utf8'));
+  console.log('Operator console views and queues ready.');
+
+  const adminRole = await applyAdminRole(pool);
+  console.log(adminRole.granted
+    ? 'Operator console database role ready.'
+    : 'Operator console database role skipped (ADMIN_DB_PASSWORD not set).');
 
   await pool.end();
 }

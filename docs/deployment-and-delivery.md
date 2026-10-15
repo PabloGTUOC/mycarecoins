@@ -172,6 +172,23 @@ Notes:
   [§3.2](#32-revenuecat)). Restart the backend after changing it.
 - The old `VITE_*` variables are dead; the Flutter web app compiles its Firebase config in.
 
+#### Operator console (`admin-api`) — not yet: Phase 2 adds the console and the tunnel
+
+The operator console API is defined in `docker-compose.yml` under the `admin` profile (`profiles: [admin]`). A normal `deploy.sh` or `docker compose up` does not start it.
+
+To switch it on later (once Phase 2 is ready):
+1. Create `backend/admin.env` and `backend/admin-db.env` on the server from their templates:
+   ```bash
+   cp backend/admin.env.example backend/admin.env
+   cp backend/admin-db.env.example backend/admin-db.env
+   # populate CF_ACCESS_*, ADMIN_DB_PASSWORD, etc.
+   ```
+2. Start the admin stack:
+   ```bash
+   docker compose --profile admin up -d
+   ```
+*(Do not enable in production yet: Phase 2 adds the console UI and the Cloudflare tunnel).*
+
 ### Verify
 
 ```bash

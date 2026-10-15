@@ -1,9 +1,12 @@
 /**
  * Platform admin API (docs/admin-family-management-plan.md).
  *
- * Mounted in app.js as:
- *   app.use('/api/admin', requireAuth, adminLimiter, requireAdmin, adminRouter)
- * so every handler here can assume req.auth and req.adminUser are set.
+ * Mounted twice while the console moves out of the app
+ * (docs/management-platform-plan.md):
+ *   app.js:       app.use('/api/admin', requireAuth, adminLimiter, requireAdmin, adminRouter)
+ *   admin/app.js: '/admin-api', behind the Access check, auth and requireOperator
+ * so every handler here can assume req.auth and req.adminUser are set, and
+ * must only touch what the carecoins_admin database role can reach.
  *
  * PRIVACY BOUNDARY: handlers expose family registry + billing state only —
  * never family internals. See src/services/adminService.js.
@@ -11,7 +14,6 @@
 import { Router } from 'express';
 import { withTransaction } from '../db/pool.js';
 import { validateBody, validateParams, required, string, oneOf, isoDate } from '../middleware/validate.js';
-import { notifyFamilyCaregivers } from '../utils/notify.js';
 import * as adminService from '../services/adminService.js';
 
 export const adminRouter = Router();
@@ -152,12 +154,7 @@ adminRouter.post('/families/:familyId/notify-inactive', validateParams('familyId
     const result = await withTransaction((client) =>
       adminService.requestInactivityNotice(client, req.adminUser.id, familyId));
     if (result.error) return res.status(result.error.code).json({ error: result.error.message });
-    notifyFamilyCaregivers(familyId, 0, {
-      title: 'Is your family still using CareCoins?',
-      body: 'Your family has been quiet for a while. Open the app to keep it active.',
-      url: '/dashboard',
-      prefKey: 'family_events',
-    });
+    // The push is queued, not sent here: see src/services/noticeOutbox.js.
     return res.json(result.data);
   } catch (err) {
     console.error('Admin inactivity notice failed:', err);
