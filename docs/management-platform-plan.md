@@ -1,6 +1,6 @@
 # Management Platform (Operator Console) — Plan
 
-> **Status: planned, not started** (2026-10-15). No code yet.
+> **Status: Phase 0 in progress** (2026-10-15): research done, console setup waiting on the owner.
 > Supersedes the *placement* of the admin console from
 > `docs/admin-family-management-plan.md` Phase 5. That plan's data model, privacy boundary,
 > webhook and entitlement rules stay as they are; this plan moves the console out of the
@@ -159,7 +159,8 @@ A new `backend/admin.env`, gitignored and on the server only. It is used by `adm
 | `ADMIN_DB_PASSWORD` | read by `db-init` to set the role's password (also passed to `db-init`) |
 | `RC_SECRET_API_KEY`, `RC_PROJECT_ID` | RevenueCat REST API v2 (secret key, `sk_…`) |
 | `RC_ENTITLEMENT_ID` | the `MyCareCoins Pro` entitlement's id |
-| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (.p8 contents) | App Store Connect API + App Store Server API, signed JWTs |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (.p8 contents) | App Store Connect API (catalogue, prices), signed JWT. A **team key** from Users and Access → Integrations → App Store Connect API |
+| `IAP_KEY_ID`, `IAP_PRIVATE_KEY` (.p8 contents), `APP_BUNDLE_ID` | App Store Server API (transaction lookup). A **different key**: Users and Access → Integrations → In-App Purchase; creating it needs the Account Holder or Admin role. The issuer id is the same |
 | `ASC_APP_ID` / bundle id | which app to read |
 | `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | Access token check |
 | `CLOUDFLARE_TUNNEL_TOKEN` | `cloudflared` |
@@ -236,7 +237,9 @@ customer**.
 - On grant, `admin-api`:
   1. writes `admin_grants` + `admin_audit_log` in one transaction, as today;
   2. sets the customer's `family_id` attribute and grants entitlement `RC_ENTITLEMENT_ID` with
-     `expires_at` = grant expiry (lifetime if none);
+     `expires_at` = grant expiry. The v2 grant **requires** `expires_at`, so a grant with no
+     expiry is sent as a far-future date (100 years). RevenueCat ignores a second grant for the
+     same entitlement that expires within two hours of an existing one, so a re-sync is safe;
   3. records the result in `admin_rc_sync`.
 - On revoke, it revokes the granted entitlement on that customer.
 - **Our database decides what the family gets; RevenueCat mirrors it for statistics.** A
@@ -270,18 +273,30 @@ CREATE TABLE IF NOT EXISTS admin_rc_sync (
 **Existing grants:** a one-off backfill (CLI, dry run first) mirrors every active
 `admin_grants` row.
 
-**To verify in Phase 0, before building on it:**
-1. Which RevenueCat charts count granted entitlements. They show as store "Promotional"; the
-   check is whether Active Subscriptions and the customer counts include them, and whether
-   revenue correctly excludes them.
-2. Which webhook event types RevenueCat sends for a grant and a revoke, and what their
-   payloads look like.
-3. That a v2 grant can create the `family_<id>` customer, or whether the customer has to be
-   created first.
+**Phase 0 findings (2026-10-15, from RevenueCat's current docs and forum):**
 
-If (1) turns out to exclude promotional entitlements from the charts you want, the fallback is
-the console's own combined overview (§3.2), which counts free plans from our database. In that
-case the mirror is still useful, for the RevenueCat customer view and exports.
+1. **The API exists.** REST API v2 has `POST /projects/{id}/customers` (create, with
+   attributes), `…/customers/{id}/actions/grant_entitlement` (`entitlement_id`, `expires_at` in
+   ms, required) and `…/actions/revoke_granted_entitlement`. No v1 calls are needed.
+2. **RevenueCat's charts most likely do *not* count granted entitlements.**
+   - RevenueCat staff said so explicitly: promotional grants don't renew and don't touch store
+     billing, so they are left out of every chart, and the Customer List is the place to find
+     them. That statement dates from 2022.
+   - The current docs define Active Subscriptions as *paid* subscriptions.
+   - Charts also show **production data only**, so the sandbox (Test Store) project cannot
+     confirm or refute this. There is no production RevenueCat data yet: the project is still
+     Test Store only (`docs/RevenueCatSetup.md`).
+3. **Webhooks for grants are unreliable.** The event-types table marks most events as not sent
+   for promotional grants. A staff reply says a grant sends `NON_RENEWING_PURCHASE` with store
+   `PROMOTIONAL`, and a user reported never receiving it. The loop guard above stays either
+   way. A sandbox grant will show what actually arrives.
+
+**What this means for decision 4 (owner to confirm):** mirroring makes free-plan families
+visible in RevenueCat's **Customer List, customer pages and data exports**, but most likely
+**not in its charts or overview numbers**. Free plans would then be counted on the console's own
+overview, which shows paid (from RevenueCat) and free (from our database) side by side. A
+one-time check once production data exists (one grant on a `family_test` customer in the
+production project, then revoked) settles item 2 for good.
 
 ---
 
@@ -378,16 +393,37 @@ Each phase ends with `npm test` and `flutter analyze && flutter test` clean (in 
 too, once it exists), and with this plan's **As built** log updated.
 
 ### Phase 0 — Spikes and console setup · S (1 day)
-- RevenueCat: create the v2 secret key. In the **sandbox** project, grant and revoke a promotional
-  entitlement on a test customer `family_test`. Record which charts count it and which
-  webhook events arrive (§4, the three items to verify).
-- App Store Connect: create the API key with the narrowest role that can read subscriptions,
-  and check a transaction lookup against a sandbox purchase.
-- Cloudflare: create the tunnel and the Access application on a placeholder page; check that
-  login works and that the `Cf-Access-Jwt-Assertion` header arrives.
-- **Exit:** the findings are written into §4 and §9 of this doc. If promotional entitlements do
-  not count in the RevenueCat charts that matter, the owner decides whether the mirror is still
-  worth it before Phase 3.
+
+Research is done (findings in §4). What is left needs the owner's accounts.
+
+**Owner, in the consoles (about 1 hour):**
+- [ ] **RevenueCat** (sandbox project) → Project settings → API keys → new **secret v2 key**.
+      Permissions: Customer information read & write, Project configuration read, Charts & metrics
+      read. Note the project id (`proj…`) and the entitlement's id for `MyCareCoins Pro`.
+- [ ] **App Store Connect** → Users and Access → Integrations:
+  - [ ] App Store Connect API → Team key, role **Customer Support** (read-only enough for
+        products, prices and subscription status; try **Developer** if a read fails). Note
+        the key id and issuer id.
+  - [ ] In-App Purchase → generate a key (needs Account Holder or Admin). Note its key id.
+  - [ ] Keep both `.p8` files out of the repo and out of chat; they download only once.
+- [ ] **Cloudflare** → Zero Trust:
+  - [ ] Create the team (free plan) if none exists.
+  - [ ] Networks → Tunnels → create a tunnel `carecoins-admin` (cloudflared); keep its token.
+  - [ ] Access → Applications → self-hosted app for `admin.mycarecoins.app`, policy: allow your
+        email; note the team domain and the **AUD tag**.
+- [ ] **Firebase** → Authentication → Settings → Authorized domains → add `admin.mycarecoins.app`.
+
+**Lead, once the RevenueCat key is in a local env file (not in the repo):**
+- [ ] A throwaway script against the **sandbox** project: create `family_test`, set its
+      `family_id` attribute, grant `MyCareCoins Pro` for 1 day, read the customer back, revoke.
+      Record the responses and which webhook events reach the backend's billing log.
+- [ ] Call `GET /metrics/overview` and record the metric ids it returns, for the console's
+      overview.
+- [ ] Write the results into §4 and the As built log.
+
+**Exit:** the owner confirms decision 4 in its revised form (mirror for the Customer List; count
+free plans on the console), or drops the mirror. Phase 1 does not depend on this decision, so
+it can start in parallel.
 
 ### Phase 1 — `admin-api` skeleton and the database role · M (2–3 days)
 - `backend/src/admin/{server,app}.js`: the Access token check → Firebase auth → `requireAdmin`
@@ -429,8 +465,10 @@ too, once it exists), and with this plan's **As built** log updated.
   `family_plans`.
 
 ### Phase 4 — App Store · S–M (2–3 days)
-- `src/admin/appstore.js`: signed-JWT client for the App Store Connect API (subscription group,
-  products, prices) and the App Store Server API (transaction lookup and history).
+- `src/admin/appstore.js`: signed-JWT clients for the App Store Connect API (team key:
+  subscription group, products, prices) and the App Store Server API (In-App Purchase key:
+  transaction lookup and history). These are two different keys; tokens live up to 60 minutes
+  and are reused for that long.
 - Console: App Store page, transaction lookup, links out to the store consoles.
 - Optional, behind the recent-sign-in check: switching RevenueCat's current offering.
 - **Tests:** JWT signing (claims, expiry), recorded responses, no secret ever in a response or
