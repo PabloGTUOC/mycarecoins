@@ -68,7 +68,7 @@ void main() {
         'platform': 'ios',
         'provider': 'apple',
         'currentPeriodEnd': '2026-11-01T00:00:00.000Z',
-        'billingOwnerId': 1001,
+        'billingOwnerUserId': 1001,
       },
       'grants': [
         {
@@ -141,8 +141,9 @@ void main() {
     expect(find.text(Strings.grantsCardTitle), findsOneWidget);
     expect(find.text(Strings.eventsCardTitle), findsOneWidget);
     expect(find.text('Wayne Family · #42'), findsOneWidget);
-    // Verify billing owner row is absent (Point 5)
-    expect(find.text(Strings.subBillingOwner), findsNothing);
+    // Verify billing owner row is present with User #1001 (MP2c)
+    expect(find.text(Strings.subBillingOwner), findsOneWidget);
+    expect(find.text('User #1001'), findsOneWidget);
 
     // 1. Notify Inactive: tap button -> confirm dialog -> calls POST -> says queued
     final notifyBtn = find.text(Strings.notifyInactiveBtn);
@@ -287,5 +288,45 @@ void main() {
 
     // Revoke button should only be available for non-revoked grants (2 out of 3)
     expect(find.text(Strings.revokeGrantBtn), findsNWidgets(2));
+  });
+
+  testWidgets('Family detail: billing owner displays dash when null', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'createdAt': '2026-01-01T10:00:00.000Z',
+      'lastActiveAt': '2026-08-15T12:00:00.000Z',
+      'memberCount': 3,
+      'pendingMemberCount': 1,
+      'actorCount': 1,
+      'status': 'dormant',
+      'planCode': 'pro',
+      'subscriptionStatus': 'active',
+    };
+
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': {
+        'planCode': 'pro',
+        'status': 'active',
+        'platform': 'ios',
+        'provider': 'apple',
+        'currentPeriodEnd': '2026-11-01T00:00:00.000Z',
+        'billingOwnerUserId': null,
+      },
+      'grants': [],
+      'recentEvents': [],
+    };
+
+    api.responses['GET:/plans'] = {'plans': []};
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.subBillingOwner), findsOneWidget);
+    expect(find.text(Strings.emptyDash), findsWidgets);
   });
 }

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import request from 'supertest';
 import { SignJWT, generateKeyPair, exportJWK, createLocalJWKSet } from 'jose';
-import { createAdminApp } from '../src/admin/app.js';
+import { createAdminApp, createOperatorLimiter } from '../src/admin/app.js';
 import { createAccessVerifier, accessVerifierFromEnv, requireAccess } from '../src/admin/access.js';
 import { requireOperator, requireRecentSignIn, RECENT_SIGN_IN_SECONDS } from '../src/admin/operator.js';
 import { deliverPendingNotices, NOTICE_MESSAGES } from '../src/services/noticeOutbox.js';
@@ -162,6 +162,27 @@ describe('requireRecentSignIn', () => {
     requireRecentSignIn(undefined, () => NOW)({ method: 'DELETE', auth: {} }, res, () => { passed = true; });
     assert.equal(passed, false);
     assert.equal(res.c, 401);
+  });
+});
+
+// ─── Rate limiter ────────────────────────────────────────────────────────────
+
+describe('operatorLimiter', () => {
+  test('returns 429 with code rateLimited when rate limit exceeded', async () => {
+    const app = createAdminApp({
+      db: operatorsDb(['uid-admin']),
+      authenticate: fakeAuth('uid-admin', NOW / 1000),
+      now: () => NOW,
+      operatorLimiter: createOperatorLimiter({ max: 1 }),
+    });
+
+    const first = await request(app).get('/admin-api/status');
+    assert.equal(first.status, 200);
+
+    const second = await request(app).get('/admin-api/status');
+    assert.equal(second.status, 429);
+    assert.equal(second.body.code, 'rateLimited');
+    assert.equal(second.body.error, 'Too many requests. Please try again later.');
   });
 });
 

@@ -206,7 +206,8 @@ describe('getFamilyBilling', () => {
     const client = mockClient([
       ok([{ id: 1 }]),
       ok([{ plan_code: 'plus', status: 'active', current_period_end: null, platform: 'play',
-            provider: 'revenuecat', provider_subscription_id: 'sub_1', updated_at: 'now' }]),
+            provider: 'revenuecat', provider_subscription_id: 'sub_1', updated_at: 'now',
+            billing_owner_user_id: '42' }]),
       ok([{ id: '5', plan_code: 'plus', reason: 'comp', expires_at: null, revoked_at: null,
             created_at: 'now', granted_by: '7' }]),
       ok([{ id: '9', provider: 'revenuecat', event_type: 'RENEWAL', processed: true,
@@ -214,9 +215,23 @@ describe('getFamilyBilling', () => {
     ]);
     const result = await getFamilyBilling(client, 1);
     assert.equal(result.data.subscription.planCode, 'plus');
+    assert.equal(result.data.subscription.billingOwnerUserId, 42);
     assert.equal(result.data.grants[0].grantedBy, 7);
     assert.deepEqual(Object.keys(result.data.recentEvents[0]).sort(),
       ['createdAt', 'eventType', 'id', 'processed', 'provider']);
+  });
+
+  test('maps billingOwnerUserId to null when unassigned', async () => {
+    const client = mockClient([
+      ok([{ id: 1 }]),
+      ok([{ plan_code: 'free', status: 'active', current_period_end: null, platform: null,
+            provider: null, provider_subscription_id: null, updated_at: 'now',
+            billing_owner_user_id: null }]),
+      ok([]),
+      ok([]),
+    ]);
+    const result = await getFamilyBilling(client, 1);
+    assert.equal(result.data.subscription.billingOwnerUserId, null);
   });
 });
 

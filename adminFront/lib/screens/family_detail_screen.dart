@@ -352,6 +352,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
               _infoRow(Strings.subPlatform, sub['platform']?.toString() ?? Strings.emptyDash),
               _infoRow(Strings.subProvider, sub['provider']?.toString() ?? Strings.emptyDash),
               _infoRow(Strings.subRenewal, Strings.formatDate(sub['currentPeriodEnd'])),
+              _infoRow(Strings.subBillingOwner, Strings.formatBillingOwner(sub['billingOwnerUserId'])),
             ],
           ],
         ),

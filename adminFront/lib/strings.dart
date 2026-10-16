@@ -94,7 +94,7 @@ class Strings {
   static const subPlatform = 'Platform';
   static const subProvider = 'Provider';
   static const subRenewal = 'Current Period End';
-  static const subBillingOwner = 'Billing Owner ID';
+  static const subBillingOwner = 'Billing owner';
 
   static const noGrants = 'No plan grants recorded for this family.';
   static const grantPlanBtn = 'Grant Plan';
@@ -267,6 +267,8 @@ class Strings {
 
   static String familyHeader(String name, int id) => '$name · #$id';
 
+  static String formatBillingOwner(dynamic userId) =>
+      userId != null ? 'User #$userId' : emptyDash;
 
   static String formatPrice(int priceCents, String currency, String period) {
     if (priceCents == 0) return priceFree;

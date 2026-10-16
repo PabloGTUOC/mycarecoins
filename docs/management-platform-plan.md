@@ -657,3 +657,16 @@ The console enforces a strict CSP on every response:
   - `GET /admin-api/status` returned HTTP 502 (no upstream `admin-api`).
 - Compose verification: `docker compose config -q` and `docker compose --profile admin config -q` both pass cleanly; default profile excludes all admin services.
 
+### Phase 2 follow-up — MP2c: closing Phase 2 API gaps (2026-10-16)
+
+Closed three of the API gaps found during Phase 2; the fourth was not a bug:
+
+1. **`GET /families` counts**: `listFamilies` and `getFamilyRegistry` in `adminService.js` now share `toRegistryEntry`, selecting and returning `pendingMemberCount` and `actorCount` alongside baseline family registry fields. The frontend `families_screen.dart` restores the **Pending** and **Actors** columns; all 11 columns remain fully visible at 1440 px with horizontal scrolling supported below that.
+2. **`GET /families/:id/billing` owner**: selects `billing_owner_user_id` from `family_plans` and returns `billingOwnerUserId` (number or `null`) under `subscription`. No join to `users` or user identities is performed, strictly preserving `carecoins_admin` role restrictions. The frontend billing card displays the **Billing owner** row as `User #<id>` or `—` when unassigned.
+3. **Structured 429 rate limit responses**: `operatorLimiter` in `src/admin/app.js` configures a custom `handler` returning `{ error: 'Too many requests. Please try again later.', code: 'rateLimited' }`, matching standard backend error format. Catalogued `rateLimited` in `docs/error-codes.md` (Operator console API only).
+4. **Plan field naming**: The snake_case keys inside plan `limits` (`max_members`, `max_actors`, `max_active_rewards`) are stored entitlement data read by existing services (`memberService.js` and `marketplace.js`); renaming them would require a data migration for no gain, so they are kept as-is.
+
+**Test & verification results:**
+- Backend unit suite: 255 tests passing (`npm test`), including rate limiter test returning 429 `{ code: 'rateLimited' }` and entitlement billing owner tests.
+- `adminFront` test suite: 25 tests passing, `flutter analyze` clean (`flutter test`).
+

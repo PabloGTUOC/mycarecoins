@@ -40,6 +40,8 @@ function toRegistryEntry(row, nowMs) {
     createdAt: row.created_at,
     lastActiveAt: row.last_active_at,
     memberCount: Number(row.member_count ?? 0),
+    pendingMemberCount: Number(row.pending_member_count ?? 0),
+    actorCount: Number(row.actor_count ?? 0),
     status: heartbeatBucket(row.last_active_at, nowMs),
     planCode: row.plan_code ?? null,
     subscriptionStatus: row.subscription_status ?? null,
@@ -63,6 +65,7 @@ export async function listFamilies(client, { search = '', status = '', page = 1,
   const { rows } = await client.query(
     `SELECT f.id, f.name, f.created_at, f.last_active_at,
             f.plan_code, f.subscription_status, f.member_count,
+            f.pending_member_count, f.actor_count,
             COUNT(*) OVER() AS total
      FROM admin_family_registry f
      ${whereSql}
@@ -92,11 +95,7 @@ export async function getFamilyRegistry(client, familyId, nowMs = Date.now()) {
   if (!rows.length) return { error: { code: 404, message: 'Family not found.' } };
 
   return {
-    data: {
-      ...toRegistryEntry(rows[0], nowMs),
-      pendingMemberCount: Number(rows[0].pending_member_count ?? 0),
-      actorCount: Number(rows[0].actor_count ?? 0),
-    },
+    data: toRegistryEntry(rows[0], nowMs),
   };
 }
 
@@ -242,7 +241,8 @@ export async function getFamilyBilling(client, familyId) {
   if (!famRows.length) return { error: { code: 404, message: 'Family not found.' } };
 
   const { rows: planRows } = await client.query(
-    `SELECT plan_code, status, current_period_end, platform, provider, provider_subscription_id, updated_at
+    `SELECT plan_code, status, current_period_end, platform, provider, provider_subscription_id, updated_at,
+            billing_owner_user_id
      FROM family_plans WHERE family_id = $1`,
     [familyId]
   );
@@ -268,6 +268,7 @@ export async function getFamilyBilling(client, familyId) {
         provider: sub.provider,
         providerSubscriptionId: sub.provider_subscription_id,
         updatedAt: sub.updated_at,
+        billingOwnerUserId: sub.billing_owner_user_id != null ? Number(sub.billing_owner_user_id) : null,
       } : null,
       grants: grantRows.map(g => ({
         id: Number(g.id),

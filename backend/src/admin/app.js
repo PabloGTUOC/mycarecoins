@@ -19,11 +19,28 @@ import { sendError } from '../utils/httpError.js';
 import { requireAccess } from './access.js';
 import { requireOperator, requireRecentSignIn } from './operator.js';
 
+export function createOperatorLimiter({
+  max = 300,
+  windowMs = 15 * 60 * 1000,
+} = {}) {
+  return rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => req.auth?.uid,
+    handler: (_req, res) => {
+      sendError(res, 429, 'rateLimited', 'Too many requests. Please try again later.');
+    },
+  });
+}
+
 export function createAdminApp({
   db,
   verifyAccess = null,
   authenticate = requireAuth,
   now = () => Date.now(),
+  operatorLimiter = null,
 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -33,19 +50,12 @@ export function createAdminApp({
     res.status(200).json({ status: 'ok', service: 'carecoins-admin-api' });
   });
 
-  const operatorLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests. Please try again later.' },
-    keyGenerator: (req) => req.auth.uid,
-  });
+  const limiter = operatorLimiter ?? createOperatorLimiter();
 
   app.use('/admin-api',
     requireAccess(verifyAccess),
     authenticate,
-    operatorLimiter,
+    limiter,
     requireOperator(db),
     requireRecentSignIn(undefined, now),
     adminRouter);

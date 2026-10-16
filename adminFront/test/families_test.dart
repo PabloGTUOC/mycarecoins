@@ -127,15 +127,62 @@ void main() {
     await tester.tap(nextBtn);
     await tester.pumpAndSettle();
 
-    // Verify Pending and Actors columns are absent (Point 4)
-    expect(find.text(Strings.colPending), findsNothing);
-    expect(find.text(Strings.colActors), findsNothing);
+    // Verify Pending and Actors columns are present (MP2c)
+    expect(find.text(Strings.colPending), findsOneWidget);
+    expect(find.text(Strings.colActors), findsOneWidget);
 
     final page2Call = api.callHistory.lastWhere(
       (c) => c.method == 'GET' && c.path.contains('/families'),
     );
     expect(page2Call.path, contains('page=2'));
     expect(find.text('Stark Family'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Families table displays all columns including Pending and Actors at 1440 px',
+      (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families'] = {
+      'families': [
+        {
+          'id': 1,
+          'name': 'Test Family',
+          'status': 'active',
+          'planCode': 'free',
+          'subscriptionStatus': 'none',
+          'memberCount': 5,
+          'pendingMemberCount': 2,
+          'actorCount': 3,
+          'createdAt': '2026-01-01T10:00:00.000Z',
+          'lastActiveAt': '2026-01-01T10:00:00.000Z',
+        },
+      ],
+      'total': 1,
+      'page': 1,
+      'pageSize': 20,
+    };
+
+    await tester.pumpWidget(AdminApp(authService: auth, api: api));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.colName), findsOneWidget);
+    expect(find.text(Strings.colId), findsOneWidget);
+    expect(find.text(Strings.colHeartbeat), findsOneWidget);
+    expect(find.text(Strings.colPlan), findsOneWidget);
+    expect(find.text(Strings.colSubscription), findsOneWidget);
+    expect(find.text(Strings.colMembers), findsOneWidget);
+    expect(find.text(Strings.colPending), findsOneWidget);
+    expect(find.text(Strings.colActors), findsOneWidget);
+    expect(find.text(Strings.colCreated), findsOneWidget);
+    expect(find.text(Strings.colLastActive), findsOneWidget);
+    expect(find.text(Strings.colActions), findsOneWidget);
+    // Verify count values in cells
+    expect(find.text('5'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
   });
 
   testWidgets(

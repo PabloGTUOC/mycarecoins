@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:admin_front/api.dart';
 import 'package:admin_front/strings.dart';
 
 void main() {
@@ -46,6 +49,37 @@ void main() {
         ),
         Strings.errRateLimited,
       );
+    });
+
+    test('429 with code rateLimited shows the rate-limit message', () async {
+      final mock = MockClient((request) async {
+        return http.Response(
+          '{"error": "Too many requests. Please try again later.", "code": "rateLimited"}',
+          429,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      final api = HttpAdminApi(
+        getToken: ({bool forceRefresh = false}) async => 'token',
+        client: mock,
+        baseUrl: 'http://localhost',
+      );
+
+      try {
+        await api.get('/families');
+        fail('Should have thrown AdminApiException');
+      } on AdminApiException catch (e) {
+        expect(e.statusCode, 429);
+        expect(e.code, 'rateLimited');
+        expect(
+          Strings.errorFor(
+            code: e.code,
+            statusCode: e.statusCode,
+            serverMessage: e.message,
+          ),
+          Strings.errRateLimited,
+        );
+      }
     });
 
     test('FirebaseAuthException codes map to English messages or dismissals', () {

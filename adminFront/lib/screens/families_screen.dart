@@ -282,7 +282,7 @@ class _FamiliesScreenState extends State<FamiliesScreen> {
                           scrollDirection: Axis.horizontal,
                           child: DataTable(
                             showCheckboxColumn: false,
-                            columnSpacing: 24,
+                            columnSpacing: 20,
                             horizontalMargin: 16,
                             columns: [
                               DataColumn(label: Text(Strings.colName)),
@@ -291,6 +291,8 @@ class _FamiliesScreenState extends State<FamiliesScreen> {
                               DataColumn(label: Text(Strings.colPlan)),
                               DataColumn(label: Text(Strings.colSubscription)),
                               DataColumn(label: Text(Strings.colMembers)),
+                              DataColumn(label: Text(Strings.colPending)),
+                              DataColumn(label: Text(Strings.colActors)),
                               DataColumn(label: Text(Strings.colCreated)),
                               DataColumn(label: Text(Strings.colLastActive)),
                               DataColumn(label: Text(Strings.colActions)),
@@ -331,6 +333,18 @@ class _FamiliesScreenState extends State<FamiliesScreen> {
                                     DataCell(
                                       Text(
                                         fam['memberCount']?.toString() ??
+                                            Strings.emptyDash,
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        fam['pendingMemberCount']?.toString() ??
+                                            Strings.emptyDash,
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Text(
+                                        fam['actorCount']?.toString() ??
                                             Strings.emptyDash,
                                       ),
                                     ),

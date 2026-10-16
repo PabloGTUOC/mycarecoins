@@ -122,7 +122,10 @@ describe('familyHeartbeat middleware', () => {
 
 // ─── registry: listFamilies ─────────────────────────────────────────────────
 
-const REGISTRY_KEYS = ['createdAt', 'id', 'lastActiveAt', 'memberCount', 'name', 'planCode', 'status', 'subscriptionStatus'];
+const REGISTRY_KEYS = [
+  'actorCount', 'createdAt', 'id', 'lastActiveAt', 'memberCount',
+  'name', 'pendingMemberCount', 'planCode', 'status', 'subscriptionStatus',
+];
 
 describe('listFamilies', () => {
   test('maps rows to allowlisted registry fields only', async () => {
@@ -130,13 +133,15 @@ describe('listFamilies', () => {
     // the explicit mapping must drop every unexpected field.
     const client = mockClient([ok([{
       id: '3', name: 'Casa', created_at: daysAgo(200), last_active_at: daysAgo(2),
-      member_count: '4', total: '1',
+      member_count: '4', pending_member_count: '1', actor_count: '2', total: '1',
       email: 'leak@test.com', display_name: 'Leaky', alias: 'leak', title: 'Walk the dog',
     }])]);
     const result = await listFamilies(client, {}, NOW);
     const fam = result.data.families[0];
     assert.deepEqual(Object.keys(fam).sort(), REGISTRY_KEYS);
     assert.equal(fam.memberCount, 4);
+    assert.equal(fam.pendingMemberCount, 1);
+    assert.equal(fam.actorCount, 2);
     assert.equal(fam.status, 'active');
     assert.equal(result.data.total, 1);
   });
@@ -173,10 +178,10 @@ describe('getFamilyRegistry', () => {
       email: 'leak@test.com',
     }])]);
     const result = await getFamilyRegistry(client, 3, NOW);
-    assert.deepEqual(Object.keys(result.data).sort(),
-      [...REGISTRY_KEYS, 'actorCount', 'pendingMemberCount'].sort());
+    assert.deepEqual(Object.keys(result.data).sort(), REGISTRY_KEYS);
     assert.equal(result.data.status, 'dormant');
     assert.equal(result.data.pendingMemberCount, 1);
+    assert.equal(result.data.actorCount, 1);
   });
 });
 
