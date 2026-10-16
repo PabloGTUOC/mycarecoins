@@ -5,6 +5,7 @@ class Strings {
 
   // ─── App & Navigation ────────────────────────────────────────────────────────
   static const appTitle = 'CareCoins Operator';
+  static const navOverview = 'Overview';
   static const navFamilies = 'Families';
   static const navPlans = 'Plans';
   static const navAppStore = 'App Store';
@@ -52,6 +53,60 @@ class Strings {
   static const priceFree = 'Free';
   static const periodMonthly = 'Monthly';
   static const periodYearly = 'Yearly';
+
+  // ─── Overview ────────────────────────────────────────────────────────────────
+  static const overviewTitle = 'Overview';
+  static const refreshBtn = 'Refresh';
+
+  static const cardFamiliesTitle = 'Families';
+  static const cardFreePlansTitle = 'Active Free Plans';
+  static const cardMirrorTitle = 'Mirror Health';
+  static const cardWebhooksTitle = 'Webhook Health';
+  static const cardRevenueCatTitle = 'RevenueCat Metrics';
+
+  static const labelTotal = 'Total';
+  static const labelActive = 'Active';
+  static const labelDormant = 'Dormant';
+  static const labelInactive = 'Inactive';
+
+  static const labelActiveGrants = 'Active grants';
+  static const labelFamiliesWithGrant = 'Families with grant';
+
+  static const labelMirrorStatus = 'Mirror status';
+  static const labelMirrorOn = 'On';
+  static const labelMirrorOff = 'Off';
+  static const labelSynced = 'Synced';
+  static const labelPending = 'Pending';
+  static const labelFailed = 'Failed';
+  static const labelOldestPending = 'Oldest pending';
+
+  static const labelLastEvent = 'Last event';
+  static const labelEvents30Days = 'Events (last 30d)';
+  static const labelUnattributed30Days = 'Unattributed (last 30d)';
+  static const labelUnprocessed30Days = 'Unprocessed (last 30d)';
+  static const recentWebhookIssues = 'Recent issues (unattributed or unprocessed)';
+  static const noRecentWebhookIssues = 'No recent webhook issues.';
+
+  static const byPlanTitle = 'Families by Plan';
+  static const byStatusTitle = 'Families by Status';
+  static const byStoreTitle = 'Families by Store';
+
+  static const colStore = 'Store';
+  static const colCount = 'Count';
+  static const colEventId = 'ID';
+  static const colEventType = 'Event';
+  static const colTimestamp = 'Timestamp';
+
+  static const revenueCatNotConfigured = 'RevenueCat not configured';
+  static const revenueCatUnavailable = 'RevenueCat unavailable';
+  static const revenueCatRejected = 'RevenueCat rejected';
+  static const noMetricsAvailable = 'No metrics available';
+
+  static const colMetric = 'Metric';
+  static const colValue = 'Value';
+  static const colPeriod = 'Period';
+
+  static const timeAgoJustNow = 'just now';
 
   // ─── Families List ───────────────────────────────────────────────────────────
   static const familiesTitle = 'Families';
@@ -395,5 +450,52 @@ class Strings {
     if (status == 1 || status == '1' || status == true) return autoRenewOn;
     if (status == 0 || status == '0' || status == false) return autoRenewOff;
     return status.toString();
+  }
+
+  static String formatTimeAgo(dynamic iso, {DateTime? now}) {
+    if (iso == null) return emptyDash;
+    final dt = DateTime.tryParse(iso.toString())?.toUtc();
+    if (dt == null) return emptyDash;
+    final current = (now ?? DateTime.now()).toUtc();
+    final diff = current.difference(dt);
+    if (diff.isNegative || diff.inMinutes < 1) {
+      return timeAgoJustNow;
+    }
+    if (diff.inMinutes < 60) {
+      final m = diff.inMinutes;
+      return m == 1 ? '1 minute ago' : '$m minutes ago';
+    }
+    if (diff.inHours < 24) {
+      final h = diff.inHours;
+      return h == 1 ? '1 hour ago' : '$h hours ago';
+    }
+    final d = diff.inDays;
+    return d == 1 ? '1 day ago' : '$d days ago';
+  }
+
+  static String formatAgeMinutes(dynamic minutes) {
+    if (minutes == null) return emptyDash;
+    final n = int.tryParse(minutes.toString()) ?? 0;
+    if (n <= 0) return '0m';
+    if (n < 60) return '${n}m';
+    if (n < 1440) {
+      final h = n ~/ 60;
+      final m = n % 60;
+      return m == 0 ? '${h}h' : '${h}h ${m}m';
+    }
+    final d = n ~/ 1440;
+    final h = (n % 1440) ~/ 60;
+    return h == 0 ? '${d}d' : '${d}d ${h}h';
+  }
+
+  static String formatMetricValue(dynamic value, dynamic unit) {
+    if (value == null) return emptyDash;
+    final valStr = value is num
+        ? (value % 1 == 0 ? value.toInt().toString() : value.toString())
+        : value.toString();
+    if (unit != null && unit.toString().isNotEmpty) {
+      return '$valStr ${unit.toString()}';
+    }
+    return valStr;
   }
 }

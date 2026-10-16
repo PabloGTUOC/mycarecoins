@@ -21,9 +21,10 @@ import { requireOperator, requireRecentSignIn } from './operator.js';
 
 import { Router } from 'express';
 import { validateParams } from '../middleware/validate.js';
-import { logAdminAction, resetGrantRcSync } from '../services/adminService.js';
+import { getOverview, logAdminAction, resetGrantRcSync } from '../services/adminService.js';
 import { syncPending } from './rcSync.js';
 import { AppStoreError } from './appstore.js';
+import { RevenueCatError } from './revenuecat.js';
 
 export function createOperatorLimiter({
   max = 300,
@@ -64,6 +65,48 @@ export function createAdminApp({
 
   const consoleRouter = Router();
   consoleRouter.use(adminRouter);
+
+  let rcMetricsCache = null;
+
+  consoleRouter.get('/overview', async (req, res) => {
+    const nowMs = typeof now === 'function' ? now() : Date.now();
+    const isMirrorOn = Boolean(rcConfig && rc);
+
+    const client = typeof db.connect === 'function' ? await db.connect() : db;
+    let overview;
+    try {
+      overview = await getOverview(client, { nowMs });
+    } catch (err) {
+      console.error('Failed to get overview:', err);
+      return sendError(res, 500, 'internal', 'Failed to generate overview.');
+    } finally {
+      if (typeof client.release === 'function') client.release();
+    }
+
+    overview.mirror.mirror = isMirrorOn ? 'on' : 'off';
+
+    let revenueCat = null;
+    if (isMirrorOn) {
+      const bypassCache = req.query.refresh === '1';
+      if (!bypassCache && rcMetricsCache && (nowMs - rcMetricsCache.timestamp < 10 * 60 * 1000)) {
+        revenueCat = { metrics: rcMetricsCache.data };
+      } else {
+        try {
+          const metrics = await rc.getMetricsOverview();
+          rcMetricsCache = { data: metrics, timestamp: nowMs };
+          revenueCat = { metrics };
+        } catch (err) {
+          const isUnavailable = err instanceof RevenueCatError ? err.kind === 'unavailable' : false;
+          revenueCat = { error: isUnavailable ? 'unavailable' : 'rejected' };
+        }
+      }
+    }
+
+    return res.json({
+      ...overview,
+      revenueCat,
+    });
+  });
 
   let catalogCache = null;
 

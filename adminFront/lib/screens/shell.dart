@@ -6,6 +6,7 @@ import '../theme.dart';
 import 'app_store_screen.dart';
 import 'families_screen.dart';
 import 'not_an_operator_screen.dart';
+import 'overview_screen.dart';
 import 'plans_screen.dart';
 import 'sign_in_screen.dart';
 
@@ -186,6 +187,11 @@ class _ShellState extends State<Shell> {
             ),
             destinations: [
               NavigationRailDestination(
+                icon: const Icon(Icons.dashboard_outlined),
+                selectedIcon: const Icon(Icons.dashboard_rounded),
+                label: Text(Strings.navOverview),
+              ),
+              NavigationRailDestination(
                 icon: const Icon(Icons.groups_outlined),
                 selectedIcon: const Icon(Icons.groups_rounded),
                 label: Text(Strings.navFamilies),
@@ -217,10 +223,12 @@ class _ShellState extends State<Shell> {
                     width: contentWidth,
                     height: constraints.maxHeight,
                     child: _selectedIndex == 0
-                        ? const FamiliesScreen()
+                        ? const OverviewScreen()
                         : _selectedIndex == 1
-                            ? const PlansScreen()
-                            : const AppStoreScreen(),
+                            ? const FamiliesScreen()
+                            : _selectedIndex == 2
+                                ? const PlansScreen()
+                                : const AppStoreScreen(),
                   ),
                 );
               },

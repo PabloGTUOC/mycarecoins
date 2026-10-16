@@ -412,3 +412,116 @@ export async function logAdminAction(client, adminId, action, { targetType, targ
     ]
   );
 }
+
+// ─── Console Overview (MP3b) ──────────────────────────────────────────────────
+
+export async function getOverview(client, { nowMs = Date.now() } = {}) {
+  const { rows: famCountRows } = await client.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE ${STATUS_CLAUSES.active})::int AS active,
+      COUNT(*) FILTER (WHERE ${STATUS_CLAUSES.dormant})::int AS dormant,
+      COUNT(*) FILTER (WHERE f.last_active_at IS NULL OR ${STATUS_CLAUSES.inactive})::int AS inactive
+    FROM admin_family_registry f
+  `);
+  const famCount = famCountRows[0] || {};
+
+  const { rows: breakdownRows } = await client.query(`
+    SELECT 'plan' AS dimension, COALESCE(f.plan_code, 'none') AS key, COUNT(*)::int AS count
+    FROM admin_family_registry f
+    GROUP BY 2
+    UNION ALL
+    SELECT 'status' AS dimension, COALESCE(f.subscription_status, 'none') AS key, COUNT(*)::int AS count
+    FROM admin_family_registry f
+    GROUP BY 2
+    UNION ALL
+    SELECT 'store' AS dimension, COALESCE(fp.platform, 'none') AS key, COUNT(*)::int AS count
+    FROM admin_family_registry f
+    LEFT JOIN family_plans fp ON fp.family_id = f.id
+    GROUP BY 2
+  `);
+
+  const byPlan = {};
+  const byStatus = {};
+  const byStore = {};
+  for (const row of breakdownRows) {
+    const count = Number(row.count ?? 0);
+    if (row.dimension === 'plan') byPlan[row.key] = count;
+    else if (row.dimension === 'status') byStatus[row.key] = count;
+    else if (row.dimension === 'store') byStore[row.key] = count;
+  }
+
+  const { rows: freeRows } = await client.query(`
+    SELECT
+      COUNT(*)::int AS active_grants,
+      COUNT(DISTINCT family_id)::int AS families_count
+    FROM admin_grants
+    WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW())
+  `);
+  const freePlan = freeRows[0] || {};
+
+  const { rows: mirrorRows } = await client.query(`
+    SELECT
+      COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+      COUNT(*) FILTER (WHERE status = 'synced')::int AS synced,
+      COUNT(*) FILTER (WHERE status = 'failed')::int AS failed,
+      EXTRACT(EPOCH FROM (NOW() - MIN(updated_at) FILTER (WHERE status = 'pending'))) / 60 AS oldest_pending_minutes
+    FROM admin_rc_sync
+  `);
+  const mirrorRow = mirrorRows[0] || {};
+
+  const { rows: webhookRows } = await client.query(`
+    SELECT
+      MAX(created_at) AS last_event_at,
+      COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days')::int AS events_last_30_days,
+      COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days' AND family_id IS NULL)::int AS unattributed_last_30_days,
+      COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days' AND processed = false)::int AS unprocessed_last_30_days
+    FROM billing_events
+  `);
+  const webhookRow = webhookRows[0] || {};
+
+  const { rows: recentIssueRows } = await client.query(`
+    SELECT id, event_type, created_at
+    FROM billing_events
+    WHERE family_id IS NULL OR processed = false
+    ORDER BY created_at DESC, id DESC
+    LIMIT 10
+  `);
+
+  return {
+    families: {
+      total: Number(famCount.total ?? 0),
+      byHeartbeat: {
+        active: Number(famCount.active ?? 0),
+        dormant: Number(famCount.dormant ?? 0),
+        inactive: Number(famCount.inactive ?? 0),
+      },
+      byPlan,
+      byStatus,
+      byStore,
+    },
+    freePlans: {
+      activeGrants: Number(freePlan.active_grants ?? 0),
+      familiesCount: Number(freePlan.families_count ?? 0),
+    },
+    mirror: {
+      pending: Number(mirrorRow.pending ?? 0),
+      synced: Number(mirrorRow.synced ?? 0),
+      failed: Number(mirrorRow.failed ?? 0),
+      oldestPendingAgeMinutes: mirrorRow.oldest_pending_minutes != null
+        ? Math.max(0, Math.floor(Number(mirrorRow.oldest_pending_minutes)))
+        : null,
+    },
+    webhooks: {
+      lastEventAt: webhookRow.last_event_at ? new Date(webhookRow.last_event_at).toISOString() : null,
+      eventsLast30Days: Number(webhookRow.events_last_30_days ?? 0),
+      unattributedLast30Days: Number(webhookRow.unattributed_last_30_days ?? 0),
+      unprocessedLast30Days: Number(webhookRow.unprocessed_last_30_days ?? 0),
+      recentEvents: recentIssueRows.map((r) => ({
+        id: Number(r.id),
+        eventType: r.event_type,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : null,
+      })),
+    },
+  };
+}

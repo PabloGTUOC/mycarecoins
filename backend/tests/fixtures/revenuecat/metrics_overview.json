@@ -1,0 +1,38 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2/charts-and-metrics/metrics/get-metrics-overview — replace with a recorded sandbox response",
+  "object": "overview_metrics",
+  "project_id": "proj_12345",
+  "currency": "USD",
+  "metrics": [
+    {
+      "id": "overview/mrr",
+      "name": "MRR",
+      "value": 12450.5,
+      "period": "P0D"
+    },
+    {
+      "id": "overview/revenue",
+      "name": "Revenue",
+      "value": 24900,
+      "period": "P28D"
+    },
+    {
+      "id": "overview/active_subscriptions",
+      "name": "Active Subscriptions",
+      "value": 850,
+      "period": "P0D"
+    },
+    {
+      "id": "overview/active_trials",
+      "name": "Active Trials",
+      "value": 140,
+      "period": "P0D"
+    },
+    {
+      "id": "overview/new_customers_last_28_days",
+      "name": "New Customers",
+      "value": 310,
+      "period": "P28D"
+    }
+  ]
+}

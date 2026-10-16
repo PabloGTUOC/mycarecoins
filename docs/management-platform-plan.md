@@ -553,6 +553,7 @@ it can start in parallel.
    (for example to fix an unattributed purchase by hand), or only re-process the webhook.
    Proposed: re-process only, plus a documented manual fix in RevenueCat.
 4. The Phase 0 findings on RevenueCat charts and webhook events (§4).
+5. Webhook Re-process needs either a payload grant for the admin role on `billing_events` or a public-backend endpoint the console calls; decide before building it.
 
 ---
 
@@ -723,5 +724,36 @@ App Store Connect and App Store Server API clients and the operator console App 
    - Replace mock fixtures with real recorded Apple API responses.
    - Verify App Store Connect API team key role and permissions (e.g. App Manager or Admin role is required for subscription catalog endpoints).
    - Test live transaction lookups against Sandbox and Production Apple StoreKit servers with valid store purchase tokens.
+
+### Phase 3 — part 2 (MP3b): Console overview, mirror & webhook health, RevenueCat metrics (2026-10-16)
+
+Overview dashboard for the operator console combining internal platform figures, free-plan mirror health, webhook status, and RevenueCat metrics:
+1. **`GET /admin-api/overview` endpoint**:
+   - Mounted exclusively on `consoleRouter` under `/admin-api/overview` (never on public `/api/admin`, verified by route isolation tests).
+   - Single read pass using 6 aggregate queries against existing views and tables accessible to the `carecoins_admin` role (`admin_family_registry`, `family_plans`, `admin_grants`, `admin_rc_sync`, `billing_events` metadata). No per-family loop and no new database grants required.
+   - **Data returned**:
+     - `families`: total families, heartbeat buckets (`active`, `dormant`, `inactive`), and breakdown maps by plan (`byPlan`), by subscription status (`byStatus`), and by store (`byStore`, null mapped to `none`). Breakdowns are calculated in a single consolidated SQL query using `UNION ALL`.
+     - `freePlans`: count of active grants (not revoked, unexpired) and distinct count of families holding an active grant.
+     - `mirror`: counts by status (`synced`, `pending`, `failed`), oldest pending row age in minutes, and `mirror: 'on' | 'off'`.
+     - `webhooks`: timestamp of last `billing_events` row, events received in the last 30 days, unattributed (`family_id IS NULL`) and unprocessed (`processed = false`) counts in the last 30 days, and metadata for the 10 most recent unattributed or unprocessed issues (`id`, `eventType`, `createdAt`; payload column is never accessed).
+     - `revenueCat`: `null` when mirror is off; metrics array when configured; `{ error: 'unavailable' | 'rejected' }` when RevenueCat fails (overview returns HTTP 200 with all internal figures intact).
+2. **RevenueCat Metrics client & caching**:
+   - `backend/src/admin/revenuecat.js`: Added `getMetricsOverview()` calling `GET /projects/{project_id}/metrics/overview` (`https://www.revenuecat.com/docs/api-v2/charts-and-metrics/metrics/get-metrics-overview`). Returns `[{ id, name, value, unit, period }]` dynamically without hardcoded metric IDs.
+   - In `backend/src/admin/app.js`, metrics responses are cached in memory for 10 minutes, with `?refresh=1` query parameter forcing a fresh fetch.
+   - RevenueCat errors are caught and mapped to `unavailable` or `rejected`, leaving internal platform metrics completely independent of external RevenueCat uptime.
+3. **Frontend Console (`adminFront`)**:
+   - **Overview landing page**: `Overview` is now destination 0 on the navigation rail and the default landing page after operator sign-in.
+   - **Cards row**:
+     - *Families*: Total families count and active/dormant/inactive heartbeat breakdown.
+     - *Active Free Plans*: Active grants count and families with grant count.
+     - *Mirror Health*: On/Off badge, synced/pending/failed counts, and oldest pending age.
+     - *Webhook Health*: Last event relative age ("x minutes/hours/days ago"), 30-day volume, unattributed and unprocessed counts, with an expandable section listing the 10 most recent issues.
+   - **Breakdown tables**: Clean 2-column tables for families by plan, by status, and by store.
+   - **RevenueCat card**: Label/value metric cards; renders "RevenueCat not configured" when mirror is off, or "RevenueCat unavailable" with warning indicator on failure.
+   - **Refresh button**: Triggers cache bypass (`?refresh=1`) to reload overview data.
+   - **Strict compliance**: All strings centralized in `strings.dart` (enforced by `guard_test.dart`).
+4. **Webhook Re-process deferred**:
+   - Webhook re-processing requires access to `billing_events.payload`, which is forbidden to the `carecoins_admin` Postgres role. Deferring until decided whether to grant column read or proxy via public backend (see §9 item 5).
+
 
 

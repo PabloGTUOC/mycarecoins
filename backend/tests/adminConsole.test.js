@@ -12,6 +12,7 @@ import { deliverPendingNotices, NOTICE_MESSAGES } from '../src/services/noticeOu
 import { adminRouter } from '../src/routes/admin.js';
 import { GRANT_STATEMENTS, FORBIDDEN_TABLES } from '../scripts/admin-role.js';
 import { AppStoreError } from '../src/admin/appstore.js';
+import { RevenueCatError } from '../src/admin/revenuecat.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -719,6 +720,210 @@ describe('GET /admin-api/appstore/transactions/:transactionId', () => {
   test('does not exist on the public /api/admin', () => {
     const hasRoute = adminRouter.stack.some(
       (layer) => layer.route?.path === '/appstore/transactions/:transactionId'
+    );
+    assert.equal(hasRoute, false);
+  });
+});
+
+describe('GET /admin-api/overview', () => {
+  const fresh = NOW / 1000 - 60;
+
+  function mockDb() {
+    const queries = [];
+    return {
+      _queries: queries,
+      async query(sql, params) {
+        queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        if (sql.includes('COUNT(*) FILTER (WHERE f.last_active_at > NOW()')) {
+          return {
+            rows: [{ total: 50, active: 30, dormant: 15, inactive: 5 }],
+          };
+        }
+        if (sql.includes("'plan' AS dimension")) {
+          return {
+            rows: [
+              { dimension: 'plan', key: 'free', count: 40 },
+              { dimension: 'plan', key: 'pro', count: 10 },
+              { dimension: 'status', key: 'active', count: 48 },
+              { dimension: 'status', key: 'canceled', count: 2 },
+              { dimension: 'store', key: 'app_store', count: 8 },
+              { dimension: 'store', key: 'play_store', count: 2 },
+              { dimension: 'store', key: 'none', count: 40 },
+            ],
+          };
+        }
+        if (sql.includes('FROM admin_grants')) {
+          return {
+            rows: [{ active_grants: 4, families_count: 3 }],
+          };
+        }
+        if (sql.includes('FROM admin_rc_sync')) {
+          return {
+            rows: [{ pending: 1, synced: 10, failed: 2, oldest_pending_minutes: 15.6 }],
+          };
+        }
+        if (sql.includes('MAX(created_at) AS last_event_at')) {
+          return {
+            rows: [
+              {
+                last_event_at: '2026-10-16T12:00:00.000Z',
+                events_last_30_days: 120,
+                unattributed_last_30_days: 3,
+                unprocessed_last_30_days: 1,
+              },
+            ],
+          };
+        }
+        if (sql.includes('family_id IS NULL OR processed = false')) {
+          return {
+            rows: [
+              { id: '101', event_type: 'INITIAL_PURCHASE', created_at: '2026-10-16T11:00:00.000Z' },
+            ],
+          };
+        }
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('returns 200 with all overview figures and revenueCat metrics when configured', async () => {
+    const db = mockDb();
+    const fakeMetrics = [
+      { id: 'overview/mrr', name: 'MRR', value: 12450.5, unit: 'USD', period: 'P0D' },
+      { id: 'overview/active_subscriptions', name: 'Active Subscriptions', value: 850, unit: null, period: 'P0D' },
+    ];
+    let metricsCallCount = 0;
+    const fakeRc = {
+      async getMetricsOverview() {
+        metricsCallCount++;
+        return fakeMetrics;
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'e' },
+    });
+
+    const res = await request(app).get('/admin-api/overview');
+    assert.equal(res.status, 200);
+
+    // Families
+    assert.equal(res.body.families.total, 50);
+    assert.deepEqual(res.body.families.byHeartbeat, { active: 30, dormant: 15, inactive: 5 });
+    assert.deepEqual(res.body.families.byPlan, { free: 40, pro: 10 });
+    assert.deepEqual(res.body.families.byStatus, { active: 48, canceled: 2 });
+    assert.deepEqual(res.body.families.byStore, { app_store: 8, play_store: 2, none: 40 });
+
+    // Free plans
+    assert.deepEqual(res.body.freePlans, { activeGrants: 4, familiesCount: 3 });
+
+    // Mirror
+    assert.deepEqual(res.body.mirror, {
+      mirror: 'on',
+      pending: 1,
+      synced: 10,
+      failed: 2,
+      oldestPendingAgeMinutes: 15,
+    });
+
+    // Webhooks
+    assert.equal(res.body.webhooks.lastEventAt, '2026-10-16T12:00:00.000Z');
+    assert.equal(res.body.webhooks.eventsLast30Days, 120);
+    assert.equal(res.body.webhooks.unattributedLast30Days, 3);
+    assert.equal(res.body.webhooks.unprocessedLast30Days, 1);
+    assert.deepEqual(res.body.webhooks.recentEvents, [
+      { id: 101, eventType: 'INITIAL_PURCHASE', createdAt: '2026-10-16T11:00:00.000Z' },
+    ]);
+
+    // RevenueCat
+    assert.deepEqual(res.body.revenueCat, { metrics: fakeMetrics });
+    assert.equal(metricsCallCount, 1);
+  });
+
+  test('caches revenueCat metrics for 10 minutes and supports ?refresh=1 bypass', async () => {
+    const db = mockDb();
+    let metricsCallCount = 0;
+    const fakeRc = {
+      async getMetricsOverview() {
+        metricsCallCount++;
+        return [{ id: 'mrr', name: 'MRR', value: 100, unit: 'USD', period: 'P0D' }];
+      },
+    };
+
+    let currentNow = NOW;
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => currentNow,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'e' },
+    });
+
+    // Call 1: fetches from RC
+    const res1 = await request(app).get('/admin-api/overview');
+    assert.equal(res1.status, 200);
+    assert.equal(metricsCallCount, 1);
+
+    // Call 2: after 5 minutes, uses in-memory cache
+    currentNow = NOW + 5 * 60 * 1000;
+    const res2 = await request(app).get('/admin-api/overview');
+    assert.equal(res2.status, 200);
+    assert.equal(metricsCallCount, 1);
+
+    // Call 3: with ?refresh=1, bypasses cache
+    const res3 = await request(app).get('/admin-api/overview?refresh=1');
+    assert.equal(res3.status, 200);
+    assert.equal(metricsCallCount, 2);
+  });
+
+  test('returns revenueCat: null when mirror is off', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: null,
+      rcConfig: null,
+    });
+
+    const res = await request(app).get('/admin-api/overview');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.revenueCat, null);
+    assert.equal(res.body.mirror.mirror, 'off');
+    assert.equal(res.body.families.total, 50);
+  });
+
+  test('returns revenueCat: { error: "unavailable" } when RevenueCat fails, leaving all other figures intact', async () => {
+    const db = mockDb();
+    const fakeRc = {
+      async getMetricsOverview() {
+        throw new RevenueCatError({ message: 'RC down', kind: 'unavailable', status: 500 });
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'e' },
+    });
+
+    const res = await request(app).get('/admin-api/overview');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.revenueCat, { error: 'unavailable' });
+    assert.equal(res.body.families.total, 50);
+    assert.equal(res.body.freePlans.activeGrants, 4);
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/overview'
     );
     assert.equal(hasRoute, false);
   });

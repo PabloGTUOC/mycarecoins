@@ -18,6 +18,13 @@ void main() {
     );
     api = FakeAdminApi();
     api.responses['GET:/status'] = {'ok': true, 'adminId': 1};
+    api.responses['GET:/overview'] = {
+      'families': {'total': 0, 'byHeartbeat': {}, 'byPlan': {}, 'byStatus': {}, 'byStore': {}},
+      'freePlans': {'activeGrants': 0, 'familiesCount': 0},
+      'mirror': {'mirror': 'off', 'pending': 0, 'synced': 0, 'failed': 0},
+      'webhooks': {'eventsLast30Days': 0, 'unattributedLast30Days': 0, 'unprocessedLast30Days': 0, 'recentEvents': []},
+      'revenueCat': null,
+    };
   });
 
   tearDown(() {
@@ -64,6 +71,8 @@ void main() {
     };
 
     await tester.pumpWidget(AdminApp(authService: auth, api: api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.groups_outlined));
     await tester.pumpAndSettle();
 
     // 1. Verify rows render
@@ -167,6 +176,8 @@ void main() {
 
     await tester.pumpWidget(AdminApp(authService: auth, api: api));
     await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.groups_outlined));
+    await tester.pumpAndSettle();
 
     expect(find.text(Strings.colName), findsOneWidget);
     expect(find.text(Strings.colId), findsOneWidget);
@@ -219,6 +230,8 @@ void main() {
     };
 
     await tester.pumpWidget(AdminApp(authService: auth, api: api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.groups_outlined));
     await tester.pumpAndSettle();
 
     expect(find.byType(Scrollbar), findsWidgets);

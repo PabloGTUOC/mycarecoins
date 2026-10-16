@@ -268,4 +268,33 @@ describe('createRevenueCatClient', () => {
       }
     );
   });
+
+  test('getMetricsOverview fetches overview metrics and maps fields', async () => {
+    const fixture = loadFixture('metrics_overview.json');
+    const fetch = fakeFetch(async (url, opts) => {
+      assert.equal(url, `https://api.revenuecat.com/v2/projects/${projectId}/metrics/overview`);
+      assert.equal(opts.method, 'GET');
+      assert.equal(opts.headers.Authorization, `Bearer ${apiKey}`);
+      return jsonResponse(fixture, 200);
+    });
+
+    const client = createRevenueCatClient({ apiKey, projectId, fetch });
+    const metrics = await client.getMetricsOverview();
+
+    assert.equal(metrics.length, 5);
+    assert.deepEqual(metrics[0], {
+      id: 'overview/mrr',
+      name: 'MRR',
+      value: 12450.5,
+      unit: 'USD',
+      period: 'P0D',
+    });
+    assert.deepEqual(metrics[1], {
+      id: 'overview/revenue',
+      name: 'Revenue',
+      value: 24900,
+      unit: 'USD',
+      period: 'P28D',
+    });
+  });
 });

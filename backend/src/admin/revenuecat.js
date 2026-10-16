@@ -197,5 +197,28 @@ export function createRevenueCatClient({
       }
       return data;
     },
+
+    // Doc URL: https://www.revenuecat.com/docs/api-v2/charts-and-metrics/metrics/get-metrics-overview
+    async getMetricsOverview() {
+      const { res, data } = await request(
+        `/projects/${projectId}/metrics/overview`,
+        {
+          method: 'GET',
+        }
+      );
+
+      if (!res.ok) {
+        raiseError(res, data);
+      }
+
+      const rawMetrics = data?.metrics || data?.items || (Array.isArray(data) ? data : []);
+      return rawMetrics.map((m) => ({
+        id: m.id != null ? String(m.id) : null,
+        name: m.name != null ? String(m.name) : null,
+        value: m.value ?? null,
+        unit: m.unit ?? data?.currency ?? null,
+        period: m.period ?? m.period_label ?? null,
+      }));
+    },
   };
 }
