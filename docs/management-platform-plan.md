@@ -670,3 +670,12 @@ Closed three of the API gaps found during Phase 2; the fourth was not a bug:
 - Backend unit suite: 255 tests passing (`npm test`), including rate limiter test returning 429 `{ code: 'rateLimited' }` and entitlement billing owner tests.
 - `adminFront` test suite: 25 tests passing, `flutter analyze` clean (`flutter test`).
 
+### Phase 2 follow-up — MP2d: `deploy.sh --admin` automation (2026-10-16)
+
+Added the opt-in `--admin` flag to `scripts/deploy.sh` to package, sync secrets for, rebuild, and verify the operator console stack (`admin-api`, `admin-web`, `cloudflared`) on production deploys:
+- **Secrets & preflight**: Appends `backend/admin.env`, `backend/admin-db.env`, and `backend/tunnel.env` to the secrets sync, validating that `TUNNEL_TOKEN`, `CF_ACCESS_AUD`, `CF_ACCESS_TEAM_DOMAIN`, and `ADMIN_DB_PASSWORD` are non-empty without logging values.
+- **Compose profile**: Wires `COMPOSE="docker compose --profile admin"` into all lifecycle steps (up, ps, `down -v` on `--reset-db`, logs and the rollback hint). The backup `pg_dump` and the post-reset `psql` checks stay on plain `docker compose`: postgres is not in the profile, and on a first `--admin` deploy the console's env files reach the server only after the backup, so `--profile admin` would make compose refuse to run.
+- **Tested by the lead** against fake `ssh`/`scp`/`curl` in a throwaway clone (never against the server): dry run, a good deploy (302 to Access), a console answering 200 (two failures in red), `cloudflared` not running (one failure), an empty `TUNNEL_TOKEN` (stops before any SSH write), and a plain deploy while the console runs (warning).
+- **Console verification**: Asserts that `admin-api`, `admin-web`, and `cloudflared` are running, and probes `$DEPLOY_ADMIN_URL/` and `$DEPLOY_ADMIN_URL/admin-api/status` without redirects, requiring HTTP 302 to `*.cloudflareaccess.com` or HTTP 403, and flagging HTTP 200/401 as critical security alerts.
+- **Un-flagged deploys**: Without `--admin`, checks whether console containers are currently running on the server and issues a warning to include `--admin`.
+

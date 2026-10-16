@@ -5,6 +5,7 @@
 #   ./scripts/deploy.sh --dry-run     # print every step, change nothing
 #   ./scripts/deploy.sh               # deploy, asking before the irreversible part
 #   ./scripts/deploy.sh --yes         # deploy without the prompt (CI, or a repeat run)
+#   ./scripts/deploy.sh --admin       # include the operator console (admin compose profile)
 #   ./scripts/deploy.sh --reset-db    # DESTRUCTIVE: wipe the database and start empty
 #
 # Configuration lives in scripts/deploy.env (gitignored). Copy the .example and
@@ -16,9 +17,9 @@
 #   2. Backs up the database *and* the uploads directory before anything else.
 #      db-init runs migrations on container start, so by the time compose is up
 #      the schema has already moved.
-#   3. Copies the two secrets that are deliberately not in git.
+#   3. Copies secrets that are deliberately not in git (includes admin secrets with --admin).
 #   4. Fast-forwards the server to your commit and rebuilds.
-#   5. Probes the public API to prove the new routes are actually live.
+#   5. Probes the public API (and operator console under --admin) to prove the new routes are live.
 #
 # It never prints the contents of a secret, and never force-pushes or resets
 # anything on the server.
@@ -47,11 +48,12 @@ DRY_RUN=false
 ASSUME_YES=false
 SKIP_BACKUP=false
 SKIP_SECRETS=false
+WITH_ADMIN=false
 RESET_DB=false
 RESET_UPLOADS=false
 
 usage() {
-  sed -n '2,34p' "${BASH_SOURCE[0]}" | sed 's/^#//;s/^ //'
+  sed -n '2,/^set -euo pipefail/ { /^set -euo pipefail/d; s/^#//; s/^ //; p; }' "${BASH_SOURCE[0]}"
   exit "${1:-0}"
 }
 
@@ -61,6 +63,7 @@ while [[ $# -gt 0 ]]; do
     --yes|-y)       ASSUME_YES=true ;;
     --skip-backup)  SKIP_BACKUP=true ;;
     --no-secrets)   SKIP_SECRETS=true ;;
+    --admin)        WITH_ADMIN=true ;;
     --reset-db)     RESET_DB=true ;;
     --reset-uploads) RESET_UPLOADS=true ;;
     -h|--help)      usage 0 ;;
@@ -68,6 +71,17 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
+
+if $WITH_ADMIN; then
+  SECRETS+=(
+    "backend/admin.env"
+    "backend/admin-db.env"
+    "backend/tunnel.env"
+  )
+  COMPOSE="docker compose --profile admin"
+else
+  COMPOSE="docker compose"
+fi
 
 if $RESET_DB && $SKIP_BACKUP; then
   echo "error: --reset-db with --skip-backup would destroy the data and keep no copy." >&2
@@ -118,6 +132,7 @@ source "$CONFIG"
 : "${DEPLOY_PATH:?DEPLOY_PATH is not set in scripts/deploy.env}"
 DEPLOY_SSH_OPTS="${DEPLOY_SSH_OPTS:-}"
 DEPLOY_URL="${DEPLOY_URL:-https://mycarecoins.app}"
+DEPLOY_ADMIN_URL="${DEPLOY_ADMIN_URL:-https://admin.mycarecoins.app}"
 DEPLOY_BACKUP_DIR="${DEPLOY_BACKUP_DIR:-$DEPLOY_PATH/backups}"
 DEPLOY_PG_USER="${DEPLOY_PG_USER:-carecoins}"
 DEPLOY_PG_DB="${DEPLOY_PG_DB:-carecoins}"
@@ -125,6 +140,7 @@ DEPLOY_PG_DB="${DEPLOY_PG_DB:-carecoins}"
 ok "host        $DEPLOY_HOST"
 ok "path        $DEPLOY_PATH"
 ok "public url  $DEPLOY_URL"
+$WITH_ADMIN && ok "admin url   $DEPLOY_ADMIN_URL"
 $DRY_RUN && warn "DRY RUN — nothing on the server will change"
 
 # ─── Local preflight ──────────────────────────────────────────────────────────
@@ -152,6 +168,18 @@ for f in "${SECRETS[@]}"; do
     It is gitignored by design; it has to exist here to be copied over."
 done
 ok "local secrets present (${#SECRETS[@]} files)"
+
+if $WITH_ADMIN; then
+  grep -q '^TUNNEL_TOKEN=.\+' "$REPO_ROOT/backend/tunnel.env" \
+    || die "TUNNEL_TOKEN is empty in backend/tunnel.env"
+  grep -q '^CF_ACCESS_AUD=.\+' "$REPO_ROOT/backend/admin.env" \
+    || die "CF_ACCESS_AUD is empty in backend/admin.env"
+  grep -q '^CF_ACCESS_TEAM_DOMAIN=.\+' "$REPO_ROOT/backend/admin.env" \
+    || die "CF_ACCESS_TEAM_DOMAIN is empty in backend/admin.env"
+  grep -q '^ADMIN_DB_PASSWORD=.\+' "$REPO_ROOT/backend/admin-db.env" \
+    || die "ADMIN_DB_PASSWORD is empty in backend/admin-db.env"
+  ok "admin secrets validated (required keys non-empty)"
+fi
 
 # ─── Remote preflight ─────────────────────────────────────────────────────────
 
@@ -186,6 +214,13 @@ remote_read "cd '$DEPLOY_PATH' && test -z \"\$(git status --porcelain)\"" \
   || die "the server checkout has local modifications.
     Inspect them before deploying — this script will not discard anyone's work."
 ok "server checkout is clean"
+
+if ! $WITH_ADMIN; then
+  RUNNING_ADMIN="$(remote_read "cd '$DEPLOY_PATH' && docker compose --profile admin ps --services --status running" 2>/dev/null | tr -d '\r' || true)"
+  if echo "$RUNNING_ADMIN" | grep -Eq '^(admin-api|admin-web|cloudflared)$'; then
+    warn "operator console is running on the server but will not be rebuilt; pass --admin to include it"
+  fi
+fi
 
 PENDING="$(git diff --name-only "$REMOTE_SHA" "$LOCAL_SHA" -- backend/scripts backend/src/db/schema.sql 2>/dev/null | grep -c . || true)"
 if [[ "${PENDING:-0}" -gt 0 ]]; then
@@ -232,6 +267,9 @@ else
   fi
   remote "mkdir -p '$DEPLOY_BACKUP_DIR'"
   # The database. db-init migrates on start, so this must happen first.
+  # Plain compose, not $COMPOSE: postgres is not in the admin profile, and on a
+  # first --admin deploy the console's env files are not on the server yet, so
+  # --profile admin would make compose refuse to run.
   remote "cd '$DEPLOY_PATH' && docker compose exec -T postgres \
             pg_dump -U '$DEPLOY_PG_USER' '$DEPLOY_PG_DB' \
             > '$DEPLOY_BACKUP_DIR/db-$STAMP.sql'"
@@ -277,7 +315,7 @@ if $RESET_DB; then
   # declares. It declares exactly one, pgdata, so this drops the Postgres data
   # directory and nothing else. Bind mounts (backend/uploads, the secrets) are
   # not volumes and are untouched.
-  remote "cd '$DEPLOY_PATH' && docker compose down -v"
+  remote "cd '$DEPLOY_PATH' && $COMPOSE down -v"
   $DRY_RUN || ok "pgdata volume removed — the next start builds an empty database"
 
   if $RESET_UPLOADS; then
@@ -289,8 +327,8 @@ if $RESET_DB; then
   fi
 fi
 
-remote "cd '$DEPLOY_PATH' && docker compose up --build -d"
-remote "cd '$DEPLOY_PATH' && docker compose ps"
+remote "cd '$DEPLOY_PATH' && $COMPOSE up --build -d"
+remote "cd '$DEPLOY_PATH' && $COMPOSE ps"
 
 if ! $DRY_RUN; then
   DEPLOYED="$(remote_read "cd '$DEPLOY_PATH' && git rev-parse HEAD" | tr -d '\r')"
@@ -307,6 +345,7 @@ step "Verify"
 
 if $DRY_RUN; then
   printf '    %s[dry-run] would probe %s%s\n' "$DIM" "$DEPLOY_URL" "$OFF"
+  $WITH_ADMIN && printf '    %s[dry-run] would probe %s%s\n' "$DIM" "$DEPLOY_ADMIN_URL" "$OFF"
 else
   printf '    waiting for the API'
   for _ in $(seq 1 30); do
@@ -356,9 +395,49 @@ else
     else warn "$path -> $code"; FAILED=$((FAILED + 1)); fi
   done
 
+  if $WITH_ADMIN; then
+    RUNNING_SERVICES="$(remote_read "cd '$DEPLOY_PATH' && $COMPOSE ps --status running --services" 2>/dev/null | tr -d '\r' || true)"
+    for svc in admin-api admin-web cloudflared; do
+      if echo "$RUNNING_SERVICES" | grep -Fqx "$svc"; then
+        ok "$svc is running"
+      else
+        warn "$svc is not running"
+        FAILED=$((FAILED + 1))
+      fi
+    done
+
+    for path in / /admin-api/status; do
+      resp="$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 10 "$DEPLOY_ADMIN_URL$path" || echo "000")"
+      read -r code redir <<< "$resp"
+      if [[ "$code" == "302" ]]; then
+        host="${redir#https://}"
+        host="${host%%/*}"
+        if [[ "$redir" == https://* && "$host" == *.cloudflareaccess.com ]]; then
+          ok "$DEPLOY_ADMIN_URL$path -> 302 (Cloudflare Access: $host)"
+        else
+          warn "$DEPLOY_ADMIN_URL$path -> 302 to unexpected location: $redir"
+          FAILED=$((FAILED + 1))
+        fi
+      elif [[ "$code" == "403" ]]; then
+        ok "$DEPLOY_ADMIN_URL$path -> 403 (Cloudflare Access blocked)"
+      elif [[ "$code" == "200" || "$code" == "401" ]]; then
+        printf '    %s! %s%s -> %s: operator console is reachable without Cloudflare Access!%s\n' \
+          "$RED" "$DEPLOY_ADMIN_URL" "$path" "$code" "$OFF"
+        warn "Cloudflare Access is not protecting $DEPLOY_ADMIN_URL$path"
+        FAILED=$((FAILED + 1))
+      else
+        warn "$DEPLOY_ADMIN_URL$path -> $code (expected 302 redirect to Cloudflare Access or 403)"
+        FAILED=$((FAILED + 1))
+      fi
+    done
+  fi
+
   if [[ "$FAILED" -gt 0 ]]; then
     printf '\n%s%d check(s) did not pass.%s Logs:\n' "$YELLOW" "$FAILED" "$OFF"
-    printf '    ssh %s "cd %s && docker compose logs --tail=80 backend"\n' "$DEPLOY_HOST" "$DEPLOY_PATH"
+    printf '    ssh %s "cd %s && %s logs --tail=80 backend"\n' "$DEPLOY_HOST" "$DEPLOY_PATH" "$COMPOSE"
+    if $WITH_ADMIN; then
+      printf '    ssh %s "cd %s && %s logs --tail=80 admin-api admin-web cloudflared"\n' "$DEPLOY_HOST" "$DEPLOY_PATH" "$COMPOSE"
+    fi
   fi
 fi
 
@@ -384,7 +463,7 @@ EOF
       sign in on $DEPLOY_URL, load an avatar, enable push.
 
     To roll back the code:
-      ssh $DEPLOY_HOST "cd $DEPLOY_PATH && git checkout $REMOTE_SHA && docker compose up --build -d"
+      ssh $DEPLOY_HOST "cd $DEPLOY_PATH && git checkout $REMOTE_SHA && $COMPOSE up --build -d"
     Schema too, if a migration is the problem:
       ssh $DEPLOY_HOST "cd $DEPLOY_PATH && docker compose exec -T postgres \\
         psql -U $DEPLOY_PG_USER -d $DEPLOY_PG_DB < $DEPLOY_BACKUP_DIR/db-$STAMP.sql"

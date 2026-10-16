@@ -191,8 +191,8 @@ The operator console stack (`admin-api`, `admin-web`, `cloudflared`) is defined 
 3. **Firebase Console → Authentication → Settings → Authorized domains**:
    - Add `admin.mycarecoins.app` to the list of authorized domains for OAuth popups.
 
-**Server environment files:**
-Create the three env files on the server from their templates:
+**Local environment files:**
+Create the three env files locally on your machine from their templates (the deploy script validates and copies them to the server with `install -m 600`):
 ```bash
 cp backend/admin.env.example backend/admin.env
 cp backend/admin-db.env.example backend/admin-db.env
@@ -200,19 +200,23 @@ cp backend/tunnel.env.example backend/tunnel.env
 # Populate CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, ADMIN_DB_PASSWORD, and TUNNEL_TOKEN.
 ```
 
-**Starting the operator console:**
+**Deploying the operator console:**
+Deploy with the `--admin` flag (dry-run first to preview changes):
 ```bash
-docker compose --profile admin up -d --build
+./scripts/deploy.sh --admin --dry-run
+./scripts/deploy.sh --admin
 ```
 
-**How to verify:**
-1. Check container status:
-   ```bash
-   docker compose --profile admin ps
-   # admin-api, admin-web (healthy), and cloudflared should be Up
-   ```
-2. Verify tunnel connectivity in Cloudflare Zero Trust dashboard (tunnel status should show `HEALTHY` with an active connector).
-3. Open `https://admin.mycarecoins.app` in your browser:
+**Verification:**
+Under `--admin`, `deploy.sh` automatically performs post-deploy verification:
+1. Verifies that `admin-api`, `admin-web`, and `cloudflared` containers are running (`$COMPOSE ps --status running --services`).
+2. Probes `$DEPLOY_ADMIN_URL/` and `$DEPLOY_ADMIN_URL/admin-api/status` without following redirects:
+   - Expects `302` redirecting to `*.cloudflareaccess.com` or `403` (protected by Cloudflare Access).
+   - Flags `200` or `401` as a critical failure (console reachable without Access protection).
+
+Manual verification in the browser:
+1. Verify tunnel connectivity in Cloudflare Zero Trust dashboard (tunnel status should show `HEALTHY` with an active connector).
+2. Open `https://admin.mycarecoins.app` in your browser:
    - Cloudflare Access login screen appears.
    - Enter your email and pass Access verification.
    - CareCoins Operator Console loads and prompts for operator sign-in.
