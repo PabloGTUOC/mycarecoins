@@ -1,11 +1,11 @@
 {
-    "name": "admin_front",
-    "short_name": "admin_front",
+    "name": "CareCoins Operator",
+    "short_name": "CareCoins Operator",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "CareCoins Operator Console",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

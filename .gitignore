@@ -23,6 +23,7 @@ scripts/deploy.env
 # .example templates are committed, the real files never are.
 backend/admin.env
 backend/admin-db.env
+backend/tunnel.env
 
 # Operator console Flutter artifacts
 adminFront/.dart_tool/

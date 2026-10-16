@@ -45,6 +45,33 @@ services:
         condition: service_healthy
     volumes:
       - ./firebase-credentials.json:/run/secrets/firebase-credentials.json:ro
+    networks:
+      - default
+      - admin
+
+  admin-web:
+    build: ./adminFront
+    profiles: [admin]
+    depends_on:
+      - admin-api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - admin
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.1
+    command: tunnel --no-autoupdate run
+    profiles: [admin]
+    env_file:
+      - ./backend/tunnel.env
+    depends_on:
+      - admin-web
+    networks:
+      - admin
 
   backend:
     build: ./backend
@@ -80,3 +107,7 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  admin:
+

@@ -1,0 +1,4 @@
+server:
+  proxy:
+    - prefix: /admin-api/
+      target: http://localhost:3001

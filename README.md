@@ -358,6 +358,25 @@ docker compose up --build -d
 
 Starts Postgres 16, `db-init` (schema + migrations), the Node API, and the NGINX-served Flutter web build. Firebase credentials must be at `./firebase-credentials.json`.
 
+### Operator console (adminFront)
+
+The operator console in `adminFront/` is a separate Flutter web application for platform administrators. Run it locally with:
+
+```bash
+cd adminFront && flutter pub get
+flutter run -d chrome
+```
+
+To run against the local Firebase Auth emulator:
+
+```bash
+flutter run -d chrome --dart-define=AUTH_EMULATOR=localhost:9099
+```
+
+> [!NOTE]
+> `admin-api` has no CORS headers configured because in production it sits behind the `admin-web` NGINX reverse proxy which serves the Flutter web app and proxies `/admin-api/` on the same origin. For local development with `flutter run`, `adminFront/web_dev_config.yaml` automatically proxies `/admin-api/` to `http://localhost:3001` so dev-server requests remain same-origin without needing CORS. Alternatively, test the containerized web build (`docker build -t cc-admin-web ./adminFront`).
+
+
 ### Operator scripts
 
 ```bash

@@ -172,22 +172,50 @@ Notes:
   [§3.2](#32-revenuecat)). Restart the backend after changing it.
 - The old `VITE_*` variables are dead; the Flutter web app compiles its Firebase config in.
 
-#### Operator console (`admin-api`) — not yet: Phase 2 adds the console and the tunnel
+#### Operator console (`admin-api`, `admin-web`, `cloudflared`) — not yet deployed
 
-The operator console API is defined in `docker-compose.yml` under the `admin` profile (`profiles: [admin]`). A normal `deploy.sh` or `docker compose up` does not start it.
+The operator console stack (`admin-api`, `admin-web`, `cloudflared`) is defined in `docker-compose.yml` under the `admin` profile (`profiles: [admin]`). A normal `deploy.sh` or `docker compose up` does not start it. It is marked **not yet deployed** until Cloudflare Zero Trust and tokens are configured on the server.
 
-To switch it on later (once Phase 2 is ready):
-1. Create `backend/admin.env` and `backend/admin-db.env` on the server from their templates:
+**One-time Cloudflare & Firebase setup:**
+1. **Cloudflare Zero Trust → Networks → Tunnels**:
+   - Create a tunnel named `carecoins-admin`.
+   - Copy its connector token into `backend/tunnel.env` (`TUNNEL_TOKEN=...`).
+   - Add a Public Hostname to the tunnel:
+     - Subdomain: `admin`
+     - Domain: `mycarecoins.app`
+     - Service: `HTTP` → `admin-web:80` (routed across the internal `admin` Docker network).
+2. **Cloudflare Zero Trust → Access → Applications**:
+   - Create a self-hosted application for `admin.mycarecoins.app`.
+   - Configure an allow policy matching the operator's authorized email(s).
+   - Copy the Application Audience (AUD) tag and team domain into `backend/admin.env` (`CF_ACCESS_AUD=...`, `CF_ACCESS_TEAM_DOMAIN=https://<team>.cloudflareaccess.com`).
+3. **Firebase Console → Authentication → Settings → Authorized domains**:
+   - Add `admin.mycarecoins.app` to the list of authorized domains for OAuth popups.
+
+**Server environment files:**
+Create the three env files on the server from their templates:
+```bash
+cp backend/admin.env.example backend/admin.env
+cp backend/admin-db.env.example backend/admin-db.env
+cp backend/tunnel.env.example backend/tunnel.env
+# Populate CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, ADMIN_DB_PASSWORD, and TUNNEL_TOKEN.
+```
+
+**Starting the operator console:**
+```bash
+docker compose --profile admin up -d --build
+```
+
+**How to verify:**
+1. Check container status:
    ```bash
-   cp backend/admin.env.example backend/admin.env
-   cp backend/admin-db.env.example backend/admin-db.env
-   # populate CF_ACCESS_*, ADMIN_DB_PASSWORD, etc.
+   docker compose --profile admin ps
+   # admin-api, admin-web (healthy), and cloudflared should be Up
    ```
-2. Start the admin stack:
-   ```bash
-   docker compose --profile admin up -d
-   ```
-*(Do not enable in production yet: Phase 2 adds the console UI and the Cloudflare tunnel).*
+2. Verify tunnel connectivity in Cloudflare Zero Trust dashboard (tunnel status should show `HEALTHY` with an active connector).
+3. Open `https://admin.mycarecoins.app` in your browser:
+   - Cloudflare Access login screen appears.
+   - Enter your email and pass Access verification.
+   - CareCoins Operator Console loads and prompts for operator sign-in.
 
 ### Verify
 

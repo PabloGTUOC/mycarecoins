@@ -1,6 +1,6 @@
 # Management Platform (Operator Console) — Plan
 
-> **Status: Phase 1 done (code, not deployed)** (2026-10-15). Phase 0 research done; console setup (keys,
+> **Status: Phase 2 code done, not deployed** (2026-10-15). Phase 0 research done; console setup (keys,
 > tunnel) still with the owner and runs in parallel.
 > Supersedes the *placement* of the admin console from
 > `docs/admin-family-management-plan.md` Phase 5. That plan's data model, privacy boundary,
@@ -154,8 +154,8 @@ else:
 
 ### 2.4 Secrets
 
-A new `backend/admin.env`, gitignored and on the server only. It is used by `admin-api` and
-`cloudflared`, never by `backend`:
+A new `backend/admin.env`, gitignored and on the server only. It is used by `admin-api`,
+never by `backend` or `cloudflared`:
 
 | Variable | For |
 |---|---|
@@ -167,8 +167,12 @@ A new `backend/admin.env`, gitignored and on the server only. It is used by `adm
 | `IAP_KEY_ID`, `IAP_PRIVATE_KEY` (.p8 contents), `APP_BUNDLE_ID` | App Store Server API (transaction lookup). A **different key**: Users and Access → Integrations → In-App Purchase; creating it needs the Account Holder or Admin role. The issuer id is the same |
 | `ASC_APP_ID` / bundle id | which app to read |
 | `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | Access token check |
-| `CLOUDFLARE_TUNNEL_TOKEN` | `cloudflared` |
+| `FIREBASE_PROJECT_ID` | Firebase project used to check operators' ID tokens |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Firebase Admin, for checking ID tokens (same mounted file) |
+
+A separate `backend/tunnel.env` (template `backend/tunnel.env.example`) holds `TUNNEL_TOKEN`
+for `cloudflared`. `admin-api` never gets the tunnel token, and `cloudflared` gets no database
+or store keys.
 
 The API keys get the narrowest rights the stores and RevenueCat allow:
 - The App Store Connect key gets the **Customer Support** or **Developer** role. It must not be
@@ -364,34 +368,54 @@ getting `ADMIN_DB_PASSWORD` from `./backend/admin-db.env` (using the long `env_f
         condition: service_healthy
     volumes:
       - ./firebase-credentials.json:/run/secrets/firebase-credentials.json:ro
-    # no ports: reached only from admin-web on the internal network
+    networks:
+      - default
+      - admin
 
   admin-web:
-    build: { context: ./adminFront }
+    build: ./adminFront
     profiles: [admin]
-    depends_on: [admin-api]
-    # no ports: reached only through cloudflared
+    depends_on:
+      - admin-api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - admin
 
   cloudflared:
-    image: cloudflare/cloudflared:<pinned version>
+    image: cloudflare/cloudflared:2025.2.1
     command: tunnel --no-autoupdate run
     profiles: [admin]
-    env_file: [./backend/admin.env]   # CLOUDFLARE_TUNNEL_TOKEN
-    depends_on: [admin-web]
+    env_file:
+      - ./backend/tunnel.env
+    depends_on:
+      - admin-web
+    networks:
+      - admin
+
+networks:
+  admin:
 ```
 
-- **Separate networks:** `admin-web` and `cloudflared` sit on an `admin` network, and
-  `frontend` is not on it. `admin-api` sits on both the `admin` network and the internal
-  database network.
-- **`adminFront/Dockerfile`:** a multi-stage build (Flutter SDK image → `flutter build web` →
-  nginx), the same pattern as `fluterFront/`. Its `nginx.conf` proxies `/admin-api` to
-  `admin-api:3001`, and sends `X-Robots-Tag: noindex` and a strict CSP.
+- **Separate networks:** `admin-web` and `cloudflared` sit on an `admin` network only, and
+  `frontend` is on `default` only. `admin-api` sits on both `default` (to reach postgres)
+  and `admin` (to receive requests from `admin-web`). `frontend` cannot resolve `admin-web`.
+- **`adminFront/Dockerfile`:** a multi-stage build (pinned Flutter SDK `ghcr.io/cirruslabs/flutter:3.44.0` →
+  `flutter build web --release --dart-define=API_BASE= --no-web-resources-cdn` → `nginx:1.27-alpine`).
+  CanvasKit and fonts are bundled inside the container to avoid external CDN requests.
+- **`nginx.conf`:** proxies `/admin-api/` to `admin-api:3001` (forwarding `Authorization` and
+  `Cf-Access-Jwt-Assertion`), provides `/health` returning 200 for compose health checks, applies
+  cache-busting rules to `index.html` and service workers, and injects `X-Robots-Tag: noindex, nofollow`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, and a strict CSP.
 - **`admin-api` CORS:** same origin only, because nginx proxies it. CORS stays closed, plus a
   stricter rate limit than the public API.
 - **`scripts/deploy.sh`:**
   - Builds the new services; `docker compose up --build -d` already covers that.
-  - Gains a pre-flight check that `backend/admin.env` exists on the server, and a post-deploy
-    probe of the console.
+  - Gains a pre-flight check that `backend/admin.env` and `backend/tunnel.env` exist on the server,
+    and a post-deploy probe of the console.
   - Keeps `--dry-run` first.
 - **Cloudflare, once, by hand:**
   - Create the tunnel and its public hostname `admin.mycarecoins.app` → `http://admin-web:80`.
@@ -572,3 +596,64 @@ The operator console's backend skeleton and the Postgres security boundary are c
 - Real-Postgres verification against `postgres:16` container (`check-admin-role.js`): all 31 checks passed; `db:init` verified idempotent twice.
 - Boot check: `GET /health` returned HTTP 200, `GET /admin-api/status` returned HTTP 401 `authMissingToken`.
 - Compose config verified valid both with and without `--profile admin`.
+
+### Phase 2 — `adminFront` Flutter web console, container, and tunnel (2026-10-15)
+
+The operator console's frontend and deployment packaging are complete in code. The console is a standalone Flutter web app (`adminFront/`) packaged into an nginx container (`admin-web`), orchestrated with `admin-api` and `cloudflared` under the `admin` compose profile, and isolated onto an internal `admin` Docker network.
+
+**Files built / touched:**
+- `adminFront/`: Standalone Flutter web project (own `pubspec.yaml`, no imports from `fluterFront`).
+  - `lib/main.dart`, `lib/app_state.dart`, `lib/api.dart`, `lib/auth.dart`: Console bootstrapping, state management, HTTP client targeting same-origin `/admin-api/`, Firebase Auth service, and recent sign-in re-auth dialog.
+  - `lib/strings.dart`: English-only user-facing string catalogue and error code mappings (`FirebaseAuthException` and backend codes).
+  - `lib/theme.dart`: Operator desktop theme tokens copied from `fluterFront` design system.
+  - `lib/screens/sign_in_screen.dart`: Google and Email/Password sign-in with mapped error feedback.
+  - `lib/screens/families_screen.dart`: Desktop table of families (ID, Name, Heartbeat, Plan, Subscription, Members, Created, Last Active, Actions), debounced search, status filter, and pagination with singular/plural formatting. Horizontal scrollbar on viewports narrower than 1440 px.
+  - `lib/screens/family_detail_screen.dart`: Registry overview, subscription details, plan grants with status badges (Active, Expired, Revoked) and grant/revoke flows, recent billing events, and inactivity notification dispatch.
+  - `lib/screens/plans_screen.dart`: Plan catalogue list and dialogs for creating and editing plans.
+  - `web/manifest.json`: Updated `name` and `short_name` to "CareCoins Operator".
+  - `test/`: 22 Flutter widget and unit tests (`auth_status_test.dart`, `error_mapping_test.dart`, `families_test.dart`, `family_detail_test.dart`, `plans_test.dart`, `reauth_test.dart`, `guard_test.dart`, `fakes.dart`).
+- `adminFront/Dockerfile`: Multi-stage Dockerfile pinning `ghcr.io/cirruslabs/flutter:3.44.0` for web compilation with `--no-web-resources-cdn` (bundling CanvasKit and fonts locally) and `nginx:1.27-alpine` runtime, copying `security-headers.conf` into `/etc/nginx/snippets/`.
+- `adminFront/.dockerignore`: Excludes `build/`, `.dart_tool/`, `test/`, `.git/`, `.idea/`, `*.log`.
+- `adminFront/security-headers.conf`: Single snippet defining the 5 security headers (CSP, `X-Robots-Tag: noindex, nofollow`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`).
+- `adminFront/nginx.conf`: Nginx server block including `security-headers.conf` at server and location levels, proxying `/admin-api/` to `http://admin-api:3001` (preserving `Authorization` and `Cf-Access-Jwt-Assertion`) using Docker internal resolver `127.0.0.11` only (no public DNS), container healthcheck `/health` returning 200, cache-busting headers for index/bootstrap files, and SPA fallback.
+- `backend/tunnel.env.example`: Dedicated template for the Cloudflare Tunnel token (`TUNNEL_TOKEN`).
+- `backend/admin.env.example`: Removed `CLOUDFLARE_TUNNEL_TOKEN` so token lives exclusively in `tunnel.env`.
+- `backend/.dockerignore` & `.gitignore`: Added `tunnel.env` ignore rules alongside `admin.env`.
+- `docker-compose.yml`: Added `admin-web` and `cloudflared` services (pinned to `cloudflare/cloudflared:2026.10.1`) under profile `admin`, added `admin` bridge network, attached `admin-api` to `default` and `admin`, and isolated `admin-web` and `cloudflared` to `admin` only.
+- `CLAUDE.md`: Added `adminFront/` layout entry, test command, and strings exception rule.
+
+**Content Security Policy (CSP) specification and host rationale:**
+The console enforces a strict CSP on every response:
+`default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://apis.google.com; worker-src 'self' blob:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; frame-src https://tfg-carecoins.firebaseapp.com https://accounts.google.com; img-src 'self' data: https://lh3.googleusercontent.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';`
+
+- `default-src 'self'`: Restricts all unspecified resource loads to same-origin.
+- `script-src 'self' 'wasm-unsafe-eval' https://apis.google.com`: `'self'` and `'wasm-unsafe-eval'` are required for Flutter Web and CanvasKit WebAssembly execution; `https://apis.google.com` is required by the Google Sign-In SDK for Google auth popups.
+- `worker-src 'self' blob:`: Flutter Web CanvasKit spawns web workers from `blob:` URLs for rendering thread pools.
+- `connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com`: Firebase Auth REST endpoints for credential verification, token refresh, and Google OAuth; `'self'` for proxied `/admin-api/` calls.
+- `frame-src https://tfg-carecoins.firebaseapp.com https://accounts.google.com`: Firebase Auth iframe handler (`tfg-carecoins.firebaseapp.com` from `DefaultFirebaseOptions.web.authDomain`) and Google account picker iframe.
+- `img-src 'self' data: https://lh3.googleusercontent.com`: Operator avatar thumbnails from Google user accounts and inline data URLs.
+- `style-src 'self' 'unsafe-inline'`: Flutter web layout and bootstrap styles.
+- `font-src 'self' data:`: Roboto and MaterialIcons fonts bundled locally via `--no-web-resources-cdn`.
+- `object-src 'none'`: Disallows plugins and Flash.
+- `base-uri 'self'`: Prevents `<base>` tag hijacking.
+- `frame-ancestors 'none'`: Prevents clickjacking by blocking embedding inside any iframe.
+
+**Decisions & deviations recorded:**
+- *Dedicated `tunnel.env`*: Isolated `TUNNEL_TOKEN` from `admin.env` so `cloudflared` receives only its tunnel token and no database credentials or store keys, and `admin-api` receives no tunnel secrets.
+- *Bundled web resources (`--no-web-resources-cdn`)*: CanvasKit and web fonts are baked into the container image during build, eliminating external runtime dependencies on `gstatic.com` and keeping CSP strict.
+- *Runtime upstream resolution in nginx with internal DNS only*: `nginx.conf` uses `resolver 127.0.0.11 valid=30s ipv6=off;` (no public DNS) and variable proxying for `admin-api:3001`. This allows `admin-web` to boot and serve static pages standalone even if `admin-api` is not yet running, returning 502 on API calls rather than crashing nginx on boot.
+- *Unified security headers snippet*: Security headers are maintained in a single snippet (`security-headers.conf`) and included at server level and in each location block with distinct `add_header` caching directives.
+- *Guard test enforcement*: `guard_test.dart` asserts no imports from `fluterFront` and no raw string literals outside `strings.dart`.
+
+**Test & verification results:**
+- `adminFront` test suite: 22 tests passing clean (`flutter test`).
+- `adminFront` static analysis: zero issues found (`flutter analyze`).
+- Web release build: succeeds cleanly (`flutter build web --release --dart-define=API_BASE=`).
+- Docker build: `docker build -t cc-admin-web ./adminFront` built successfully; content size 36.2 MB.
+- Standalone container proof (`cc-aw` on port 18080):
+  - `GET /` returned HTTP 200 with all security headers (`X-Robots-Tag: noindex, nofollow`, CSP, frame options).
+  - `GET /health` returned HTTP 200 `OK`.
+  - `GET /families/1` returned HTTP 200 with SPA fallback and security headers.
+  - `GET /admin-api/status` returned HTTP 502 (no upstream `admin-api`).
+- Compose verification: `docker compose config -q` and `docker compose --profile admin config -q` both pass cleanly; default profile excludes all admin services.
+

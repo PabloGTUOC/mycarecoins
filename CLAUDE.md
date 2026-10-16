@@ -13,6 +13,7 @@ shared. `docs/PRODUCT.md` is the product brief; `README.md` is the architecture 
 | `backend/src/db/schema.sql` + `backend/scripts/migrate-*.sql` | Schema; migrations chained in `scripts/init-db.js` |
 | `fluterFront/` | Flutter app — the only frontend — for web, iOS and Android (`provider` + one `AppState`) |
 | `fluterFront/lib/l10n/` | ARB files: en (template), es, fr, de |
+| `adminFront/` | Operator console, Flutter web, English only, its own pubspec, never imports `fluterFront` |
 | `scripts/deploy.sh` | Production deploy over SSH (`--dry-run` first) |
 | `docs/` | Design docs and implementation logs |
 | `graphify-out/` | Code knowledge graph — use the `graphify` skill to query it |
@@ -26,6 +27,7 @@ cd backend && npm run dev:test                      # API against the Firebase A
 cd backend && npm run db:init                       # schema + every migration; must stay re-runnable
 cd fluterFront && flutter analyze && flutter test   # both must be clean
 cd fluterFront && flutter run -d chrome
+cd adminFront && flutter analyze && flutter test    # both must be clean
 ```
 
 To check a migration against real Postgres, follow `docs/automatic-testing-E2E.md` § How to run.
@@ -74,7 +76,9 @@ Run `db:init` twice.
   `lib/theme/app_theme.dart`; status colours come from `context.careColors` (soft fill → ink
   text). Don't hand-roll a control the theme already styles.
 - **Every user-facing string goes in all four ARB files.** No literals in widgets. ICU plurals
-  must not contain a bare `#` (`arb_plurals_test.dart`).
+  must not contain a bare `#` (`arb_plurals_test.dart`). Exception: `adminFront/` is
+  English-only and its strings live in `lib/strings.dart` (enforced by `guard_test.dart`),
+  not ARB files.
 - **Don't run `dart format` on whole files.** The code is not formatter-clean, and it turns a
   small edit into a diff of hundreds of lines. Match the surrounding style by hand.
 - **Backend tests use `mockClient`,** which answers queries in order. When a service gains or
