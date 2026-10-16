@@ -100,6 +100,11 @@ repo uses them; ignore them, or authenticate only the ones you want.
   `~/.gemini/antigravity-cli/settings.json` (`permissions.allow`, entries like
   `command(flutter test)`). Copy that file from the old machine, or agy asks before every
   command. In agy's terminal, Shift+Tab once per session turns on accept-edits mode.
+- **agy never touches `.claude`** (`~/.claude/`, `~/.claude.json`, the repo's `.claude/`). A
+  `lead-guard` `PreToolUse` hook in `~/.gemini/config/hooks.json` runs
+  `~/.gemini/config/lead-guard.sh`, which answers `deny` to any tool call mentioning `.claude`
+  and `ask` otherwise. Recreate both on a new machine. What agy needs from the lead's memory
+  goes in `.lead/AGY.md` (standing rules, read before every ticket).
 - Claude Code needs two allow rules to drive agy without prompting the owner:
   `Bash(bash scripts/dev/watch-antigravity.sh:*)` and `Bash(orca terminal:*)` (`/permissions`).
 - The lead reviews the diff, fixes, runs `flutter analyze && flutter test`, checks on the
