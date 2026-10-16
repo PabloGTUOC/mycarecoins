@@ -508,8 +508,9 @@ it can start in parallel.
 ### Phase 4 — App Store · S–M (2–3 days)
 - `src/admin/appstore.js`: signed-JWT clients for the App Store Connect API (team key:
   subscription group, products, prices) and the App Store Server API (In-App Purchase key:
-  transaction lookup and history). These are two different keys; tokens live up to 60 minutes
-  and are reused for that long.
+  transaction lookup and history). These are two different keys: Connect API tokens are capped
+  at 20 minutes (issue for 19 min, reuse until 18 min); Server API tokens live up to 60 minutes
+  (issue for 55 min, reuse until 54 min).
 - Console: App Store page, transaction lookup, links out to the store consoles.
 - Optional, behind the recent-sign-in check: switching RevenueCat's current offering.
 - **Tests:** JWT signing (claims, expiry), recorded responses, no secret ever in a response or
@@ -692,5 +693,35 @@ Groundwork for Phase 3 free-plan mirroring into RevenueCat and billing loop prot
    - *Expired grant bypass*: If a pending grant's expiry has already passed (`expires_at <= now`), it is marked `synced` without calling RevenueCat (nothing left to mirror).
 5. **Retry & Console UI**: Added `POST /admin-api/families/:familyId/grants/:grantId/rc-sync` (restricted to admin console router only; does not exist on public `/api/admin`), protected by recent sign-in (`requireRecentSignIn`), auditing `grant.rc_retry`. When mirror is off, returns `{ status: 'pending', mirror: 'off' }`; when on, executes `syncPending` for that grant and returns updated status. Retrying a grant with no sync record returns 404 `notFound`, and unexpected sync errors return 500 `internal`. In `adminFront`, the family detail grants table displays the **RevenueCat** column (Synced / Pending / Failed with error tooltip / —) and a **Retry** button on Pending/Failed rows going through operator re-auth.
 6. **Sandbox verification outstanding**: The lead's sandbox test with real RevenueCat keys must still replace mock fixtures with recorded responses and confirm whether `NON_RENEWING_PURCHASE` or other webhook events arrive for promotional grants.
+
+### Phase 4 (MP4a) — App Store clients and console page (2026-10-16)
+
+App Store Connect and App Store Server API clients and the operator console App Store screen are complete in code:
+1. **Tokens & Security**:
+   - `backend/src/admin/appstore.js`: Built signed-JWT token makers for both App Store Connect API (team key: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, `aud: 'appstoreconnect-v1'`, capped at 20 minutes: issued for 19 min, reused up to 18 min) and App Store Server API (In-App Purchase key: `IAP_KEY_ID`, `ASC_ISSUER_ID`, `APP_BUNDLE_ID`, `IAP_PRIVATE_KEY`, `aud: 'appstoreconnect-v1'`, `bid`, capped at 60 minutes: issued for 55 min, reused up to 54 min).
+   - Keys parsed as PEM from env (handling `\n` escapes). Sensitive keys and tokens are never logged or included in error messages (verified by tests).
+   - "Off until configured": `appStoreConfigFromEnv(env)` returns `{ connect, server }` with missing parts as `null`. When keys are incomplete, endpoints return HTTP 503 `appStoreNotConfigured`.
+2. **App Store Clients**:
+   - **Connect API client**: `getApp(bundleId)`, `listSubscriptionGroups(appId)`, `listSubscriptions(groupId)`, `listSubscriptionPrices(subscriptionId)`, and `getCatalog(bundleId)` traversing groups, subscriptions, and territory price points.
+   - **Server API client**: `getTransaction(id)` (`/inApps/v1/transactions/{id}`), `getSubscriptionStatuses(id)` (`/inApps/v1/subscriptions/{id}`), and `lookupTransaction(id)`. Signed JWS payloads (`signedTransactionInfo`, `signedRenewalInfo`) are decoded using `jose.decodeJwt` (TLS from Apple; full certificate chain verification is deliberately omitted as documented). Returned fields: `productId`, `transactionId`, `originalTransactionId`, `purchaseDate`, `expiresDate`, `environment`, `type`, `inAppOwnershipType`, `revocationDate`, `revocationReason`, `autoRenewStatus`, `autoRenewProductId`, `expirationIntent`, and `status`. Personal identifiers like `appAccountToken` are strictly excluded.
+   - Every client function includes Apple documentation reference URLs directly in header comments.
+   - Error abstraction: `AppStoreError` categorizes failures as `unavailable` (5xx, 429, timeouts, network) or `rejected` (4xx).
+   - Doc-shaped mock fixtures established under `backend/tests/fixtures/appstore/` with `_source` annotations.
+3. **Admin API Routes**:
+   - Mounted exclusively on `consoleRouter` under `/admin-api/appstore/` (never exposed on public `/api/admin`):
+     - `GET /admin-api/appstore/catalog`: caches catalog in memory for 10 minutes; `?refresh=1` query parameter bypasses cache.
+     - `GET /admin-api/appstore/transactions/:transactionId?environment=production|sandbox`: validates transaction ID as 1-20 digits; writes an audit trail entry (`appstore.transaction_lookup`) to `admin_audit_log` with `{ transactionId, environment }`. Maps 404 to `notFound`.
+   - Error codes added to `docs/error-codes.md`: `appStoreNotConfigured` (503), `appStoreUnavailable` (502), `appStoreRejected` (502).
+4. **Console Frontend (`adminFront`)**:
+   - Added third navigation rail destination **App Store**.
+   - Not-configured state: renders a dedicated information card stating App Store keys are not set, and nothing else.
+   - Catalog view: renders subscription groups with tables of subscriptions (Product ID, Name, State, Prices formatted by customer price, currency, and territory) and a Refresh button.
+   - Transaction lookup: digits-only text input, Production/Sandbox `SegmentedButton`, "Look up" button, and detailed result card with formatted dates.
+   - External links out (open in new tab): App Store Connect subscriptions page (`https://appstoreconnect.apple.com/apps`) and RevenueCat customer search (`https://app.revenuecat.com/customers`).
+   - Strict `strings.dart` compliance: zero raw text literals outside `strings.dart` (enforced by `guard_test.dart`).
+5. **What the lead's live check must cover**:
+   - Replace mock fixtures with real recorded Apple API responses.
+   - Verify App Store Connect API team key role and permissions (e.g. App Manager or Admin role is required for subscription catalog endpoints).
+   - Test live transaction lookups against Sandbox and Production Apple StoreKit servers with valid store purchase tokens.
 
 

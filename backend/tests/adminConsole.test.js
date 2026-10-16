@@ -11,6 +11,7 @@ import { requireOperator, requireRecentSignIn, RECENT_SIGN_IN_SECONDS } from '..
 import { deliverPendingNotices, NOTICE_MESSAGES } from '../src/services/noticeOutbox.js';
 import { adminRouter } from '../src/routes/admin.js';
 import { GRANT_STATEMENTS, FORBIDDEN_TABLES } from '../scripts/admin-role.js';
+import { AppStoreError } from '../src/admin/appstore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -448,3 +449,278 @@ describe('POST /admin-api/families/:familyId/grants/:grantId/rc-sync', () => {
     assert.equal(hasRoute, false);
   });
 });
+
+// ─── App Store Endpoints ──────────────────────────────────────────────────────
+
+describe('GET /admin-api/appstore/catalog', () => {
+  const fresh = NOW / 1000 - 60;
+
+  function mockDb() {
+    const queries = [];
+    return {
+      _queries: queries,
+      async query(sql, params) {
+        queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('returns 503 appStoreNotConfigured when App Store client is not configured', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: null,
+      appStoreConfig: null,
+    });
+
+    const res = await request(app).get('/admin-api/appstore/catalog');
+    assert.equal(res.status, 503);
+    assert.equal(res.body.code, 'appStoreNotConfigured');
+  });
+
+  test('returns 200 with catalog and caches in memory for 10 minutes', async () => {
+    const db = mockDb();
+    let getCatalogCalls = 0;
+    const fakeCatalog = {
+      app: { id: 'app_1', name: 'MyCareCoins', bundleId: 'app.mycarecoins' },
+      subscriptionGroups: [
+        {
+          id: 'g_1',
+          referenceName: 'Pro',
+          subscriptions: [
+            {
+              id: 's_1',
+              name: 'Monthly',
+              productId: 'pro_monthly',
+              state: 'APPROVED',
+              prices: [{ territory: 'USA', customerPrice: '4.99', currency: 'USD', startDate: null }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const fakeAppStore = {
+      connect: {
+        async getCatalog() {
+          getCatalogCalls++;
+          return fakeCatalog;
+        },
+      },
+    };
+
+    let currentNow = NOW;
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => currentNow,
+      appStore: fakeAppStore,
+      appStoreConfig: { connect: { keyId: 'k', issuerId: 'i', privateKey: 'p' } },
+    });
+
+    // First call: fetches catalog
+    const res1 = await request(app).get('/admin-api/appstore/catalog');
+    assert.equal(res1.status, 200);
+    assert.deepEqual(res1.body, fakeCatalog);
+    assert.equal(getCatalogCalls, 1);
+
+    // Second call 5 minutes later: served from cache
+    currentNow += 5 * 60 * 1000;
+    const res2 = await request(app).get('/admin-api/appstore/catalog');
+    assert.equal(res2.status, 200);
+    assert.deepEqual(res2.body, fakeCatalog);
+    assert.equal(getCatalogCalls, 1);
+
+    // Third call with ?refresh=1: bypasses cache and re-fetches
+    const res3 = await request(app).get('/admin-api/appstore/catalog?refresh=1');
+    assert.equal(res3.status, 200);
+    assert.deepEqual(res3.body, fakeCatalog);
+    assert.equal(getCatalogCalls, 2);
+  });
+
+  test('maps AppStoreError to 502 appStoreUnavailable or appStoreRejected', async () => {
+    const db = mockDb();
+    const unavailableAppStore = {
+      connect: {
+        async getCatalog() {
+          throw new AppStoreError({ message: 'Rate limited by Apple', kind: 'unavailable', status: 429 });
+        },
+      },
+    };
+
+    const app1 = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: unavailableAppStore,
+      appStoreConfig: { connect: { keyId: 'k', issuerId: 'i', privateKey: 'p' } },
+    });
+
+    const res1 = await request(app1).get('/admin-api/appstore/catalog');
+    assert.equal(res1.status, 502);
+    assert.equal(res1.body.code, 'appStoreUnavailable');
+
+    const rejectedAppStore = {
+      connect: {
+        async getCatalog() {
+          throw new AppStoreError({ message: 'Invalid credentials', kind: 'rejected', status: 401 });
+        },
+      },
+    };
+
+    const app2 = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: rejectedAppStore,
+      appStoreConfig: { connect: { keyId: 'k', issuerId: 'i', privateKey: 'p' } },
+    });
+
+    const res2 = await request(app2).get('/admin-api/appstore/catalog');
+    assert.equal(res2.status, 502);
+    assert.equal(res2.body.code, 'appStoreRejected');
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/appstore/catalog'
+    );
+    assert.equal(hasRoute, false);
+  });
+});
+
+describe('GET /admin-api/appstore/transactions/:transactionId', () => {
+  const fresh = NOW / 1000 - 60;
+
+  function mockDb() {
+    const queries = [];
+    return {
+      _queries: queries,
+      async query(sql, params) {
+        queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        if (sql.includes('INSERT INTO admin_audit_log')) return { rows: [] };
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('validates transactionId: returns 400 invalidInput when not digits or >20 chars', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+    });
+
+    const res1 = await request(app).get('/admin-api/appstore/transactions/not-digits');
+    assert.equal(res1.status, 400);
+    assert.equal(res1.body.code, 'invalidInput');
+
+    const res2 = await request(app).get('/admin-api/appstore/transactions/1234567890123456789012345');
+    assert.equal(res2.status, 400);
+    assert.equal(res2.body.code, 'invalidInput');
+  });
+
+  test('returns 503 appStoreNotConfigured when server API client is not configured', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: null,
+      appStoreConfig: null,
+    });
+
+    const res = await request(app).get('/admin-api/appstore/transactions/1000000123');
+    assert.equal(res.status, 503);
+    assert.equal(res.body.code, 'appStoreNotConfigured');
+  });
+
+  test('returns 404 notFound when transaction is not found in Apple', async () => {
+    const db = mockDb();
+    const fakeAppStore = {
+      server: {
+        async lookupTransaction() {
+          throw new AppStoreError({ message: 'Transaction id not found.', kind: 'rejected', status: 404 });
+        },
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: fakeAppStore,
+      appStoreConfig: { server: { keyId: 'k', issuerId: 'i', bundleId: 'b', privateKey: 'p' } },
+    });
+
+    const res = await request(app).get('/admin-api/appstore/transactions/999999999');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.code, 'notFound');
+  });
+
+  test('returns 200 with transaction data and writes admin_audit_log on success', async () => {
+    const db = mockDb();
+    const fakeData = {
+      productId: 'pro_monthly',
+      transactionId: '1000000123',
+      originalTransactionId: '1000000123',
+      purchaseDate: '2024-01-01T00:00:00.000Z',
+      expiresDate: '2024-02-01T00:00:00.000Z',
+      environment: 'Production',
+      type: 'Auto-Renewable Subscription',
+      inAppOwnershipType: 'PURCHASED',
+      revocationDate: null,
+      revocationReason: null,
+      autoRenewStatus: 1,
+      autoRenewProductId: 'pro_monthly',
+      expirationIntent: null,
+      status: 1,
+    };
+
+    let passedEnv = null;
+    const fakeAppStore = {
+      server: {
+        async lookupTransaction(id, { environment }) {
+          passedEnv = environment;
+          return fakeData;
+        },
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      appStore: fakeAppStore,
+      appStoreConfig: { server: { keyId: 'k', issuerId: 'i', bundleId: 'b', privateKey: 'p' } },
+    });
+
+    const res = await request(app).get('/admin-api/appstore/transactions/1000000123?environment=sandbox');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, fakeData);
+    assert.equal(passedEnv, 'sandbox');
+
+    // Audit log written
+    const auditQuery = db._queries.find((q) => q.sql.includes('INSERT INTO admin_audit_log'));
+    assert.ok(auditQuery);
+    assert.equal(auditQuery.params[0], 7); // admin id
+    assert.equal(auditQuery.params[1], 'appstore.transaction_lookup');
+    assert.equal(auditQuery.params[2], 'transaction');
+    assert.equal(auditQuery.params[3], '1000000123');
+    assert.deepEqual(JSON.parse(auditQuery.params[4]), { transactionId: '1000000123', environment: 'sandbox' });
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/appstore/transactions/:transactionId'
+    );
+    assert.equal(hasRoute, false);
+  });
+});
+

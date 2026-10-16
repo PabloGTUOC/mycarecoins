@@ -1,0 +1,23 @@
+{
+  "_source": "https://developer.apple.com/documentation/appstoreconnectapi/get-v1-subscriptiongroups-_id_-subscriptions",
+  "data": [
+    {
+      "type": "subscriptions",
+      "id": "sub_monthly",
+      "attributes": {
+        "name": "Pro Monthly",
+        "productId": "pro_monthly",
+        "state": "APPROVED"
+      }
+    },
+    {
+      "type": "subscriptions",
+      "id": "sub_yearly",
+      "attributes": {
+        "name": "Pro Yearly",
+        "productId": "pro_yearly",
+        "state": "APPROVED"
+      }
+    }
+  ]
+}

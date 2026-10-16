@@ -7,6 +7,7 @@ class Strings {
   static const appTitle = 'CareCoins Operator';
   static const navFamilies = 'Families';
   static const navPlans = 'Plans';
+  static const navAppStore = 'App Store';
   static const signOut = 'Sign out';
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -158,6 +159,49 @@ class Strings {
   static const colPlanDefault = 'Default';
   static const colPlanActive = 'Active';
 
+  // ─── App Store ───────────────────────────────────────────────────────────────
+  static const appStoreTitle = 'App Store';
+  static const catalogTitle = 'Subscription Catalog';
+  static const refreshCatalogBtn = 'Refresh';
+  static const lookupTitle = 'Transaction Lookup';
+  static const lookupBtn = 'Look up';
+  static const transactionIdLabel = 'Transaction ID';
+  static const envProduction = 'Production';
+  static const envSandbox = 'Sandbox';
+
+  static const linkAppStoreConnect = 'App Store Connect';
+  static const linkRevenueCat = 'RevenueCat Customers';
+  static const appStoreConnectUrl = 'https://appstoreconnect.apple.com/apps';
+  static const revenueCatCustomersUrl = 'https://app.revenuecat.com/customers';
+
+  static const appStoreNotConfiguredTitle = 'App Store Not Configured';
+  static const appStoreNotConfiguredBody =
+      'App Store keys are not configured. Set ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY, IAP_KEY_ID, IAP_PRIVATE_KEY, and APP_BUNDLE_ID in the backend environment to enable.';
+
+  static const colGroup = 'Subscription Group';
+  static const colProduct = 'Product ID';
+  static const colState = 'State';
+  static const colPrice = 'Price';
+  static const colTerritory = 'Territory';
+  static const noSubscriptionsFound = 'No subscriptions found in catalog.';
+  static const noSubscriptionGroups = 'No subscription groups found.';
+
+  static const colTxId = 'Transaction ID';
+  static const colOrigTxId = 'Original Transaction ID';
+  static const colPurchaseDate = 'Purchase Date';
+  static const colExpiresDate = 'Expires Date';
+  static const colEnvironment = 'Environment';
+  static const colType = 'Type';
+  static const colOwnership = 'Ownership Type';
+  static const colRevocationDate = 'Revocation Date';
+  static const colRevocationReason = 'Revocation Reason';
+  static const colAutoRenew = 'Auto-Renew Status';
+  static const colAutoRenewProduct = 'Auto-Renew Product ID';
+  static const colExpirationIntent = 'Expiration Intent';
+  static const txNotFound = 'Transaction not found.';
+  static const autoRenewOn = 'On';
+  static const autoRenewOff = 'Off';
+
   // ─── Error Mappings ──────────────────────────────────────────────────────────
   static const errAdminOnly =
       'Admin access required. This account is not an operator.';
@@ -171,6 +215,10 @@ class Strings {
       'Authentication required. No ID token provided.';
   static const errNotFound = 'The requested resource was not found.';
   static const errRateLimited = 'Too many requests. Please try again later.';
+  static const errAppStoreNotConfigured = 'App Store API is not configured.';
+  static const errAppStoreUnavailable =
+      'App Store service is temporarily unavailable.';
+  static const errAppStoreRejected = 'App Store request failed.';
   static const errGenericFallback =
       'An unexpected error occurred. Please try again.';
 
@@ -254,6 +302,15 @@ class Strings {
     if (code == 'notFound' || statusCode == 404) {
       return errNotFound;
     }
+    if (code == 'appStoreNotConfigured') {
+      return errAppStoreNotConfigured;
+    }
+    if (code == 'appStoreUnavailable') {
+      return errAppStoreUnavailable;
+    }
+    if (code == 'appStoreRejected') {
+      return errAppStoreRejected;
+    }
     if (serverMessage != null && serverMessage.trim().isNotEmpty) {
       return serverMessage.trim();
     }
@@ -313,5 +370,30 @@ class Strings {
       parts.add('Revoked: ${formatDate(revokedAt)}');
     }
     return parts.join(' · ');
+  }
+
+  static String formatCatalogPrice(
+      dynamic customerPrice, dynamic currency, dynamic territory) {
+    if (customerPrice == null && currency == null && territory == null) {
+      return emptyDash;
+    }
+    final priceStr = customerPrice?.toString() ?? '';
+    final currStr = currency?.toString() ?? '';
+    final terrStr = territory?.toString() ?? '';
+    final parts = <String>[];
+    if (priceStr.isNotEmpty || currStr.isNotEmpty) {
+      parts.add('$priceStr $currStr'.trim());
+    }
+    if (terrStr.isNotEmpty) {
+      parts.add('($terrStr)');
+    }
+    return parts.join(' ');
+  }
+
+  static String formatAutoRenew(dynamic status) {
+    if (status == null) return emptyDash;
+    if (status == 1 || status == '1' || status == true) return autoRenewOn;
+    if (status == 0 || status == '0' || status == false) return autoRenewOff;
+    return status.toString();
   }
 }

@@ -1,0 +1,81 @@
+{
+  "_source": "https://developer.apple.com/documentation/appstoreconnectapi/get-v1-subscriptions-_id_-prices",
+  "data": [
+    {
+      "type": "subscriptionPrices",
+      "id": "price_1",
+      "attributes": {
+        "preserved": false,
+        "startDate": "2024-01-01"
+      },
+      "relationships": {
+        "subscriptionPricePoint": {
+          "data": {
+            "type": "subscriptionPricePoints",
+            "id": "spp_1"
+          }
+        },
+        "territory": {
+          "data": {
+            "type": "territories",
+            "id": "USA"
+          }
+        }
+      }
+    },
+    {
+      "type": "subscriptionPrices",
+      "id": "price_2",
+      "attributes": {
+        "preserved": false,
+        "startDate": "2024-01-01"
+      },
+      "relationships": {
+        "subscriptionPricePoint": {
+          "data": {
+            "type": "subscriptionPricePoints",
+            "id": "spp_2"
+          }
+        },
+        "territory": {
+          "data": {
+            "type": "territories",
+            "id": "EUR"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "type": "subscriptionPricePoints",
+      "id": "spp_1",
+      "attributes": {
+        "customerPrice": "4.99",
+        "proceeds": "3.49"
+      }
+    },
+    {
+      "type": "territories",
+      "id": "USA",
+      "attributes": {
+        "currency": "USD"
+      }
+    },
+    {
+      "type": "subscriptionPricePoints",
+      "id": "spp_2",
+      "attributes": {
+        "customerPrice": "4.99",
+        "proceeds": "3.49"
+      }
+    },
+    {
+      "type": "territories",
+      "id": "EUR",
+      "attributes": {
+        "currency": "EUR"
+      }
+    }
+  ]
+}

@@ -75,6 +75,7 @@ void main() {
     expect(find.text(Strings.appTitle), findsOneWidget);
     expect(find.text(Strings.navFamilies), findsWidgets);
     expect(find.text(Strings.navPlans), findsOneWidget);
+    expect(find.text(Strings.navAppStore), findsOneWidget);
     expect(find.text('admin@carecoins.app'), findsOneWidget);
   });
 

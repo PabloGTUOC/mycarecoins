@@ -57,6 +57,9 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `actorOnlyPetsRemovable` | 403 | — | Only pets can be removed. Human members must leave or be deleted. |
 | `adminOnly` | 403 | — | Admin access required. |
 | `adminReauthRequired` | 401 | `maxAgeMinutes` | Sign in again to make changes. Operator console API only. |
+| `appStoreNotConfigured` | 503 | — | App Store API is not configured. Operator console API only. |
+| `appStoreRejected` | 502 | — | App Store request was rejected. Operator console API only. |
+| `appStoreUnavailable` | 502 | — | App Store service is unavailable. Operator console API only. |
 | `authInvalidToken` | 401 | — | Invalid token. |
 | `authMissingToken` | 401 | — | No token provided. |
 | `billingMalformedEvent` | 400 | — | Webhook error: Malformed event payload. |

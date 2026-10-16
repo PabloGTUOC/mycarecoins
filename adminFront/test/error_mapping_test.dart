@@ -18,6 +18,12 @@ void main() {
       expect(Strings.errorFor(statusCode: 404), Strings.errNotFound);
       expect(Strings.errorFor(code: 'rateLimited'), Strings.errRateLimited);
       expect(Strings.errorFor(statusCode: 429), Strings.errRateLimited);
+      expect(Strings.errorFor(code: 'appStoreNotConfigured'),
+          Strings.errAppStoreNotConfigured);
+      expect(Strings.errorFor(code: 'appStoreUnavailable'),
+          Strings.errAppStoreUnavailable);
+      expect(Strings.errorFor(code: 'appStoreRejected'),
+          Strings.errAppStoreRejected);
     });
 
     test('unknown error code falls back to generic message', () {

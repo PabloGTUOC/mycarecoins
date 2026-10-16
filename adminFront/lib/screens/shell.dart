@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../strings.dart';
 import '../theme.dart';
+import 'app_store_screen.dart';
 import 'families_screen.dart';
 import 'not_an_operator_screen.dart';
 import 'plans_screen.dart';
@@ -194,6 +195,11 @@ class _ShellState extends State<Shell> {
                 selectedIcon: const Icon(Icons.inventory_2_rounded),
                 label: Text(Strings.navPlans),
               ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.store_outlined),
+                selectedIcon: const Icon(Icons.store_rounded),
+                label: Text(Strings.navAppStore),
+              ),
             ],
           ),
           const VerticalDivider(width: 1, thickness: 1),
@@ -212,7 +218,9 @@ class _ShellState extends State<Shell> {
                     height: constraints.maxHeight,
                     child: _selectedIndex == 0
                         ? const FamiliesScreen()
-                        : const PlansScreen(),
+                        : _selectedIndex == 1
+                            ? const PlansScreen()
+                            : const AppStoreScreen(),
                   ),
                 );
               },

@@ -21,8 +21,9 @@ import { requireOperator, requireRecentSignIn } from './operator.js';
 
 import { Router } from 'express';
 import { validateParams } from '../middleware/validate.js';
-import { resetGrantRcSync } from '../services/adminService.js';
+import { logAdminAction, resetGrantRcSync } from '../services/adminService.js';
 import { syncPending } from './rcSync.js';
+import { AppStoreError } from './appstore.js';
 
 export function createOperatorLimiter({
   max = 300,
@@ -48,6 +49,8 @@ export function createAdminApp({
   operatorLimiter = null,
   rc = null,
   rcConfig = null,
+  appStore = null,
+  appStoreConfig = null,
 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -61,6 +64,63 @@ export function createAdminApp({
 
   const consoleRouter = Router();
   consoleRouter.use(adminRouter);
+
+  let catalogCache = null;
+
+  consoleRouter.get('/appstore/catalog', async (req, res) => {
+    if (!appStoreConfig?.connect || !appStore?.connect) {
+      return sendError(res, 503, 'appStoreNotConfigured', 'App Store API is not configured.');
+    }
+
+    const nowMs = typeof now === 'function' ? now() : Date.now();
+    const bypassCache = req.query.refresh === '1';
+
+    if (!bypassCache && catalogCache && (nowMs - catalogCache.timestamp < 10 * 60 * 1000)) {
+      return res.json(catalogCache.data);
+    }
+
+    try {
+      const data = await appStore.connect.getCatalog(appStoreConfig.connect.bundleId);
+      catalogCache = { data, timestamp: nowMs };
+      return res.json(data);
+    } catch (err) {
+      const isUnavailable = err instanceof AppStoreError ? err.kind === 'unavailable' : false;
+      const code = isUnavailable ? 'appStoreUnavailable' : 'appStoreRejected';
+      return sendError(res, 502, code, err.message || 'Failed to fetch App Store catalog.');
+    }
+  });
+
+  consoleRouter.get('/appstore/transactions/:transactionId', async (req, res) => {
+    const { transactionId } = req.params;
+    if (!/^\d{1,20}$/.test(transactionId)) {
+      return sendError(res, 400, 'invalidInput', 'transactionId: must be 1-20 digits', { field: 'transactionId' });
+    }
+
+    if (!appStoreConfig?.server || !appStore?.server) {
+      return sendError(res, 503, 'appStoreNotConfigured', 'App Store API is not configured.');
+    }
+
+    const environment = req.query.environment === 'sandbox' ? 'sandbox' : 'production';
+
+    try {
+      const data = await appStore.server.lookupTransaction(transactionId, { environment });
+
+      await logAdminAction(db, req.adminUser.id, 'appstore.transaction_lookup', {
+        targetType: 'transaction',
+        targetId: transactionId,
+        payload: { transactionId, environment },
+      });
+
+      return res.json(data);
+    } catch (err) {
+      if (err instanceof AppStoreError && err.status === 404) {
+        return sendError(res, 404, 'notFound', 'Transaction not found.');
+      }
+      const isUnavailable = err instanceof AppStoreError ? err.kind === 'unavailable' : false;
+      const code = isUnavailable ? 'appStoreUnavailable' : 'appStoreRejected';
+      return sendError(res, 502, code, err.message || 'Failed to lookup transaction.');
+    }
+  });
 
   consoleRouter.post(
     '/families/:familyId/grants/:grantId/rc-sync',

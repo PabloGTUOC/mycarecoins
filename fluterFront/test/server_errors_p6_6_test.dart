@@ -63,6 +63,10 @@ void main() {
       'accessInvalid': 'Operator console API only.',
       'accessMissing': 'Operator console API only.',
       'adminReauthRequired': 'Operator console API only.',
+      'appStoreNotConfigured': 'Operator console API only.',
+      'appStoreRejected': 'Operator console API only.',
+      'appStoreUnavailable': 'Operator console API only.',
+      'rateLimited': 'Operator console API only.',
     };
 
     final dummyParams = <String, dynamic>{

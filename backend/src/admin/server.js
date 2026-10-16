@@ -5,6 +5,7 @@ import { accessVerifierFromEnv } from './access.js';
 import { createAdminApp } from './app.js';
 import { createRevenueCatClient, revenueCatConfigFromEnv } from './revenuecat.js';
 import { syncPending } from './rcSync.js';
+import { createAppStoreClients, appStoreConfigFromEnv } from './appstore.js';
 
 const port = Number(process.env.PORT || 3001);
 
@@ -41,11 +42,24 @@ if (rcConfig && rcClient) {
   console.log('RevenueCat mirror off');
 }
 
+const appStoreConfig = appStoreConfigFromEnv(process.env);
+const appStoreClients = (appStoreConfig?.connect || appStoreConfig?.server)
+  ? createAppStoreClients({ config: appStoreConfig })
+  : null;
+
+if (appStoreClients) {
+  console.log('App Store integration on');
+} else {
+  console.log('App Store integration off');
+}
+
 const app = createAdminApp({
   db: pool,
   verifyAccess,
   rc: rcClient,
   rcConfig,
+  appStore: appStoreClients,
+  appStoreConfig,
 });
 
 app.listen(port, '0.0.0.0', () => {
