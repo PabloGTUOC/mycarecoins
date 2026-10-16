@@ -96,4 +96,33 @@ describe('processWebhookEvent', () => {
     const result = await processWebhookEvent(mockClient([]), { type: 'RENEWAL' });
     assert.equal(result.error.code, 400);
   });
+
+  test('loop guard: PROMOTIONAL store events are marked processed and never touch family_plans or plans', async () => {
+    for (const type of ['NON_RENEWING_PURCHASE', 'INITIAL_PURCHASE']) {
+      const client = mockClient([inserted(), inserted()]);
+      const result = await processWebhookEvent(client, {
+        ...baseEvent,
+        id: `evt_promo_${type}`,
+        type,
+        store: 'PROMOTIONAL',
+      });
+      assert.deepEqual(result.data, { ignored: 'promotional_mirror' });
+      assert.equal(client._calls.length, 2);
+      assert.ok(client._calls[0].sql.includes('INSERT INTO billing_events'));
+      assert.ok(client._calls[1].sql.includes('SET processed = true'));
+      assert.ok(!client._calls.some(c => c.sql.includes('family_plans')));
+      assert.ok(!client._calls.some(c => c.sql.includes('plans')));
+    }
+
+    // Normal APP_STORE event still writes family_plans
+    const appStoreClient = mockClient([inserted(), conflict(), inserted(), inserted()]);
+    const appStoreResult = await processWebhookEvent(appStoreClient, {
+      ...baseEvent,
+      id: 'evt_app_store',
+      type: 'INITIAL_PURCHASE',
+      store: 'APP_STORE',
+    });
+    assert.deepEqual(appStoreResult.data, { familyId: 7, planCode: 'pro', status: 'active' });
+    assert.ok(appStoreClient._calls.some(c => c.sql.includes('INSERT INTO family_plans')));
+  });
 });

@@ -1,0 +1,7 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2 — replace with a recorded sandbox response",
+  "id": "grant_abc123",
+  "object": "entitlement_grant",
+  "entitlement_id": "ent_pro",
+  "expires_at": 1790000000000
+}

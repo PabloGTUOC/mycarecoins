@@ -3,6 +3,8 @@ import { pool } from '../db/pool.js';
 import { ADMIN_ROLE } from '../../scripts/admin-role.js';
 import { accessVerifierFromEnv } from './access.js';
 import { createAdminApp } from './app.js';
+import { createRevenueCatClient, revenueCatConfigFromEnv } from './revenuecat.js';
+import { syncPending } from './rcSync.js';
 
 const port = Number(process.env.PORT || 3001);
 
@@ -19,7 +21,32 @@ if (rows[0].role !== ADMIN_ROLE) {
   console.warn(`${message} Fine for local work; never in production.`);
 }
 
-const app = createAdminApp({ db: pool, verifyAccess });
+const rcConfig = revenueCatConfigFromEnv(process.env);
+const rcClient = rcConfig ? createRevenueCatClient(rcConfig) : null;
+
+if (rcConfig && rcClient) {
+  const runSync = async () => {
+    try {
+      await syncPending(pool, rcClient, { entitlementId: rcConfig.entitlementId });
+    } catch (err) {
+      console.error('RevenueCat sync error:', err.message);
+    }
+  };
+  // Run once at start
+  runSync();
+  // Schedule every 5 minutes
+  const timer = setInterval(runSync, 5 * 60 * 1000);
+  timer.unref?.();
+} else {
+  console.log('RevenueCat mirror off');
+}
+
+const app = createAdminApp({
+  db: pool,
+  verifyAccess,
+  rc: rcClient,
+  rcConfig,
+});
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`CareCoins admin API running on port ${port}`);

@@ -1,0 +1,6 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2 — replace with a recorded sandbox response",
+  "object": "error",
+  "type": "invalid_request_error",
+  "message": "Entitlement ent_pro not found in project."
+}

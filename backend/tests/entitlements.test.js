@@ -209,7 +209,8 @@ describe('getFamilyBilling', () => {
             provider: 'revenuecat', provider_subscription_id: 'sub_1', updated_at: 'now',
             billing_owner_user_id: '42' }]),
       ok([{ id: '5', plan_code: 'plus', reason: 'comp', expires_at: null, revoked_at: null,
-            created_at: 'now', granted_by: '7' }]),
+            created_at: 'now', granted_by: '7',
+            rc_status: 'synced', rc_attempts: 0, rc_last_error: null, rc_synced_at: 'now' }]),
       ok([{ id: '9', provider: 'revenuecat', event_type: 'RENEWAL', processed: true,
             created_at: 'now', payload: { secret: 'raw provider payload' } }]),
     ]);
@@ -217,6 +218,12 @@ describe('getFamilyBilling', () => {
     assert.equal(result.data.subscription.planCode, 'plus');
     assert.equal(result.data.subscription.billingOwnerUserId, 42);
     assert.equal(result.data.grants[0].grantedBy, 7);
+    assert.deepEqual(result.data.grants[0].rcSync, {
+      status: 'synced',
+      attempts: 0,
+      lastError: null,
+      syncedAt: 'now',
+    });
     assert.deepEqual(Object.keys(result.data.recentEvents[0]).sort(),
       ['createdAt', 'eventType', 'id', 'processed', 'provider']);
   });
@@ -247,22 +254,33 @@ describe('grants', () => {
     const client = mockClient([
       ok([{ id: 1 }]),      // family exists
       ok([{ code: 'plus' }]), // plan exists + active
-      ok([grantRow]),       // INSERT
+      ok([grantRow]),       // INSERT admin_grants
+      empty(),              // INSERT admin_rc_sync
       empty(),              // audit
     ]);
     const result = await createGrant(client, 7, 1, { planCode: 'plus', reason: 'beta tester' });
     assert.equal(result.data.grant.planCode, 'plus');
-    assert.equal(client._calls[3].params[1], 'grant.create');
+    assert.ok(client._calls[3].sql.includes('INSERT INTO admin_rc_sync'));
+    assert.equal(client._calls[3].params[0], 5);
+    assert.equal(client._calls[3].params[1], 'family_1');
+    assert.equal(client._calls[4].params[1], 'grant.create');
 
     assert.equal((await createGrant(mockClient([empty()]), 7, 99, { planCode: 'plus' })).error.code, 404);
     assert.equal((await createGrant(mockClient([ok([{ id: 1 }]), empty()]), 7, 1, { planCode: 'nope' })).error.code, 404);
   });
 
   test('revokeGrant stamps revoked_at once and audits', async () => {
-    const client = mockClient([{ rows: [], rowCount: 1 }, empty()]);
+    const client = mockClient([
+      { rows: [], rowCount: 1 }, // UPDATE admin_grants
+      empty(),                   // upsert admin_rc_sync
+      empty(),                   // audit
+    ]);
     const result = await revokeGrant(client, 7, 1, 5);
     assert.equal(result.data.success, true);
-    assert.equal(client._calls[1].params[1], 'grant.revoke');
+    assert.ok(client._calls[1].sql.includes('admin_rc_sync'));
+    assert.equal(client._calls[1].params[0], 5);
+    assert.equal(client._calls[1].params[1], 'family_1');
+    assert.equal(client._calls[2].params[1], 'grant.revoke');
 
     assert.equal((await revokeGrant(mockClient([empty()]), 7, 1, 5)).error.code, 404);
   });

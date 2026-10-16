@@ -76,6 +76,12 @@ export async function processWebhookEvent(client, event) {
   );
   if (!inserted) return { data: { duplicate: true } };
 
+  if (event.store === 'PROMOTIONAL') {
+    await client.query(
+      `UPDATE billing_events SET processed = true WHERE event_id = $1`, [event.id]);
+    return { data: { ignored: 'promotional_mirror' } };
+  }
+
   const status = STATUS_BY_EVENT[event.type];
   if (!status) {
     // Informational event (e.g. SUBSCRIPTION_EXTENDED variants we don't

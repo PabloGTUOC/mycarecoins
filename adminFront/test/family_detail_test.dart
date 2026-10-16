@@ -329,4 +329,115 @@ void main() {
     expect(find.text(Strings.subBillingOwner), findsOneWidget);
     expect(find.text(Strings.emptyDash), findsWidgets);
   });
+
+  testWidgets(
+      'Family detail: RevenueCat column shows Synced, Pending, Failed with tooltip, and Retry button calls POST rc-sync',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'createdAt': '2026-01-01T10:00:00.000Z',
+      'lastActiveAt': '2026-08-15T12:00:00.000Z',
+      'memberCount': 3,
+      'pendingMemberCount': 0,
+      'actorCount': 0,
+      'status': 'active',
+      'planCode': 'pro',
+      'subscriptionStatus': 'active',
+    };
+
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [
+        {
+          'id': 1,
+          'planCode': 'pro',
+          'reason': 'Synced grant',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'expiresAt': '2099-01-01T00:00:00.000Z',
+          'revokedAt': null,
+          'rcSync': {
+            'status': 'synced',
+            'attempts': 0,
+            'lastError': null,
+            'syncedAt': '2026-01-01T00:05:00.000Z',
+          },
+        },
+        {
+          'id': 2,
+          'planCode': 'pro',
+          'reason': 'Pending grant',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'expiresAt': '2099-01-01T00:00:00.000Z',
+          'revokedAt': null,
+          'rcSync': {
+            'status': 'pending',
+            'attempts': 1,
+            'lastError': null,
+            'syncedAt': null,
+          },
+        },
+        {
+          'id': 3,
+          'planCode': 'pro',
+          'reason': 'Failed grant',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'expiresAt': '2099-01-01T00:00:00.000Z',
+          'revokedAt': null,
+          'rcSync': {
+            'status': 'failed',
+            'attempts': 3,
+            'lastError': 'Customer does not exist in RevenueCat',
+            'syncedAt': null,
+          },
+        },
+      ],
+      'recentEvents': [],
+    };
+
+    api.responses['POST:/families/42/grants/3/rc-sync'] = {
+      'status': 'synced',
+    };
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Verify column header
+    expect(find.text(Strings.colRevenueCat), findsOneWidget);
+
+    // Verify statuses in grants table
+    final dataTable = find.byType(DataTable);
+    expect(
+        find.descendant(of: dataTable, matching: find.text(Strings.rcSyncSynced)),
+        findsOneWidget);
+    expect(
+        find.descendant(of: dataTable, matching: find.text(Strings.rcSyncPending)),
+        findsOneWidget);
+    expect(
+        find.descendant(of: dataTable, matching: find.text(Strings.rcSyncFailed)),
+        findsOneWidget);
+
+    // Verify tooltip on failed row
+    final tooltip = tester.widget<Tooltip>(
+        find.descendant(of: dataTable, matching: find.byType(Tooltip)));
+    expect(tooltip.message, 'Customer does not exist in RevenueCat');
+
+    // Retry button should only appear for pending and failed (2 out of 3)
+    final retryBtns = find.text(Strings.rcSyncRetryBtn);
+    expect(retryBtns, findsNWidgets(2));
+
+    // Tap retry on the failed grant (the second retry button)
+    await tester.tap(retryBtns.last);
+    await tester.pumpAndSettle();
+
+    // Verify POST was sent to the right path
+    final postCall = api.callHistory.firstWhere(
+      (c) => c.method == 'POST' && c.path == '/families/42/grants/3/rc-sync',
+    );
+    expect(postCall, isNotNull);
+  });
 }

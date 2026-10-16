@@ -9,6 +9,7 @@ import { createAdminApp, createOperatorLimiter } from '../src/admin/app.js';
 import { createAccessVerifier, accessVerifierFromEnv, requireAccess } from '../src/admin/access.js';
 import { requireOperator, requireRecentSignIn, RECENT_SIGN_IN_SECONDS } from '../src/admin/operator.js';
 import { deliverPendingNotices, NOTICE_MESSAGES } from '../src/services/noticeOutbox.js';
+import { adminRouter } from '../src/routes/admin.js';
 import { GRANT_STATEMENTS, FORBIDDEN_TABLES } from '../scripts/admin-role.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -260,5 +261,190 @@ describe('deliverPendingNotices', () => {
   test('nothing queued sends nothing', async () => {
     const db = { query: async () => ({ rows: [] }) };
     assert.equal(await deliverPendingNotices(db, async () => { throw new Error('no'); }), 0);
+  });
+});
+
+// ─── POST /admin-api/families/:familyId/grants/:grantId/rc-sync ───────────────
+
+describe('POST /admin-api/families/:familyId/grants/:grantId/rc-sync', () => {
+  const stale = NOW / 1000 - RECENT_SIGN_IN_SECONDS - 1;
+  const fresh = NOW / 1000 - 60;
+
+  function mockConsoleDb({ grantExists = true, syncExists = true, updatedRow = null } = {}) {
+    const queries = [];
+    return {
+      _queries: queries,
+      async connect() {
+        return {
+          async query(sql, params) {
+            queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+            if (sql.includes('admin_operators')) {
+              return { rows: [{ id: '7' }] };
+            }
+            if (sql.includes('BEGIN') || sql.includes('COMMIT') || sql.includes('ROLLBACK')) {
+              return { rows: [] };
+            }
+            if (sql.includes('SELECT id FROM admin_grants')) {
+              return grantExists ? { rows: [{ id: 1 }] } : { rows: [] };
+            }
+            if (sql.includes('UPDATE admin_rc_sync')) {
+              return syncExists
+                ? { rows: [{ status: 'pending', attempts: 0, last_error: null, synced_at: null }], rowCount: 1 }
+                : { rows: [], rowCount: 0 };
+            }
+            if (sql.includes('INSERT INTO admin_audit_log')) {
+              return { rows: [] };
+            }
+            if (sql.includes('SELECT status, attempts, last_error, synced_at FROM admin_rc_sync')) {
+              return { rows: [updatedRow ?? { status: 'synced', attempts: 0, last_error: null, synced_at: 'now' }] };
+            }
+            return { rows: [] };
+          },
+          release() {},
+        };
+      },
+      async query(sql, params) {
+        queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        if (sql.includes('admin_operators')) {
+          return { rows: [{ id: '7' }] };
+        }
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('requires recent sign-in (401 adminReauthRequired when stale)', async () => {
+    const db = mockConsoleDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', stale),
+      now: () => NOW,
+    });
+    const res = await request(app).post('/admin-api/families/42/grants/5/rc-sync');
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, 'adminReauthRequired');
+  });
+
+  test('returns 404 notFound when grant does not belong to family', async () => {
+    const db = mockConsoleDb({ grantExists: false });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+    });
+    const res = await request(app).post('/admin-api/families/42/grants/999/rc-sync');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.code, 'notFound');
+  });
+
+  test('returns 404 notFound when grant has no admin_rc_sync row (pre-phase grant)', async () => {
+    const db = mockConsoleDb({ grantExists: true, syncExists: false });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+    });
+    const res = await request(app).post('/admin-api/families/42/grants/5/rc-sync');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.code, 'notFound');
+    assert.equal(res.body.error, 'Grant has no RevenueCat sync record.');
+  });
+
+  test('with mirror off: sets row to pending, audits, returns mirror off', async () => {
+    const db = mockConsoleDb({ grantExists: true });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rcConfig: null,
+      rc: null,
+    });
+    const res = await request(app).post('/admin-api/families/42/grants/5/rc-sync');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { status: 'pending', mirror: 'off' });
+
+    const auditCall = db._queries.find((q) => q.sql.includes('INSERT INTO admin_audit_log'));
+    assert.ok(auditCall);
+    assert.equal(auditCall.params[1], 'grant.rc_retry');
+  });
+
+  test('with mirror on: runs syncPending for that row and returns updated status', async () => {
+    const db = mockConsoleDb({
+      grantExists: true,
+      updatedRow: { status: 'synced', attempts: 0, last_error: null, synced_at: 'now' },
+    });
+
+    const fakeRc = {
+      async ensureCustomer() {},
+      async grantEntitlement() {},
+      async revokeGrantedEntitlement() {},
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_pro' },
+    });
+
+    const res = await request(app).post('/admin-api/families/42/grants/5/rc-sync');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.status, 'synced');
+  });
+
+  test('returns 500 internal when syncPending throws an unexpected error', async () => {
+    const db = {
+      async connect() {
+        return {
+          async query(sql) {
+            if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+            if (sql.includes('BEGIN') || sql.includes('COMMIT') || sql.includes('ROLLBACK')) return { rows: [] };
+            if (sql.includes('SELECT id FROM admin_grants')) return { rows: [{ id: 1 }] };
+            if (sql.includes('UPDATE admin_rc_sync')) {
+              return { rows: [{ status: 'pending', attempts: 0, last_error: null, synced_at: null }], rowCount: 1 };
+            }
+            if (sql.includes('INSERT INTO admin_audit_log')) return { rows: [] };
+            if (sql.includes('SELECT s.grant_id')) {
+              throw new Error('Database disk full');
+            }
+            return { rows: [] };
+          },
+          release() {},
+        };
+      },
+      async query(sql) {
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        return { rows: [] };
+      },
+    };
+
+    const fakeRc = {
+      async ensureCustomer() {},
+      async grantEntitlement() {},
+      async revokeGrantedEntitlement() {},
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_pro' },
+    });
+
+    const res = await request(app).post('/admin-api/families/42/grants/5/rc-sync');
+    assert.equal(res.status, 500);
+    assert.equal(res.body.code, 'internal');
+    assert.equal(res.body.error, 'Failed to retry sync.');
+    assert.equal(res.body.lastError, undefined); // Never leak raw message
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    // Assert route is not mounted in adminRouter (the router mounted by public app.js)
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/families/:familyId/grants/:grantId/rc-sync'
+    );
+    assert.equal(hasRoute, false);
   });
 });

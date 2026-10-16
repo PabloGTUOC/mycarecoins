@@ -1,0 +1,6 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2 — replace with a recorded sandbox response",
+  "object": "error",
+  "type": "rate_limit_error",
+  "message": "Too many requests. Please slow down."
+}

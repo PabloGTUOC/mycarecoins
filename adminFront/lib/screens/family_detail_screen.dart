@@ -240,6 +240,19 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     }
   }
 
+  Future<void> _retryRcSync(int grantId) async {
+    final app = context.read<AppState>();
+    final done = await app.runMutation(
+      context,
+      () => app.api.post('/families/${widget.familyId}/grants/$grantId/rc-sync'),
+      successMessage: Strings.rcSyncRetrySuccess,
+    );
+
+    if (done && mounted) {
+      _load();
+    }
+  }
+
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -374,8 +387,62 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     return (Strings.grantStatusActive, AppColors.successInk);
   }
 
+  Widget _buildRcSyncCell(Map<String, dynamic> g) {
+    final rcSync = (g['rcSync'] as Map?)?.cast<String, dynamic>();
+    if (rcSync == null) {
+      return Text(
+        Strings.emptyDash,
+        style: const TextStyle(color: AppColors.textSecondary),
+      );
+    }
+
+    final status = rcSync['status']?.toString();
+    if (status == 'synced') {
+      return Text(
+        Strings.rcSyncSynced,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.successInk,
+        ),
+      );
+    } else if (status == 'pending') {
+      return Text(
+        Strings.rcSyncPending,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.warningStrong,
+        ),
+      );
+    } else if (status == 'failed') {
+      final errorMsg = rcSync['lastError']?.toString();
+      final textWidget = Text(
+        Strings.rcSyncFailed,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.dangerInk,
+        ),
+      );
+      if (errorMsg != null && errorMsg.isNotEmpty) {
+        return Tooltip(
+          message: errorMsg,
+          child: textWidget,
+        );
+      }
+      return textWidget;
+    }
+
+    return Text(
+      Strings.emptyDash,
+      style: const TextStyle(color: AppColors.textSecondary),
+    );
+  }
+
   DataRow _buildGrantRow(Map<String, dynamic> g) {
     final status = _grantStatus(g);
+    final rcSync = (g['rcSync'] as Map?)?.cast<String, dynamic>();
+    final canRetry = rcSync != null &&
+        (rcSync['status'] == 'pending' || rcSync['status'] == 'failed');
+
     return DataRow(
       cells: [
         DataCell(
@@ -416,8 +483,26 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
           ),
         ),
         DataCell(
-          g['revokedAt'] == null
-              ? TextButton(
+          _buildRcSyncCell(g),
+        ),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (canRetry)
+                TextButton(
+                  onPressed: () => _retryRcSync(
+                    (g['id'] as num).toInt(),
+                  ),
+                  child: Text(
+                    Strings.rcSyncRetryBtn,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              if (g['revokedAt'] == null)
+                TextButton(
                   onPressed: () => _revokeGrant(
                     (g['id'] as num).toInt(),
                   ),
@@ -428,8 +513,9 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                )
-              : const SizedBox.shrink(),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -485,6 +571,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                     DataColumn(label: Text(Strings.colGranted)),
                     DataColumn(label: Text(Strings.colExpires)),
                     DataColumn(label: Text(Strings.colStatus)),
+                    DataColumn(label: Text(Strings.colRevenueCat)),
                     DataColumn(label: Text(Strings.colActions)),
                   ],
                   rows: [

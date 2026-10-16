@@ -247,8 +247,12 @@ export async function getFamilyBilling(client, familyId) {
     [familyId]
   );
   const { rows: grantRows } = await client.query(
-    `SELECT id, plan_code, reason, expires_at, revoked_at, created_at, granted_by
-     FROM admin_grants WHERE family_id = $1 ORDER BY created_at DESC`,
+    `SELECT g.id, g.plan_code, g.reason, g.expires_at, g.revoked_at, g.created_at, g.granted_by,
+            s.status AS rc_status, s.attempts AS rc_attempts, s.last_error AS rc_last_error,
+            s.synced_at AS rc_synced_at
+     FROM admin_grants g
+     LEFT JOIN admin_rc_sync s ON s.grant_id = g.id
+     WHERE g.family_id = $1 ORDER BY g.created_at DESC`,
     [familyId]
   );
   const { rows: eventRows } = await client.query(
@@ -278,6 +282,12 @@ export async function getFamilyBilling(client, familyId) {
         revokedAt: g.revoked_at,
         createdAt: g.created_at,
         grantedBy: Number(g.granted_by),
+        rcSync: g.rc_status ? {
+          status: g.rc_status,
+          attempts: Number(g.rc_attempts ?? 0),
+          lastError: g.rc_last_error ?? null,
+          syncedAt: g.rc_synced_at ?? null,
+        } : null,
       })),
       recentEvents: eventRows.map(e => ({
         id: Number(e.id),
@@ -307,6 +317,13 @@ export async function createGrant(client, adminId, familyId, { planCode, reason,
      RETURNING id, plan_code, reason, expires_at, revoked_at, created_at, granted_by`,
     [familyId, planCode, adminId, reason?.trim() || null, expiresAt ? new Date(expiresAt) : null]
   );
+  const grant = rows[0];
+
+  await client.query(
+    `INSERT INTO admin_rc_sync (grant_id, rc_customer_id, action, status)
+     VALUES ($1, $2, 'grant', 'pending')`,
+    [Number(grant.id), `family_${familyId}`]
+  );
 
   await logAdminAction(client, adminId, 'grant.create', {
     targetType: 'family', targetId: familyId, payload: { planCode, reason, expiresAt },
@@ -314,13 +331,13 @@ export async function createGrant(client, adminId, familyId, { planCode, reason,
   return {
     data: {
       grant: {
-        id: Number(rows[0].id),
-        planCode: rows[0].plan_code,
-        reason: rows[0].reason,
-        expiresAt: rows[0].expires_at,
-        revokedAt: rows[0].revoked_at,
-        createdAt: rows[0].created_at,
-        grantedBy: Number(rows[0].granted_by),
+        id: Number(grant.id),
+        planCode: grant.plan_code,
+        reason: grant.reason,
+        expiresAt: grant.expires_at,
+        revokedAt: grant.revoked_at,
+        createdAt: grant.created_at,
+        grantedBy: Number(grant.granted_by),
       },
     },
   };
@@ -334,10 +351,50 @@ export async function revokeGrant(client, adminId, familyId, grantId) {
   );
   if (!rowCount) return { error: { code: 404, message: 'Active grant not found.' } };
 
+  await client.query(
+    `INSERT INTO admin_rc_sync (grant_id, rc_customer_id, action, status, attempts, last_error, updated_at)
+     VALUES ($1, $2, 'revoke', 'pending', 0, NULL, NOW())
+     ON CONFLICT (grant_id) DO UPDATE SET
+       action = 'revoke',
+       status = 'pending',
+       attempts = 0,
+       last_error = NULL,
+       updated_at = NOW()`,
+    [Number(grantId), `family_${familyId}`]
+  );
+
   await logAdminAction(client, adminId, 'grant.revoke', {
     targetType: 'family', targetId: familyId, payload: { grantId },
   });
   return { data: { success: true } };
+}
+
+export async function resetGrantRcSync(client, adminId, familyId, grantId) {
+  const { rows: grantRows } = await client.query(
+    `SELECT id FROM admin_grants WHERE id = $1 AND family_id = $2`,
+    [grantId, familyId]
+  );
+  if (!grantRows.length) return { error: { code: 404, message: 'Grant not found in family.' } };
+
+  const { rows, rowCount } = await client.query(
+    `UPDATE admin_rc_sync
+     SET status = 'pending',
+         attempts = 0,
+         last_error = NULL,
+         updated_at = NOW()
+     WHERE grant_id = $1
+     RETURNING status, attempts, last_error, synced_at`,
+    [grantId]
+  );
+  if (!rowCount) {
+    return { error: { code: 404, message: 'Grant has no RevenueCat sync record.' } };
+  }
+
+  await logAdminAction(client, adminId, 'grant.rc_retry', {
+    targetType: 'grant', targetId: grantId, payload: { familyId },
+  });
+
+  return { data: { syncRow: rows[0] } };
 }
 
 // Every mutating admin call writes exactly one audit row, inside the same

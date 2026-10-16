@@ -19,6 +19,11 @@ import { sendError } from '../utils/httpError.js';
 import { requireAccess } from './access.js';
 import { requireOperator, requireRecentSignIn } from './operator.js';
 
+import { Router } from 'express';
+import { validateParams } from '../middleware/validate.js';
+import { resetGrantRcSync } from '../services/adminService.js';
+import { syncPending } from './rcSync.js';
+
 export function createOperatorLimiter({
   max = 300,
   windowMs = 15 * 60 * 1000,
@@ -41,6 +46,8 @@ export function createAdminApp({
   authenticate = requireAuth,
   now = () => Date.now(),
   operatorLimiter = null,
+  rc = null,
+  rcConfig = null,
 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -52,13 +59,75 @@ export function createAdminApp({
 
   const limiter = operatorLimiter ?? createOperatorLimiter();
 
+  const consoleRouter = Router();
+  consoleRouter.use(adminRouter);
+
+  consoleRouter.post(
+    '/families/:familyId/grants/:grantId/rc-sync',
+    validateParams('familyId', 'grantId'),
+    async (req, res) => {
+      const familyId = Number(req.params.familyId);
+      const grantId = Number(req.params.grantId);
+
+      const client = typeof db.connect === 'function' ? await db.connect() : db;
+      let resetResult;
+      try {
+        await client.query('BEGIN');
+        resetResult = await resetGrantRcSync(client, req.adminUser.id, familyId, grantId);
+        if (resetResult.error) {
+          await client.query('ROLLBACK');
+          return sendError(res, resetResult.error.code, 'notFound', resetResult.error.message);
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        console.error('Failed to reset RC sync row:', err);
+        return sendError(res, 500, 'internal', 'Failed to retry sync.');
+      } finally {
+        if (typeof client.release === 'function') client.release();
+      }
+
+      if (!rcConfig || !rc) {
+        return res.json({ status: 'pending', mirror: 'off' });
+      }
+
+      try {
+        await syncPending(db, rc, {
+          entitlementId: rcConfig.entitlementId,
+          now,
+          grantId,
+        });
+
+        const checkClient = typeof db.connect === 'function' ? await db.connect() : db;
+        try {
+          const { rows } = await checkClient.query(
+            `SELECT status, attempts, last_error, synced_at FROM admin_rc_sync WHERE grant_id = $1`,
+            [grantId]
+          );
+          const current = rows[0];
+          return res.json({
+            status: current?.status ?? 'pending',
+            attempts: Number(current?.attempts ?? 0),
+            lastError: current?.last_error ?? null,
+            syncedAt: current?.synced_at ?? null,
+          });
+        } finally {
+          if (typeof checkClient.release === 'function') checkClient.release();
+        }
+      } catch (err) {
+        console.error('Error running syncPending on retry:', err);
+        return sendError(res, 500, 'internal', 'Failed to retry sync.');
+      }
+    }
+  );
+
   app.use('/admin-api',
     requireAccess(verifyAccess),
     authenticate,
     limiter,
     requireOperator(db),
     requireRecentSignIn(undefined, now),
-    adminRouter);
+    consoleRouter);
 
   app.use((_req, res) => {
     sendError(res, 404, 'notFound', 'Not found.');

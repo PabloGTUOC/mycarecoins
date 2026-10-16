@@ -1,0 +1,6 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2 — replace with a recorded sandbox response",
+  "object": "error",
+  "type": "resource_already_exists_error",
+  "message": "Customer with ID family_42 already exists"
+}

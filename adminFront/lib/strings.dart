@@ -113,10 +113,17 @@ class Strings {
   static const colGranted = 'Granted';
   static const colExpires = 'Expires';
   static const colStatus = 'Status';
+  static const colRevenueCat = 'RevenueCat';
 
   static const grantStatusActive = 'Active';
   static const grantStatusExpired = 'Expired';
   static const grantStatusRevoked = 'Revoked';
+
+  static const rcSyncSynced = 'Synced';
+  static const rcSyncPending = 'Pending';
+  static const rcSyncFailed = 'Failed';
+  static const rcSyncRetryBtn = 'Retry';
+  static const rcSyncRetrySuccess = 'Sync retry triggered.';
 
   static const noEvents = 'No recent billing events found.';
   static const eventType = 'Event';

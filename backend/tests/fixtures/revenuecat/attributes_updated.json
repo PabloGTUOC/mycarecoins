@@ -1,0 +1,12 @@
+{
+  "_source": "https://www.revenuecat.com/docs/api-v2/customer — replace with a recorded sandbox response",
+  "id": "family_42",
+  "object": "customer",
+  "project_id": "proj_12345",
+  "attributes": [
+    {
+      "name": "family_id",
+      "value": "42"
+    }
+  ]
+}
