@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:admin_front/api.dart';
 import 'package:admin_front/app_state.dart';
 import 'package:admin_front/auth.dart';
 import 'package:admin_front/screens/family_detail_screen.dart';
@@ -28,14 +29,15 @@ void main() {
     auth.dispose();
   });
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Future<bool> Function(Uri uri)? launchUrlFn}) {
     return ChangeNotifierProvider<AppState>.value(
       value: state,
       child: MaterialApp(
         theme: buildAdminTheme(),
-        home: const FamilyDetailScreen(
+        home: FamilyDetailScreen(
           familyId: 42,
           initialName: 'Wayne Family',
+          launchUrlFn: launchUrlFn,
         ),
       ),
     );
@@ -407,10 +409,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify column header
-    expect(find.text(Strings.colRevenueCat), findsOneWidget);
-
-    // Verify statuses in grants table
     final dataTable = find.byType(DataTable);
+    expect(
+        find.descendant(of: dataTable, matching: find.text(Strings.colRevenueCat)),
+        findsOneWidget);
     expect(
         find.descendant(of: dataTable, matching: find.text(Strings.rcSyncSynced)),
         findsOneWidget);
@@ -431,6 +433,8 @@ void main() {
     expect(retryBtns, findsNWidgets(2));
 
     // Tap retry on the failed grant (the second retry button)
+    await tester.ensureVisible(retryBtns.last);
+    await tester.pumpAndSettle();
     await tester.tap(retryBtns.last);
     await tester.pumpAndSettle();
 
@@ -439,5 +443,254 @@ void main() {
       (c) => c.method == 'POST' && c.path == '/families/42/grants/3/rc-sync',
     );
     expect(postCall, isNotNull);
+  });
+
+  testWidgets(
+      'Family detail RevenueCat card: renders populated data with customers, entitlements, and links out to dashboard',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'createdAt': '2026-01-01T10:00:00.000Z',
+      'lastActiveAt': '2026-08-15T12:00:00.000Z',
+      'status': 'active',
+    };
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [],
+      'recentEvents': [],
+    };
+    api.responses['GET:/families/42/revenuecat'] = {
+      'familyCustomer': {
+        'customerId': 'family_42',
+        'found': true,
+        'entitlements': [
+          {
+            'id': 'carecoins_free',
+            'expiresAt': '2026-12-31T00:00:00.000Z',
+            'store': 'promotional',
+            'grantType': 'free',
+          },
+        ],
+        'lastSeenAt': '2026-10-15T10:00:00.000Z',
+      },
+      'billingOwnerCustomer': {
+        'customerId': '1001',
+        'found': true,
+        'entitlements': [
+          {
+            'id': 'carecoins_pro',
+            'expiresAt': '2026-11-15T00:00:00.000Z',
+            'store': 'app_store',
+          },
+        ],
+        'lastSeenAt': '2026-10-16T08:00:00.000Z',
+      },
+      'mismatches': [],
+    };
+
+    final launchedUris = <Uri>[];
+    await tester.pumpWidget(buildTestWidget(
+      launchUrlFn: (uri) async {
+        launchedUris.add(uri);
+        return true;
+      },
+    ));
+    await tester.pumpAndSettle();
+
+    // Verify card title
+    expect(find.text(Strings.rcCardTitle), findsOneWidget);
+
+    // Verify family customer
+    expect(find.text(Strings.rcFamilyCustomerTitle), findsOneWidget);
+    expect(find.text('family_42'), findsOneWidget);
+    expect(find.text(Strings.rcStatusFound), findsNWidgets(2)); // both customers found
+
+    // Verify entitlements
+    expect(
+      find.text(Strings.rcEntitlementSummary(
+        id: 'carecoins_free',
+        expiresAt: '2026-12-31T00:00:00.000Z',
+        store: 'promotional',
+        grantType: 'free',
+      )),
+      findsOneWidget,
+    );
+
+    // Verify billing owner customer
+    expect(find.text(Strings.rcBillingOwnerCustomerTitle), findsOneWidget);
+    expect(find.text('1001'), findsOneWidget);
+
+    // Tap link out to RevenueCat dashboard for family customer
+    final openBtns = find.text(Strings.rcOpenInDashboard);
+    expect(openBtns, findsNWidgets(2));
+    await tester.tap(openBtns.first);
+    await tester.pumpAndSettle();
+
+    expect(launchedUris, hasLength(1));
+    expect(
+      launchedUris.first.toString(),
+      Strings.rcCustomerDashboardUrl('family_42'),
+    );
+  });
+
+  testWidgets(
+      'Family detail RevenueCat card: renders not-configured state on 503',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'status': 'active',
+    };
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [],
+      'recentEvents': [],
+    };
+    api.responses['GET:/families/42/revenuecat'] = AdminApiException(
+      statusCode: 503,
+      code: 'revenueCatNotConfigured',
+      message: 'RevenueCat is not configured.',
+    );
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.errRevenueCatNotConfigured), findsOneWidget);
+  });
+
+  testWidgets(
+      'Family detail RevenueCat card: renders unavailable error and allows retry with refresh=1',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'status': 'active',
+    };
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [],
+      'recentEvents': [],
+    };
+    api.responses['GET:/families/42/revenuecat'] = AdminApiException(
+      statusCode: 502,
+      code: 'revenueCatUnavailable',
+      message: 'RevenueCat unavailable',
+    );
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.errRevenueCatUnavailable), findsOneWidget);
+
+    // Provide successful response for refresh
+    api.responses['GET:/families/42/revenuecat?refresh=1'] = {
+      'familyCustomer': {
+        'customerId': 'family_42',
+        'found': true,
+        'entitlements': [],
+        'lastSeenAt': null,
+      },
+      'billingOwnerCustomer': null,
+      'mismatches': [],
+    };
+
+    // Tap retry button next to error
+    await tester.tap(find.text(Strings.retry));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.errRevenueCatUnavailable), findsNothing);
+    expect(find.text('family_42'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Family detail RevenueCat card: renders mismatch warning rows with theme warning styling',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'status': 'active',
+    };
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [],
+      'recentEvents': [],
+    };
+    api.responses['GET:/families/42/revenuecat'] = {
+      'familyCustomer': {
+        'customerId': 'family_42',
+        'found': false,
+        'entitlements': [],
+        'lastSeenAt': null,
+      },
+      'billingOwnerCustomer': null,
+      'mismatches': [
+        {
+          'code': 'freePlanNotMirrored',
+          'message': 'The family has an active grant synced in our database, but no active entitlement exists in RevenueCat.',
+        },
+      ],
+    };
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.rcMismatchTitle('freePlanNotMirrored')), findsOneWidget);
+    expect(
+      find.text('The family has an active grant synced in our database, but no active entitlement exists in RevenueCat.'),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+  });
+
+  testWidgets(
+      'Family detail RevenueCat card: handles customer not found and no billing owner',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    api.responses['GET:/families/42'] = {
+      'id': 42,
+      'name': 'Wayne Family',
+      'status': 'active',
+    };
+    api.responses['GET:/families/42/billing'] = {
+      'subscription': null,
+      'grants': [],
+      'recentEvents': [],
+    };
+    api.responses['GET:/families/42/revenuecat'] = {
+      'familyCustomer': {
+        'customerId': 'family_42',
+        'found': false,
+        'entitlements': [],
+        'lastSeenAt': null,
+      },
+      'billingOwnerCustomer': null,
+      'mismatches': [],
+    };
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.rcStatusNotFound), findsOneWidget);
+    expect(find.text(Strings.rcNoBillingOwner), findsOneWidget);
   });
 }

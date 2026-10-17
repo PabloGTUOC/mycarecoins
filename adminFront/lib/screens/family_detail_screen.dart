@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../api.dart';
 import '../app_state.dart';
 import '../strings.dart';
 import '../theme.dart';
@@ -7,11 +9,13 @@ import '../theme.dart';
 class FamilyDetailScreen extends StatefulWidget {
   final int familyId;
   final String initialName;
+  final Future<bool> Function(Uri uri)? launchUrlFn;
 
   const FamilyDetailScreen({
     super.key,
     required this.familyId,
     required this.initialName,
+    this.launchUrlFn,
   });
 
   @override
@@ -25,10 +29,67 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
   Map<String, dynamic>? _registry;
   Map<String, dynamic>? _billing;
 
+  bool _rcLoading = true;
+  bool _rcNotConfigured = false;
+  String? _rcError;
+  Map<String, dynamic>? _rcData;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _loadRevenueCat();
+  }
+
+  Future<void> _loadRevenueCat({bool refresh = false}) async {
+    setState(() {
+      _rcLoading = true;
+      _rcError = null;
+      _rcNotConfigured = false;
+    });
+
+    try {
+      final api = context.read<AppState>().api;
+      final path = refresh
+          ? '/families/${widget.familyId}/revenuecat?refresh=1'
+          : '/families/${widget.familyId}/revenuecat';
+      final res = await api.get(path);
+      if (!mounted) return;
+      setState(() {
+        _rcData = res;
+        _rcLoading = false;
+      });
+    } on AdminApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 503 || e.code == 'revenueCatNotConfigured') {
+        setState(() {
+          _rcNotConfigured = true;
+          _rcLoading = false;
+        });
+      } else {
+        setState(() {
+          _rcLoading = false;
+          _rcError = Strings.errorFor(
+            code: e.code,
+            statusCode: e.statusCode,
+            serverMessage: e.message,
+          );
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _rcLoading = false;
+        _rcError = Strings.errGenericFallback;
+      });
+    }
+  }
+
+  Future<void> _openUrl(String urlString) async {
+    final uri = Uri.parse(urlString);
+    final fn = widget.launchUrlFn ??
+        (u) => launchUrl(u, mode: LaunchMode.externalApplication);
+    await fn(uri);
   }
 
   Future<void> _load() async {
@@ -373,6 +434,291 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     );
   }
 
+  Widget _buildRcCustomerBlock(
+    String sectionTitle,
+    Map<String, dynamic>? customer, {
+    bool isBillingOwner = false,
+  }) {
+    if (customer == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            sectionTitle,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isBillingOwner ? Strings.rcNoBillingOwner : Strings.rcStatusNotFound,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      );
+    }
+
+    final customerId = customer['customerId']?.toString() ?? Strings.emptyDash;
+    final found = customer['found'] == true;
+    final rawEntitlements = (customer['entitlements'] as List?) ?? [];
+    final entitlements =
+        rawEntitlements.map((e) => (e as Map).cast<String, dynamic>()).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              sectionTitle,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () => _openUrl(Strings.rcCustomerDashboardUrl(customerId)),
+              icon: const Icon(Icons.open_in_new_rounded, size: 14),
+              label: Text(Strings.rcOpenInDashboard),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _infoRow(Strings.rcCustomerIdLabel, customerId),
+        _infoRow(
+          Strings.rcStatusLabel,
+          found ? Strings.rcStatusFound : Strings.rcStatusNotFound,
+        ),
+        if (found) ...[
+          _infoRow(
+            Strings.rcLastSeenLabel,
+            Strings.formatDate(customer['lastSeenAt']),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 180,
+                  child: Text(
+                    Strings.rcActiveEntitlementsTitle,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: entitlements.isEmpty
+                      ? Text(
+                          Strings.rcNoActiveEntitlements,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (final e in entitlements)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  Strings.rcEntitlementSummary(
+                                    id: e['id']?.toString() ?? Strings.emptyDash,
+                                    expiresAt: e['expiresAt'],
+                                    store: e['store']?.toString(),
+                                    grantType: e['grantType']?.toString(),
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRevenueCatCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  Strings.rcCardTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  tooltip: Strings.rcRefreshBtn,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  onPressed:
+                      _rcLoading ? null : () => _loadRevenueCat(refresh: true),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            if (_rcLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        Strings.rcLoading,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_rcNotConfigured)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  Strings.errRevenueCatNotConfigured,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13.5,
+                  ),
+                ),
+              )
+            else if (_rcError != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _rcError!,
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _loadRevenueCat(refresh: true),
+                      child: Text(Strings.retry),
+                    ),
+                  ],
+                ),
+              )
+            else if (_rcData != null) ...[
+              () {
+                final rawMismatches = (_rcData!['mismatches'] as List?) ?? [];
+                final mismatches = rawMismatches
+                    .map((m) => (m as Map).cast<String, dynamic>())
+                    .toList();
+                if (mismatches.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  children: [
+                    for (final m in mismatches)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningSoft,
+                          borderRadius: BorderRadius.circular(AppRadii.sm),
+                          border: Border.all(color: AppColors.warning),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppColors.warningStrong,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    Strings.rcMismatchTitle(
+                                      m['code']?.toString() ?? '',
+                                    ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                      color: AppColors.warningInk,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    m['message']?.toString() ??
+                                        Strings.emptyDash,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.warningInk,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                  ],
+                );
+              }(),
+              _buildRcCustomerBlock(
+                Strings.rcFamilyCustomerTitle,
+                (_rcData!['familyCustomer'] as Map?)?.cast<String, dynamic>(),
+              ),
+              const Divider(height: 24),
+              _buildRcCustomerBlock(
+                Strings.rcBillingOwnerCustomerTitle,
+                (_rcData!['billingOwnerCustomer'] as Map?)
+                    ?.cast<String, dynamic>(),
+                isBillingOwner: true,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   (String, Color) _grantStatus(Map<String, dynamic> g) {
     if (g['revokedAt'] != null) {
       return (Strings.grantStatusRevoked, AppColors.dangerInk);
@@ -690,7 +1036,10 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
           IconButton(
             tooltip: Strings.retry,
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _load,
+            onPressed: () {
+              _load();
+              _loadRevenueCat(refresh: true);
+            },
           ),
         ],
       ),
@@ -724,6 +1073,8 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                       _buildRegistryCard(),
                       const SizedBox(height: 16),
                       _buildBillingCard(),
+                      const SizedBox(height: 16),
+                      _buildRevenueCatCard(),
                       const SizedBox(height: 16),
                       _buildGrantsCard(),
                       const SizedBox(height: 16),

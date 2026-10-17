@@ -929,3 +929,330 @@ describe('GET /admin-api/overview', () => {
   });
 });
 
+describe('GET /admin-api/families/:familyId/revenuecat', () => {
+  const fresh = NOW / 1000 - 60;
+
+  function mockFamilyDb({ familyExists = true, plan = null, grants = [] } = {}) {
+    return {
+      async query(sql, params) {
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        if (sql.includes('admin_family_registry')) {
+          return { rows: familyExists ? [{ id: params[0] }] : [] };
+        }
+        if (sql.includes('family_plans')) {
+          return { rows: plan ? [plan] : [] };
+        }
+        if (sql.includes('admin_grants')) {
+          return { rows: grants };
+        }
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('returns 200 with both customers and active entitlements when mirror is on', async () => {
+    const db = mockFamilyDb({
+      plan: { plan_code: 'pro', status: 'active', provider: 'revenuecat', billing_owner_user_id: 10 },
+      grants: [{ id: 1, plan_code: 'free', sync_status: 'synced' }],
+    });
+
+    const fakeRc = {
+      async getCustomer(id) {
+        if (id === 'family_1') {
+          return {
+            id: 'family_1',
+            active_entitlements: {
+              items: [{ entitlement_id: 'ent_free', expires_at: NOW + 30 * 24 * 60 * 60 * 1000, store: 'promotional', grant_type: 'free' }],
+            },
+            last_seen_at: NOW - 1000,
+          };
+        }
+        if (id === '10') {
+          return {
+            id: '10',
+            active_entitlements: {
+              items: [{ entitlement_id: 'ent_free', expires_at: NOW + 30 * 24 * 60 * 60 * 1000, store: 'app_store' }],
+            },
+            last_seen_at: NOW - 1000,
+          };
+        }
+        throw new RevenueCatError({ kind: 'rejected', status: 404, message: 'Not found' });
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+
+    const res = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.familyCustomer.customerId, 'family_1');
+    assert.equal(res.body.familyCustomer.found, true);
+    assert.equal(res.body.familyCustomer.entitlements.length, 1);
+    assert.equal(res.body.familyCustomer.entitlements[0].id, 'ent_free');
+    assert.equal(res.body.familyCustomer.entitlements[0].store, 'promotional');
+    assert.equal(res.body.familyCustomer.entitlements[0].grantType, 'free');
+    assert.equal(res.body.billingOwnerCustomer.customerId, '10');
+    assert.equal(res.body.billingOwnerCustomer.found, true);
+    assert.equal(res.body.billingOwnerCustomer.entitlements.length, 1);
+    assert.deepEqual(res.body.mismatches, []);
+  });
+
+  test('returns 404 notFound when family does not exist in registry', async () => {
+    const db = mockFamilyDb({ familyExists: false });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: { async getCustomer() {} },
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+
+    const res = await request(app).get('/admin-api/families/999/revenuecat');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.code, 'notFound');
+  });
+
+  test('returns 503 revenueCatNotConfigured when mirror config is off', async () => {
+    const db = mockFamilyDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: null,
+      rcConfig: null,
+    });
+
+    const res = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res.status, 503);
+    assert.equal(res.body.code, 'revenueCatNotConfigured');
+  });
+
+  test('handles RevenueCat 404 as found: false without error', async () => {
+    const db = mockFamilyDb({
+      plan: { plan_code: 'pro', status: 'canceled', provider: 'stripe', billing_owner_user_id: null },
+      grants: [],
+    });
+
+    const fakeRc = {
+      async getCustomer() {
+        throw new RevenueCatError({ kind: 'rejected', status: 404, message: 'Customer not found' });
+      },
+    };
+
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+
+    const res = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.familyCustomer, {
+      customerId: 'family_1',
+      found: false,
+      entitlements: [],
+      lastSeenAt: null,
+    });
+    assert.equal(res.body.billingOwnerCustomer, null);
+    assert.deepEqual(res.body.mismatches, []);
+  });
+
+  test('returns 502 revenueCatUnavailable / revenueCatRejected on RevenueCat error', async () => {
+    const db = mockFamilyDb();
+
+    // Unavailable
+    const unavailableRc = {
+      async getCustomer() {
+        throw new RevenueCatError({ kind: 'unavailable', status: 503, message: 'RC unavailable' });
+      },
+    };
+    const app1 = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: unavailableRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+    const res1 = await request(app1).get('/admin-api/families/1/revenuecat');
+    assert.equal(res1.status, 502);
+    assert.equal(res1.body.code, 'revenueCatUnavailable');
+
+    // Rejected
+    const rejectedRc = {
+      async getCustomer() {
+        throw new RevenueCatError({ kind: 'rejected', status: 401, message: 'Invalid credentials' });
+      },
+    };
+    const app2 = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      rc: rejectedRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+    const res2 = await request(app2).get('/admin-api/families/1/revenuecat');
+    assert.equal(res2.status, 502);
+    assert.equal(res2.body.code, 'revenueCatRejected');
+  });
+
+  test('caches result for 60 seconds and supports ?refresh=1 bypass', async () => {
+    const db = mockFamilyDb({
+      plan: null,
+      grants: [],
+    });
+
+    let callCount = 0;
+    const fakeRc = {
+      async getCustomer(id) {
+        callCount++;
+        return { id, active_entitlements: { items: [] } };
+      },
+    };
+
+    let currentNow = NOW;
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => currentNow,
+      rc: fakeRc,
+      rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+    });
+
+    // 1st call: queries RC
+    const res1 = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res1.status, 200);
+    assert.equal(callCount, 1);
+
+    // 2nd call at +30s: hits cache
+    currentNow = NOW + 30 * 1000;
+    const res2 = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res2.status, 200);
+    assert.equal(callCount, 1);
+
+    // 3rd call at +70s: cache expired, queries RC
+    currentNow = NOW + 70 * 1000;
+    const res3 = await request(app).get('/admin-api/families/1/revenuecat');
+    assert.equal(res3.status, 200);
+    assert.equal(callCount, 2);
+
+    // 4th call at +75s with ?refresh=1: bypasses cache
+    currentNow = NOW + 75 * 1000;
+    const res4 = await request(app).get('/admin-api/families/1/revenuecat?refresh=1');
+    assert.equal(res4.status, 200);
+    assert.equal(callCount, 3);
+  });
+
+  test('identifies all 4 mismatch conditions', async () => {
+    // 1. freePlanNotMirrored: DB has active synced grant, but family customer has no active RC entitlement
+    {
+      const db = mockFamilyDb({
+        grants: [{ id: 1, plan_code: 'free', sync_status: 'synced' }],
+      });
+      const rc = {
+        async getCustomer() {
+          return { active_entitlements: { items: [] } };
+        },
+      };
+      const app = createAdminApp({
+        db,
+        authenticate: fakeAuth('uid-admin', fresh),
+        now: () => NOW,
+        rc,
+        rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+      });
+      const res = await request(app).get('/admin-api/families/1/revenuecat');
+      assert.equal(res.status, 200);
+      assert.equal(res.body.mismatches.some((m) => m.code === 'freePlanNotMirrored'), true);
+    }
+
+    // 2. mirrorStale: DB has no active grant, but family customer has active RC entitlement
+    {
+      const db = mockFamilyDb({ grants: [] });
+      const rc = {
+        async getCustomer() {
+          return {
+            active_entitlements: {
+              items: [{ entitlement_id: 'ent_free', expires_at: NOW + 100000 }],
+            },
+          };
+        },
+      };
+      const app = createAdminApp({
+        db,
+        authenticate: fakeAuth('uid-admin', fresh),
+        now: () => NOW,
+        rc,
+        rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+      });
+      const res = await request(app).get('/admin-api/families/1/revenuecat');
+      assert.equal(res.status, 200);
+      assert.equal(res.body.mismatches.some((m) => m.code === 'mirrorStale'), true);
+    }
+
+    // 3. subscriptionMissingInRevenueCat: DB has active RC subscription, but billing owner has no entitlement
+    {
+      const db = mockFamilyDb({
+        plan: { plan_code: 'pro', status: 'active', provider: 'revenuecat', billing_owner_user_id: 10 },
+      });
+      const rc = {
+        async getCustomer() {
+          return { active_entitlements: { items: [] } };
+        },
+      };
+      const app = createAdminApp({
+        db,
+        authenticate: fakeAuth('uid-admin', fresh),
+        now: () => NOW,
+        rc,
+        rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+      });
+      const res = await request(app).get('/admin-api/families/1/revenuecat');
+      assert.equal(res.status, 200);
+      assert.equal(res.body.mismatches.some((m) => m.code === 'subscriptionMissingInRevenueCat'), true);
+    }
+
+    // 4. subscriptionMissingHere: billing owner has active entitlement, but DB is not active RC sub
+    {
+      const db = mockFamilyDb({
+        plan: { plan_code: 'pro', status: 'canceled', provider: 'revenuecat', billing_owner_user_id: 10 },
+      });
+      const rc = {
+        async getCustomer(id) {
+          if (id === '10') {
+            return {
+              active_entitlements: {
+                items: [{ entitlement_id: 'ent_free', expires_at: NOW + 100000 }],
+              },
+            };
+          }
+          return { active_entitlements: { items: [] } };
+        },
+      };
+      const app = createAdminApp({
+        db,
+        authenticate: fakeAuth('uid-admin', fresh),
+        now: () => NOW,
+        rc,
+        rcConfig: { apiKey: 'k', projectId: 'p', entitlementId: 'ent_free' },
+      });
+      const res = await request(app).get('/admin-api/families/1/revenuecat');
+      assert.equal(res.status, 200);
+      assert.equal(res.body.mismatches.some((m) => m.code === 'subscriptionMissingHere'), true);
+    }
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/families/:familyId/revenuecat'
+    );
+    assert.equal(hasRoute, false);
+  });
+});
+

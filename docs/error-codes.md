@@ -135,6 +135,9 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `recurrenceTooManyOccurrences` | 400 | `{ max }` | A repeating request cannot cover more than 60 occurrences — pick a nearer end date. |
 | `recurrenceWeekdaysOnWeekend` | 400 | — | A weekdays repeat has to start on a weekday. |
 | `retentionFamilyBecameActive` | 409 | — | Family became active again — skipped. |
+| `revenueCatNotConfigured` | 503 | — | RevenueCat API is not configured. Operator console API only. |
+| `revenueCatRejected` | 502 | — | RevenueCat request was rejected. Operator console API only. |
+| `revenueCatUnavailable` | 502 | — | RevenueCat service is unavailable. Operator console API only. |
 | `rewardExpired` | 409 | — | Reward has expired. |
 | `rewardFieldsRequired` | 400 | — | familyId, title and cost are required. |
 | `rewardIdInvalidUuid` | 400 | `{ field }` | rewardId: must be a valid UUID |

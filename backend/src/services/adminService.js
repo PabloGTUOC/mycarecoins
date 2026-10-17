@@ -525,3 +525,141 @@ export async function getOverview(client, { nowMs = Date.now() } = {}) {
     },
   };
 }
+
+// ─── Family RevenueCat State & Mismatches (MP3c) ──────────────────────────────
+
+export async function getFamilyRevenueCatStatus(client, familyId, rcClient, rcConfig, { nowMs = Date.now() } = {}) {
+  const { rows: famRows } = await client.query(
+    `SELECT id FROM admin_family_registry WHERE id = $1`,
+    [familyId]
+  );
+  if (!famRows.length) {
+    return { error: { code: 404, message: 'Family not found.' } };
+  }
+
+  const { rows: planRows } = await client.query(
+    `SELECT plan_code, status, provider, billing_owner_user_id
+     FROM family_plans
+     WHERE family_id = $1`,
+    [familyId]
+  );
+  const sub = planRows[0] || null;
+
+  const { rows: grantRows } = await client.query(
+    `SELECT g.id, g.plan_code, s.status AS sync_status
+     FROM admin_grants g
+     LEFT JOIN admin_rc_sync s ON s.grant_id = g.id
+     WHERE g.family_id = $1
+       AND g.revoked_at IS NULL
+       AND (g.expires_at IS NULL OR g.expires_at > NOW())`,
+    [familyId]
+  );
+
+  async function lookupCustomer(customerId) {
+    try {
+      // https://www.revenuecat.com/docs/api-v2/customer
+      const raw = await rcClient.getCustomer(customerId);
+      const activeItems = raw?.active_entitlements?.items || [];
+      const entitlements = activeItems.map((e) => {
+        const item = {
+          id: e.entitlement_id ?? e.id ?? null,
+          expiresAt: e.expires_at ? new Date(e.expires_at).toISOString() : null,
+        };
+        if (e.store != null) item.store = e.store;
+        if (e.grant_type != null) item.grantType = e.grant_type;
+        return item;
+      });
+      return {
+        customerId,
+        found: true,
+        entitlements,
+        lastSeenAt: raw.last_seen_at ? new Date(raw.last_seen_at).toISOString() : null,
+      };
+    } catch (err) {
+      if (err.status === 404) {
+        return {
+          customerId,
+          found: false,
+          entitlements: [],
+          lastSeenAt: null,
+        };
+      }
+      throw err;
+    }
+  }
+
+  const familyCustomerId = `family_${familyId}`;
+  const familyCustomer = await lookupCustomer(familyCustomerId);
+
+  let billingOwnerCustomer = null;
+  if (sub?.billing_owner_user_id != null) {
+    billingOwnerCustomer = await lookupCustomer(String(sub.billing_owner_user_id));
+  }
+
+  const entitlementId = rcConfig?.entitlementId;
+
+  const hasActiveGrant = grantRows.length > 0;
+  const hasSyncedActiveGrant = grantRows.some((g) => g.sync_status === 'synced');
+
+  const familyHasEntitlement = Boolean(
+    familyCustomer.found &&
+    familyCustomer.entitlements.some(
+      (e) => (!entitlementId || e.id === entitlementId) && (!e.expiresAt || new Date(e.expiresAt).getTime() > nowMs)
+    )
+  );
+
+  const billingOwnerHasEntitlement = Boolean(
+    billingOwnerCustomer?.found &&
+    billingOwnerCustomer.entitlements.some(
+      (e) => (!entitlementId || e.id === entitlementId) && (!e.expiresAt || new Date(e.expiresAt).getTime() > nowMs)
+    )
+  );
+
+  const isRcSubscription = sub?.provider === 'revenuecat' && ['active', 'trialing', 'in_grace'].includes(sub?.status);
+
+  const mismatches = [];
+
+  // 1. freePlanNotMirrored: the family has an active grant whose sync row is synced,
+  // but the family customer has no active RC_ENTITLEMENT_ID entitlement.
+  if (hasSyncedActiveGrant && !familyHasEntitlement) {
+    mismatches.push({
+      code: 'freePlanNotMirrored',
+      message: 'The family has an active grant synced in our database, but no active entitlement exists in RevenueCat.',
+    });
+  }
+
+  // 2. mirrorStale: the family has no active grant, but the family customer still has
+  // the entitlement active.
+  if (!hasActiveGrant && familyHasEntitlement) {
+    mismatches.push({
+      code: 'mirrorStale',
+      message: 'The family has no active grant in our database, but the entitlement is still active in RevenueCat.',
+    });
+  }
+
+  // 3. subscriptionMissingInRevenueCat: family_plans says active/trialing/in_grace from
+  // provider revenuecat, but the billing owner customer has no active entitlement.
+  if (isRcSubscription && !billingOwnerHasEntitlement) {
+    mismatches.push({
+      code: 'subscriptionMissingInRevenueCat',
+      message: 'The subscription is active in CareCoins via RevenueCat, but no active entitlement exists on the billing owner in RevenueCat.',
+    });
+  }
+
+  // 4. subscriptionMissingHere: the billing owner customer has the entitlement active
+  // but family_plans is not in one of those statuses (a missed webhook).
+  if (billingOwnerHasEntitlement && !isRcSubscription) {
+    mismatches.push({
+      code: 'subscriptionMissingHere',
+      message: 'The billing owner customer has an active entitlement in RevenueCat, but the family does not have an active subscription in CareCoins.',
+    });
+  }
+
+  return {
+    data: {
+      familyCustomer,
+      billingOwnerCustomer,
+      mismatches,
+    },
+  };
+}

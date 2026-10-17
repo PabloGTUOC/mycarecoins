@@ -21,7 +21,7 @@ import { requireOperator, requireRecentSignIn } from './operator.js';
 
 import { Router } from 'express';
 import { validateParams } from '../middleware/validate.js';
-import { getOverview, logAdminAction, resetGrantRcSync } from '../services/adminService.js';
+import { getOverview, logAdminAction, resetGrantRcSync, getFamilyRevenueCatStatus } from '../services/adminService.js';
 import { syncPending } from './rcSync.js';
 import { AppStoreError } from './appstore.js';
 import { RevenueCatError } from './revenuecat.js';
@@ -220,6 +220,49 @@ export function createAdminApp({
       } catch (err) {
         console.error('Error running syncPending on retry:', err);
         return sendError(res, 500, 'internal', 'Failed to retry sync.');
+      }
+    }
+  );
+
+  const familyRcCache = new Map();
+
+  consoleRouter.get(
+    '/families/:familyId/revenuecat',
+    validateParams('familyId'),
+    async (req, res) => {
+      if (!rcConfig || !rc) {
+        return sendError(res, 503, 'revenueCatNotConfigured', 'RevenueCat is not configured.');
+      }
+
+      const familyId = Number(req.params.familyId);
+      const nowMs = typeof now === 'function' ? now() : Date.now();
+      const bypassCache = req.query.refresh === '1';
+
+      if (!bypassCache && familyRcCache.has(familyId)) {
+        const cached = familyRcCache.get(familyId);
+        if (nowMs - cached.timestamp < 60 * 1000) {
+          return res.json(cached.data);
+        }
+      }
+
+      const client = typeof db.connect === 'function' ? await db.connect() : db;
+      try {
+        const result = await getFamilyRevenueCatStatus(client, familyId, rc, rcConfig, { nowMs });
+        if (result.error) {
+          return sendError(res, result.error.code, result.error.code === 404 ? 'notFound' : 'internal', result.error.message);
+        }
+        familyRcCache.set(familyId, { data: result.data, timestamp: nowMs });
+        return res.json(result.data);
+      } catch (err) {
+        if (err instanceof RevenueCatError || err?.name === 'RevenueCatError') {
+          const isUnavailable = err.kind === 'unavailable';
+          const code = isUnavailable ? 'revenueCatUnavailable' : 'revenueCatRejected';
+          return sendError(res, 502, code, err.message || 'Failed to fetch RevenueCat customer.');
+        }
+        console.error('Failed to get family RevenueCat status:', err);
+        return sendError(res, 500, 'internal', 'Failed to fetch RevenueCat status.');
+      } finally {
+        if (typeof client.release === 'function') client.release();
       }
     }
   );

@@ -67,6 +67,9 @@ void main() {
       'appStoreRejected': 'Operator console API only.',
       'appStoreUnavailable': 'Operator console API only.',
       'rateLimited': 'Operator console API only.',
+      'revenueCatNotConfigured': 'Operator console API only.',
+      'revenueCatRejected': 'Operator console API only.',
+      'revenueCatUnavailable': 'Operator console API only.',
     };
 
     final dummyParams = <String, dynamic>{

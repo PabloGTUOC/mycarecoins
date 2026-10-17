@@ -755,5 +755,38 @@ Overview dashboard for the operator console combining internal platform figures,
 4. **Webhook Re-process deferred**:
    - Webhook re-processing requires access to `billing_events.payload`, which is forbidden to the `carecoins_admin` Postgres role. Deferring until decided whether to grant column read or proxy via public backend (see §9 item 5).
 
+### Phase 3 — part 3 (MP3c): Family detail RevenueCat state and mismatch flags (2026-10-16)
+
+Operator console Family detail RevenueCat integration and automated mismatch detection:
+1. **`GET /admin-api/families/:familyId/revenuecat` endpoint**:
+   - Mounted exclusively on `consoleRouter` under `/admin-api/families/:familyId/revenuecat` (never on public `/api/admin`, verified by route isolation tests).
+   - Read-only; no recent-sign-in check.
+   - Status 503 `revenueCatNotConfigured` when mirror configuration (`RC_SECRET_API_KEY`, `RC_PROJECT_ID`, `RC_ENTITLEMENT_ID`) is off.
+   - Lookups performed via RevenueCat v2 customer API (`https://www.revenuecat.com/docs/api-v2/customer`):
+     - **Family customer**: `family_<id>` representing free-plan grant mirrors.
+     - **Billing owner customer**: `family_plans.billing_owner_user_id` as the RevenueCat app user ID (confirmed in `fluterFront/lib/services/purchase_service.dart:66`: `Purchases.logIn(backendUserId)` logs in with the backend user ID). Skipped when `billing_owner_user_id` is null.
+   - Response shape per customer: `{ customerId, found, entitlements: [{ id, expiresAt, store, grantType }], lastSeenAt }`. RC 404 responses are caught and converted to `found: false` without failing the request. Attributes other than `family_id` are never queried or returned; emails and personal identifiers are strictly excluded.
+   - In-memory cache per family for 60 seconds; `?refresh=1` query parameter bypasses cache.
+   - RevenueCat errors mapped to HTTP 502 with codes `revenueCatUnavailable` or `revenueCatRejected`.
+2. **Mismatch Flags**:
+   Computed server-side as an array of `{ code, message }` items:
+   - `freePlanNotMirrored`: The family has an active grant in CareCoins whose sync status is `synced`, but the family customer in RevenueCat has no active `RC_ENTITLEMENT_ID` entitlement. *Meaning for operator*: The grant was marked synced or RevenueCat lost the grant entitlement; operator should trigger a sync retry.
+   - `mirrorStale`: The family has no active grant in CareCoins, but the family customer still has an active entitlement in RevenueCat. *Meaning for operator*: A grant was revoked or expired but the entitlement was not revoked in RevenueCat; operator should inspect or revoke in RevenueCat dashboard.
+   - `subscriptionMissingInRevenueCat`: `family_plans` shows status `active`, `trialing`, or `in_grace` with provider `revenuecat`, but the billing owner customer in RevenueCat has no active entitlement. *Meaning for operator*: CareCoins believes the user is subscribed, but RevenueCat has no active subscription for this user; user may have canceled or been refunded without a webhook firing.
+   - `subscriptionMissingHere`: The billing owner customer has an active entitlement in RevenueCat, but `family_plans` in CareCoins is not in `active`, `trialing`, or `in_grace`. *Meaning for operator*: A customer purchased or renewed in App Store / Play Store through RevenueCat, but the CareCoins webhook failed, was dropped, or hasn't arrived; operator should check webhook health or investigate.
+3. **Frontend Console (`adminFront`)**:
+   - Family detail screen contains a dedicated **RevenueCat** card placed under the Billing card.
+   - Loads asynchronously on open separately from registry and billing data, ensuring slow external network responses never block screen render.
+   - Displays family customer and billing owner customer state (`Found in RevenueCat` with ID, last seen timestamp, active entitlements with expiry dates and store/grant types; or `Not in RevenueCat`).
+   - Mismatch warning rows rendered in theme warning styling (`AppColors.warningSoft` background, `AppColors.warning` border, `AppColors.warningInk` text, and `Icons.warning_amber_rounded`).
+   - Handles `not configured` (503), `unavailable` (502), and `loading` states cleanly.
+   - Card header contains a **Refresh** button to bypass cache (`?refresh=1`).
+   - Provides direct link out buttons ("Open in RevenueCat") to the customer search in the RevenueCat dashboard using URL constant pattern (`https://app.revenuecat.com/customers?query=<customerId>`).
+   - Strict `strings.dart` compliance: zero raw text literals outside `strings.dart` (enforced by `guard_test.dart`).
+4. **Error Codes Added**:
+   - Cataloged in `docs/error-codes.md`: `revenueCatNotConfigured` (503), `revenueCatUnavailable` (502), `revenueCatRejected` (502).
+   - Exempted in `fluterFront/test/server_errors_p6_6_test.dart` operator console list.
+
+
 
 

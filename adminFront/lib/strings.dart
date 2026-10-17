@@ -189,6 +189,27 @@ class Strings {
   static const eventProcessedYes = 'Yes';
   static const eventProcessedNo = 'No';
 
+  // ─── RevenueCat Card (Family Detail) ─────────────────────────────────────────
+  static const rcCardTitle = 'RevenueCat';
+  static const rcFamilyCustomerTitle = 'Family Customer';
+  static const rcBillingOwnerCustomerTitle = 'Billing Owner Customer';
+  static const rcCustomerIdLabel = 'Customer ID';
+  static const rcLastSeenLabel = 'Last Seen';
+  static const rcStatusLabel = 'Status';
+  static const rcStatusFound = 'Found in RevenueCat';
+  static const rcStatusNotFound = 'Not in RevenueCat';
+  static const rcNoBillingOwner = 'No billing owner assigned to this family.';
+  static const rcActiveEntitlementsTitle = 'Active Entitlements';
+  static const rcNoActiveEntitlements = 'No active entitlements.';
+  static const rcMismatchesTitle = 'Mismatch Flags';
+  static const rcNoMismatches = 'No mismatches detected.';
+  static const rcRefreshBtn = 'Refresh';
+  static const rcOpenInDashboard = 'Open in RevenueCat';
+  static const rcLoading = 'Loading RevenueCat state...';
+  static const rcCustomerDashboardUrlPattern = 'https://app.revenuecat.com/customers';
+  static String rcCustomerDashboardUrl(String customerId) =>
+      '$rcCustomerDashboardUrlPattern?query=${Uri.encodeComponent(customerId)}';
+
   // ─── Plans ───────────────────────────────────────────────────────────────────
   static const plansTitle = 'Plan Catalogue';
   static const newPlanBtn = 'New Plan';
@@ -274,6 +295,10 @@ class Strings {
   static const errAppStoreUnavailable =
       'App Store service is temporarily unavailable.';
   static const errAppStoreRejected = 'App Store request failed.';
+  static const errRevenueCatNotConfigured = 'RevenueCat is not configured.';
+  static const errRevenueCatUnavailable =
+      'RevenueCat service is temporarily unavailable.';
+  static const errRevenueCatRejected = 'RevenueCat request failed.';
   static const errGenericFallback =
       'An unexpected error occurred. Please try again.';
 
@@ -365,6 +390,15 @@ class Strings {
     }
     if (code == 'appStoreRejected') {
       return errAppStoreRejected;
+    }
+    if (code == 'revenueCatNotConfigured') {
+      return errRevenueCatNotConfigured;
+    }
+    if (code == 'revenueCatUnavailable') {
+      return errRevenueCatUnavailable;
+    }
+    if (code == 'revenueCatRejected') {
+      return errRevenueCatRejected;
     }
     if (serverMessage != null && serverMessage.trim().isNotEmpty) {
       return serverMessage.trim();
@@ -497,5 +531,35 @@ class Strings {
       return '$valStr ${unit.toString()}';
     }
     return valStr;
+  }
+
+  static String rcEntitlementSummary({
+    required String id,
+    dynamic expiresAt,
+    String? store,
+    String? grantType,
+  }) {
+    final parts = <String>[id];
+    if (store != null && store.isNotEmpty) parts.add(store);
+    if (grantType != null && grantType.isNotEmpty) parts.add(grantType);
+    if (expiresAt != null) {
+      parts.add('Expires: ${formatDate(expiresAt)}');
+    }
+    return parts.join(' · ');
+  }
+
+  static String rcMismatchTitle(String code) {
+    switch (code) {
+      case 'freePlanNotMirrored':
+        return 'Free plan not mirrored';
+      case 'mirrorStale':
+        return 'Mirror stale';
+      case 'subscriptionMissingInRevenueCat':
+        return 'Subscription missing in RevenueCat';
+      case 'subscriptionMissingHere':
+        return 'Subscription missing in CareCoins';
+      default:
+        return 'RevenueCat mismatch';
+    }
   }
 }
