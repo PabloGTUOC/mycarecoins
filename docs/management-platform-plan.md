@@ -553,7 +553,7 @@ it can start in parallel.
    (for example to fix an unattributed purchase by hand), or only re-process the webhook.
    Proposed: re-process only, plus a documented manual fix in RevenueCat.
 4. The Phase 0 findings on RevenueCat charts and webhook events (§4).
-5. Webhook Re-process needs either a payload grant for the admin role on `billing_events` or a public-backend endpoint the console calls; decide before building it.
+5. Webhook Re-process: Decided on 2026-10-17: the public backend re-processes; admin-api calls it over the internal Docker network; the `carecoins_admin` Postgres role still never reads `billing_events.payload`. Implemented in Phase 3 part 4 (MP3d).
 
 ---
 
@@ -786,6 +786,29 @@ Operator console Family detail RevenueCat integration and automated mismatch det
 4. **Error Codes Added**:
    - Cataloged in `docs/error-codes.md`: `revenueCatNotConfigured` (503), `revenueCatUnavailable` (502), `revenueCatRejected` (502).
    - Exempted in `fluterFront/test/server_errors_p6_6_test.dart` operator console list.
+
+### Phase 3 — part 4 (MP3d): Webhook Re-process through public backend (2026-10-17)
+
+Webhook re-processing through the public backend over the internal network, preserving the strict database boundary where `carecoins_admin` never reads `billing_events.payload`:
+1. **Public backend reprocess service & endpoint**:
+   - `backend/src/services/billingService.js`: Split `processWebhookEvent` into the insert/dedupe step and `applyStoredEvent(client, eventRow)`. Implemented `reprocessEvent(client, eventId)`: `SELECT id, event_id, event_type, family_id, payload, processed, created_at FROM billing_events WHERE id = $1 FOR UPDATE`, returns 404 `notFound` if missing, then runs `applyStoredEvent` re-reading attribution from the stored payload. Guarantees that only unprocessed events may be re-processed (409 `reprocessAlreadyProcessed`), and events older than a processed event for the same family (by `event_timestamp_ms` or `created_at`) are marked processed with outcome `stale` without altering `family_plans`. Returns `{ processed, outcome }` where outcome is `applied` / `ignored` / `unattributed` / `promotional_mirror` / `stale`.
+   - `backend/src/routes/internal.js`: New internal router mounted in `src/app.js` at `/internal` (not under `/api`; frontend nginx only proxies `/api/` and `/uploads/`, and backend publishes no host ports, making `/internal` completely unreachable externally).
+   - Shared secret security: Header `X-Internal-Token` compared against `INTERNAL_API_TOKEN` using `crypto.timingSafeEqual` on equal-length buffers. Missing, unset, or mismatched tokens return 404 `notFound` so the route is not advertised. Rate-limited by its own dedicated limiter.
+   - Separation test clean: `src/app.js` never imports from `src/admin/`.
+2. **admin-api proxy & audit**:
+   - `POST /admin-api/webhooks/:eventId/reprocess`: Protected by `requireRecentSignIn`. Writes `admin_audit_log` (`action: 'webhook.reprocess'`, `targetType: 'billing_event'`, `targetId: String(eventId)`, `payload: { eventId, outcome }`).
+   - Resolves `backend` on Docker compose default network (`INTERNAL_API_URL`, default `http://backend:3000`) with a 10s timeout (`AbortSignal.timeout(10000)`).
+   - Maps 404 → `notFound`, network errors/5xx → 502 `reprocessUnavailable`.
+   - Status 503 `reprocessNotConfigured` when `INTERNAL_API_TOKEN` is unset.
+   - `GET /admin-api/overview`: Includes `webhooks.reprocess: 'on' | 'off'` depending on whether `INTERNAL_API_TOKEN` is configured.
+3. **Console UI (`adminFront`)**:
+   - Overview webhook card shows a **Re-process** button on each recent unattributed or unprocessed event when `webhooks.reprocess == 'on'` (hidden when `'off'`).
+   - Tapping Re-process opens a confirmation dialog. On confirmation, runs through `app.runMutation` (re-auth flow if sign-in is stale), displays a SnackBar with the outcome, and refreshes the overview figures.
+   - All strings defined in `strings.dart` (enforced by `guard_test.dart`).
+4. **Error Codes & Config**:
+   - Registered `reprocessNotConfigured` (503) and `reprocessUnavailable` (502) in `docs/error-codes.md` and `fluterFront/test/server_errors_p6_6_test.dart`.
+   - Documented `INTERNAL_API_TOKEN` in `backend/.env.example` and `backend/admin.env.example`, and `INTERNAL_API_URL` in `backend/admin.env.example`.
+   - Added `INTERNAL_API_TOKEN` non-empty warning check in `scripts/deploy.sh` `--admin` preflight.
 
 
 

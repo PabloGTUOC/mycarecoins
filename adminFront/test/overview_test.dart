@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:admin_front/api.dart';
 import 'package:admin_front/app_state.dart';
 import 'package:admin_front/auth.dart';
 import 'package:admin_front/main.dart';
@@ -269,5 +270,141 @@ void main() {
 
     // Overview title is present
     expect(find.text(Strings.overviewTitle), findsWidgets);
+  });
+
+  testWidgets(
+      'webhook re-process button is visible when reprocess is on and hidden when off',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    // 1. Reprocess is off
+    final dataOff = Map<String, dynamic>.from(fullOverviewData);
+    dataOff['webhooks'] = {
+      ...fullOverviewData['webhooks'] as Map<String, dynamic>,
+      'reprocess': 'off',
+    };
+    api.responses['GET:/overview'] = dataOff;
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Expand recent issues
+    await tester.tap(find.text(Strings.recentWebhookIssues));
+    await tester.pumpAndSettle();
+
+    expect(find.text('#101'), findsOneWidget);
+    expect(find.text(Strings.reprocessBtn), findsNothing);
+
+    // 2. Reprocess is on
+    final dataOn = Map<String, dynamic>.from(fullOverviewData);
+    dataOn['webhooks'] = {
+      ...fullOverviewData['webhooks'] as Map<String, dynamic>,
+      'reprocess': 'on',
+    };
+    api.responses['GET:/overview?refresh=1'] = dataOn;
+
+    // Refresh overview
+    await tester.tap(find.text(Strings.refreshBtn));
+    await tester.pumpAndSettle();
+
+    // Re-process button is now visible
+    expect(find.text(Strings.reprocessBtn), findsOneWidget);
+  });
+
+  testWidgets(
+      'webhook re-process confirm dialog flow, mutation, and outcome snackbar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final dataOn = Map<String, dynamic>.from(fullOverviewData);
+    dataOn['webhooks'] = {
+      ...fullOverviewData['webhooks'] as Map<String, dynamic>,
+      'reprocess': 'on',
+    };
+    api.responses['GET:/overview'] = dataOn;
+    api.responses['POST:/webhooks/101/reprocess'] = {
+      'processed': true,
+      'outcome': 'applied',
+    };
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    // Expand recent issues
+    await tester.tap(find.text(Strings.recentWebhookIssues));
+    await tester.pumpAndSettle();
+
+    // Tap Re-process
+    await tester.tap(find.text(Strings.reprocessBtn));
+    await tester.pumpAndSettle();
+
+    // Confirm dialog is shown
+    expect(find.text(Strings.reprocessConfirmTitle), findsOneWidget);
+    expect(find.text(Strings.reprocessConfirmBody(101)), findsOneWidget);
+
+    // Tap Cancel -> dialog closes, no POST
+    await tester.tap(find.text(Strings.cancel));
+    await tester.pumpAndSettle();
+    expect(find.text(Strings.reprocessConfirmTitle), findsNothing);
+    expect(
+        api.callHistory.any((c) =>
+            c.method == 'POST' && c.path == '/webhooks/101/reprocess'),
+        isFalse);
+
+    // Tap Re-process again
+    await tester.tap(find.text(Strings.reprocessBtn));
+    await tester.pumpAndSettle();
+
+    // Tap Confirm
+    await tester.tap(find.text(Strings.confirm));
+    await tester.pumpAndSettle();
+
+    // POST was called
+    expect(
+        api.callHistory.any((c) =>
+            c.method == 'POST' && c.path == '/webhooks/101/reprocess'),
+        isTrue);
+
+    // Outcome snackbar is shown
+    expect(
+        find.text(Strings.reprocessOutcomeMessage('applied')), findsOneWidget);
+  });
+
+  testWidgets(
+      'webhook re-process handles 409 reprocessAlreadyProcessed with error snackbar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final dataOn = Map<String, dynamic>.from(fullOverviewData);
+    dataOn['webhooks'] = {
+      ...fullOverviewData['webhooks'] as Map<String, dynamic>,
+      'reprocess': 'on',
+    };
+    api.responses['GET:/overview'] = dataOn;
+    api.responses['POST:/webhooks/101/reprocess'] = AdminApiException(
+      statusCode: 409,
+      code: 'reprocessAlreadyProcessed',
+      message: 'This event was already applied.',
+    );
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(Strings.recentWebhookIssues));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(Strings.reprocessBtn));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(Strings.confirm));
+    await tester.pumpAndSettle();
+
+    expect(find.text(Strings.errReprocessAlreadyProcessed), findsOneWidget);
   });
 }

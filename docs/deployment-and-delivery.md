@@ -198,6 +198,9 @@ cp backend/admin.env.example backend/admin.env
 cp backend/admin-db.env.example backend/admin-db.env
 cp backend/tunnel.env.example backend/tunnel.env
 # Populate CF_ACCESS_AUD, CF_ACCESS_TEAM_DOMAIN, ADMIN_DB_PASSWORD, and TUNNEL_TOKEN.
+# For webhook re-processing (MP3d), generate a shared secret (e.g. openssl rand -hex 32)
+# and set INTERNAL_API_TOKEN in BOTH backend/.env and backend/admin.env.
+# In backend/admin.env, INTERNAL_API_URL defaults to http://backend:3000.
 ```
 
 **Deploying the operator console:**

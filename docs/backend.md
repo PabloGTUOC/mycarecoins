@@ -82,6 +82,7 @@ backend/
 │   │   ├── personalTime.js        # /api/personal-time — ask, accept, decline, withdraw
 │   │   ├── admin.js               # /api/admin — platform registry, plans, grants
 │   │   ├── billing.js             # /api/billing — RevenueCat webhook (shared-secret auth)
+│   │   ├── internal.js            # /internal — internal admin-api routes (shared secret)
 │   │   └── events.js              # /api/events — onboarding/telemetry events
 │   │
 │   ├── services/
@@ -143,6 +144,8 @@ perUserLimiter (300 req / 15 min per UID)
 /api/billing       → billingRouter      ← mounted BEFORE requireAuth: the RevenueCat
                                           webhook authenticates by shared secret, not
                                           by Firebase token
+/internal          → internalRouter     ← internal docker network only; shared-secret
+                                          (X-Internal-Token); unreachable from outside
 ↓
 requireAuth + perUserLimiter, and familyHeartbeat on every family-scoped router:
 /api/admin         → adminRouter        ← additionally behind requireAdmin + adminLimiter
@@ -842,6 +845,21 @@ on `/api/admin`. Buckets: active ≤ 30 days, dormant 30–90, inactive > 90.
   place every client reads the family's plan from (drives the Pro section
   in the app and the double-purchase guard). Clients never trust store SDK
   state for family-wide entitlements.
+
+### Internal API & Webhook Re-processing (/internal)
+
+The internal router (`src/routes/internal.js`, mounted at `/internal` in `src/app.js`) allows the operator console API (`admin-api`) to trigger billing logic without granting the `carecoins_admin` Postgres role access to `billing_events.payload`:
+
+- **Complete external isolation**:
+  1. The frontend reverse proxy (nginx) only proxies `/api/` and `/uploads/` to the backend. Any external request to `/internal` is not routed and returns a 404 from nginx.
+  2. The `backend` container publishes no host ports (`ports:` block omitted in `docker-compose.yml`).
+  3. Reached exclusively over the internal Docker compose network (e.g. `http://backend:3000/internal/...`) from `admin-api`.
+- **Shared token lock**:
+  - Header `X-Internal-Token` must match `INTERNAL_API_TOKEN` using constant-time comparison (`crypto.timingSafeEqual` on equal-length buffers).
+  - If `INTERNAL_API_TOKEN` is unset or empty, or if the header is missing or mismatched, the router returns 404 `notFound` so the existence of the endpoint is never advertised.
+  - Dedicated rate limiter (`createInternalLimiter`), independent of Firebase user limits.
+- **Reprocess endpoint**:
+  - `POST /internal/billing-events/:id/reprocess`: Runs `billingService.reprocessEvent(client, id)` inside a transaction. Locks the `billing_events` row with `FOR UPDATE`, re-reads attribution from `payload`, and updates `family_plans` and `billing_events` idempotently. Returns `{ processed, outcome }`.
 
 ### Retention sweep
 

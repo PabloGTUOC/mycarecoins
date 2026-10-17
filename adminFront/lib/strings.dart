@@ -86,6 +86,12 @@ class Strings {
   static const labelUnprocessed30Days = 'Unprocessed (last 30d)';
   static const recentWebhookIssues = 'Recent issues (unattributed or unprocessed)';
   static const noRecentWebhookIssues = 'No recent webhook issues.';
+  static const reprocessBtn = 'Re-process';
+  static const reprocessConfirmTitle = 'Re-process Webhook Event';
+  static String reprocessConfirmBody(dynamic id) =>
+      'Are you sure you want to re-process webhook event #$id on the public backend?';
+  static String reprocessOutcomeMessage(String outcome) =>
+      'Webhook event re-processed: $outcome';
 
   static const byPlanTitle = 'Families by Plan';
   static const byStatusTitle = 'Families by Status';
@@ -299,6 +305,12 @@ class Strings {
   static const errRevenueCatUnavailable =
       'RevenueCat service is temporarily unavailable.';
   static const errRevenueCatRejected = 'RevenueCat request failed.';
+  static const errReprocessAlreadyProcessed =
+      'This event was already applied.';
+  static const errReprocessNotConfigured =
+      'Webhook re-processing is not configured.';
+  static const errReprocessUnavailable =
+      'Webhook re-processing service is temporarily unavailable.';
   static const errGenericFallback =
       'An unexpected error occurred. Please try again.';
 
@@ -399,6 +411,15 @@ class Strings {
     }
     if (code == 'revenueCatRejected') {
       return errRevenueCatRejected;
+    }
+    if (code == 'reprocessAlreadyProcessed') {
+      return errReprocessAlreadyProcessed;
+    }
+    if (code == 'reprocessNotConfigured') {
+      return errReprocessNotConfigured;
+    }
+    if (code == 'reprocessUnavailable') {
+      return errReprocessUnavailable;
     }
     if (serverMessage != null && serverMessage.trim().isNotEmpty) {
       return serverMessage.trim();

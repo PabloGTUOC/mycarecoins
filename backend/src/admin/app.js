@@ -52,6 +52,9 @@ export function createAdminApp({
   rcConfig = null,
   appStore = null,
   appStoreConfig = null,
+  internalApiUrl = process.env.INTERNAL_API_URL || 'http://backend:3000',
+  internalApiToken = process.env.INTERNAL_API_TOKEN || null,
+  fetch = globalThis.fetch,
 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -84,6 +87,7 @@ export function createAdminApp({
     }
 
     overview.mirror.mirror = isMirrorOn ? 'on' : 'off';
+    overview.webhooks.reprocess = internalApiToken ? 'on' : 'off';
 
     let revenueCat = null;
     if (isMirrorOn) {
@@ -164,6 +168,64 @@ export function createAdminApp({
       return sendError(res, 502, code, err.message || 'Failed to lookup transaction.');
     }
   });
+
+  consoleRouter.post(
+    '/webhooks/:eventId/reprocess',
+    validateParams('eventId'),
+    async (req, res) => {
+      if (!internalApiToken) {
+        return sendError(res, 503, 'reprocessNotConfigured', 'Webhook re-processing is not configured.');
+      }
+
+      const eventId = Number(req.params.eventId);
+      const url = `${internalApiUrl.replace(/\/+$/, '')}/internal/billing-events/${eventId}/reprocess`;
+
+      let internalRes;
+      try {
+        internalRes = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Internal-Token': internalApiToken,
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+      } catch (err) {
+        return sendError(res, 502, 'reprocessUnavailable', 'Public backend is unavailable.');
+      }
+
+      if (internalRes.status === 404) {
+        return sendError(res, 404, 'notFound', 'Billing event not found.');
+      }
+
+      if (internalRes.status >= 500) {
+        return sendError(res, 502, 'reprocessUnavailable', 'Public backend returned a server error.');
+      }
+
+      let body;
+      try {
+        body = await internalRes.json();
+      } catch {
+        return sendError(res, 502, 'reprocessUnavailable', 'Invalid response from public backend.');
+      }
+
+      if (!internalRes.ok) {
+        const code = body?.code || 'reprocessUnavailable';
+        return sendError(res, internalRes.status, code, body?.error || 'Failed to reprocess event.');
+      }
+
+      try {
+        await logAdminAction(db, req.adminUser.id, 'webhook.reprocess', {
+          targetType: 'billing_event',
+          targetId: String(eventId),
+          payload: { eventId, outcome: body.outcome },
+        });
+      } catch (err) {
+        console.error('Failed to log admin action for webhook.reprocess:', err);
+      }
+
+      return res.json(body);
+    }
+  );
 
   consoleRouter.post(
     '/families/:familyId/grants/:grantId/rc-sync',

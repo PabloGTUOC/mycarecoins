@@ -134,6 +134,9 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `recurrenceMissingUntil` | 400 | — | A repeating request needs a date to repeat until. |
 | `recurrenceTooManyOccurrences` | 400 | `{ max }` | A repeating request cannot cover more than 60 occurrences — pick a nearer end date. |
 | `recurrenceWeekdaysOnWeekend` | 400 | — | A weekdays repeat has to start on a weekday. |
+| `reprocessAlreadyProcessed` | 409 | — | This event was already applied. Operator console API only. |
+| `reprocessNotConfigured` | 503 | — | Webhook re-processing is not configured. Operator console API only. |
+| `reprocessUnavailable` | 502 | — | Public backend is unavailable. Operator console API only. |
 | `retentionFamilyBecameActive` | 409 | — | Family became active again — skipped. |
 | `revenueCatNotConfigured` | 503 | — | RevenueCat API is not configured. Operator console API only. |
 | `revenueCatRejected` | 502 | — | RevenueCat request was rejected. Operator console API only. |

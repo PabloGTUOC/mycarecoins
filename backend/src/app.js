@@ -17,6 +17,7 @@ import { statsRouter } from './routes/stats.js';
 import { absencesRouter } from './routes/absences.js';
 import { personalTimeRouter } from './routes/personalTime.js';
 import { eventsRouter } from './routes/events.js';
+import { internalRouter } from './routes/internal.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sendError } from './utils/httpError.js';
@@ -83,6 +84,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Provider webhooks authenticate by shared secret, not Firebase — see the
 // router. Covered by the global IP limiter only.
 app.use('/api/billing', billingRouter);
+
+// Internal routes (admin-api calls over internal Docker network, secured by X-Internal-Token).
+app.use('/internal', internalRouter);
 
 app.use('/api/admin', requireAuth, adminLimiter, requireAdmin, adminRouter);
 app.use('/api/me', requireAuth, perUserLimiter, meRouter);

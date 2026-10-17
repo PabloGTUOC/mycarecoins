@@ -839,10 +839,24 @@ describe('GET /admin-api/overview', () => {
     assert.deepEqual(res.body.webhooks.recentEvents, [
       { id: 101, eventType: 'INITIAL_PURCHASE', createdAt: '2026-10-16T11:00:00.000Z' },
     ]);
+    assert.equal(res.body.webhooks.reprocess, 'off');
 
     // RevenueCat
     assert.deepEqual(res.body.revenueCat, { metrics: fakeMetrics });
     assert.equal(metricsCallCount, 1);
+  });
+
+  test('overview sets webhooks.reprocess to on when internalApiToken is configured', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'configured-token',
+    });
+    const res = await request(app).get('/admin-api/overview');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.webhooks.reprocess, 'on');
   });
 
   test('caches revenueCat metrics for 10 minutes and supports ?refresh=1 bypass', async () => {
@@ -1255,4 +1269,213 @@ describe('GET /admin-api/families/:familyId/revenuecat', () => {
     assert.equal(hasRoute, false);
   });
 });
+
+// ─── POST /admin-api/webhooks/:eventId/reprocess ──────────────────────────────
+
+describe('POST /admin-api/webhooks/:eventId/reprocess', () => {
+  const stale = NOW / 1000 - RECENT_SIGN_IN_SECONDS - 1;
+  const fresh = NOW / 1000 - 60;
+
+  function mockDb() {
+    const queries = [];
+    return {
+      _queries: queries,
+      async query(sql, params) {
+        queries.push({ sql: sql.replace(/\s+/g, ' ').trim(), params });
+        if (sql.includes('admin_operators')) return { rows: [{ id: '7' }] };
+        if (sql.includes('INSERT INTO admin_audit_log')) return { rows: [], rowCount: 1 };
+        return { rows: [] };
+      },
+    };
+  }
+
+  test('requires recent sign-in (401 adminReauthRequired when stale)', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', stale),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, 'adminReauthRequired');
+  });
+
+  test('validates eventId: returns 400 invalidInput when not a positive integer', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+    });
+    const res = await request(app).post('/admin-api/webhooks/not-an-id/reprocess');
+    assert.equal(res.status, 400);
+    assert.equal(res.body.code, 'invalidInput');
+    assert.equal(res.body.params?.field, 'eventId');
+  });
+
+  test('returns 503 reprocessNotConfigured when internalApiToken is unset', async () => {
+    const db = mockDb();
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: null,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 503);
+    assert.equal(res.body.code, 'reprocessNotConfigured');
+  });
+
+  test('returns 404 notFound when internal route answers 404', async () => {
+    const db = mockDb();
+    const fakeFetch = async () => ({
+      status: 404,
+      ok: false,
+      async json() { return { code: 'notFound', error: 'Billing event not found.' }; },
+    });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/999/reprocess');
+    assert.equal(res.status, 404);
+    assert.equal(res.body.code, 'notFound');
+  });
+
+  test('returns 502 reprocessUnavailable on fetch network error or timeout', async () => {
+    const db = mockDb();
+    const fakeFetch = async () => { throw new Error('fetch failed: connection refused'); };
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 502);
+    assert.equal(res.body.code, 'reprocessUnavailable');
+  });
+
+  test('returns 502 reprocessUnavailable when public backend answers 500', async () => {
+    const db = mockDb();
+    const fakeFetch = async () => ({
+      status: 500,
+      ok: false,
+      async json() { return { error: 'Internal server error' }; },
+    });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 502);
+    assert.equal(res.body.code, 'reprocessUnavailable');
+  });
+
+  test('calls internal route, audits, and returns outcome on success', async () => {
+    const db = mockDb();
+    let calledUrl = null;
+    let calledOpts = null;
+    const fakeFetch = async (url, opts) => {
+      calledUrl = url;
+      calledOpts = opts;
+      return {
+        status: 200,
+        ok: true,
+        async json() { return { processed: true, outcome: 'applied' }; },
+      };
+    };
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiUrl: 'http://backend:3000',
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { processed: true, outcome: 'applied' });
+
+    assert.equal(calledUrl, 'http://backend:3000/internal/billing-events/42/reprocess');
+    assert.equal(calledOpts.method, 'POST');
+    assert.equal(calledOpts.headers['X-Internal-Token'], 'token-123');
+
+    const auditQuery = db._queries.find((q) => q.sql.includes('INSERT INTO admin_audit_log'));
+    assert.ok(auditQuery);
+    assert.equal(auditQuery.params[0], 7);
+    assert.equal(auditQuery.params[1], 'webhook.reprocess');
+    assert.equal(auditQuery.params[2], 'billing_event');
+    assert.equal(auditQuery.params[3], '42');
+    assert.deepEqual(JSON.parse(auditQuery.params[4]), { eventId: 42, outcome: 'applied' });
+  });
+
+  test('passes 409 reprocessAlreadyProcessed through from public backend', async () => {
+    const db = mockDb();
+    const fakeFetch = async () => ({
+      status: 409,
+      ok: false,
+      async json() {
+        return {
+          code: 'reprocessAlreadyProcessed',
+          error: 'This event was already applied.',
+        };
+      },
+    });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 409);
+    assert.equal(res.body.code, 'reprocessAlreadyProcessed');
+    assert.equal(res.body.error, 'This event was already applied.');
+  });
+
+  test('passes 200 outcome stale through and writes audit log', async () => {
+    const db = mockDb();
+    const fakeFetch = async () => ({
+      status: 200,
+      ok: true,
+      async json() {
+        return { processed: true, outcome: 'stale' };
+      },
+    });
+    const app = createAdminApp({
+      db,
+      authenticate: fakeAuth('uid-admin', fresh),
+      now: () => NOW,
+      internalApiToken: 'token-123',
+      fetch: fakeFetch,
+    });
+    const res = await request(app).post('/admin-api/webhooks/42/reprocess');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { processed: true, outcome: 'stale' });
+
+    const auditQuery = db._queries.find((q) => q.sql.includes('INSERT INTO admin_audit_log'));
+    assert.ok(auditQuery);
+    assert.deepEqual(JSON.parse(auditQuery.params[4]), { eventId: 42, outcome: 'stale' });
+  });
+
+  test('does not exist on the public /api/admin', () => {
+    const hasRoute = adminRouter.stack.some(
+      (layer) => layer.route?.path === '/webhooks/:eventId/reprocess'
+    );
+    assert.equal(hasRoute, false);
+  });
+});
+
 

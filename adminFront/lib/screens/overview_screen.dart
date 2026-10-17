@@ -373,12 +373,58 @@ class _OverviewScreenState extends State<OverviewScreen> {
     );
   }
 
+  Future<void> _reprocessWebhook(dynamic rawId) async {
+    final eventId = rawId is int ? rawId : (int.tryParse(rawId.toString()) ?? 0);
+    if (eventId <= 0) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Strings.reprocessConfirmTitle),
+        content: Text(Strings.reprocessConfirmBody(eventId)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(Strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(Strings.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final app = context.read<AppState>();
+    Map<String, dynamic>? res;
+    final done = await app.runMutation(
+      context,
+      () async {
+        res = await app.api.post('/webhooks/$eventId/reprocess');
+      },
+    );
+
+    if (done && mounted) {
+      final outcome = res?['outcome']?.toString() ?? 'applied';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Strings.reprocessOutcomeMessage(outcome)),
+          backgroundColor: AppColors.successStrong,
+        ),
+      );
+      _loadOverview();
+    }
+  }
+
   Widget _buildWebhooksCard(Map<String, dynamic> webhooks) {
     final lastEventAt = webhooks['lastEventAt'];
     final events30Days = webhooks['eventsLast30Days'];
     final unattributed30Days = webhooks['unattributedLast30Days'];
     final unprocessed30Days = webhooks['unprocessedLast30Days'];
     final recentEvents = (webhooks['recentEvents'] as List?) ?? [];
+    final canReprocess = webhooks['reprocess'] == 'on';
 
     final now = widget.nowFn?.call() ?? DateTime.now();
     final lastEventText = Strings.formatTimeAgo(lastEventAt, now: now);
@@ -470,22 +516,45 @@ class _OverviewScreenState extends State<OverviewScreen> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                type,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    type,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    date,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (canReprocess) ...[
+                              const SizedBox(width: 4),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () => _reprocessWebhook(id),
+                                child: Text(
+                                  Strings.reprocessBtn,
+                                  style: const TextStyle(fontSize: 11),
                                 ),
                               ),
-                            ),
-                            Text(
-                              date,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       );

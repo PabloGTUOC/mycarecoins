@@ -178,6 +178,8 @@ if $WITH_ADMIN; then
     || die "CF_ACCESS_TEAM_DOMAIN is empty in backend/admin.env"
   grep -q '^ADMIN_DB_PASSWORD=.\+' "$REPO_ROOT/backend/admin-db.env" \
     || die "ADMIN_DB_PASSWORD is empty in backend/admin-db.env"
+  grep -q '^INTERNAL_API_TOKEN=.\+' "$REPO_ROOT/backend/admin.env" \
+    || warn "INTERNAL_API_TOKEN is empty in backend/admin.env (webhook re-process off)"
   ok "admin secrets validated (required keys non-empty)"
 fi
 

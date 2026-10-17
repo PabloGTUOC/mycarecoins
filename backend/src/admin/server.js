@@ -53,6 +53,15 @@ if (appStoreClients) {
   console.log('App Store integration off');
 }
 
+const internalApiUrl = process.env.INTERNAL_API_URL || 'http://backend:3000';
+const internalApiToken = process.env.INTERNAL_API_TOKEN || null;
+
+if (internalApiToken) {
+  console.log('Webhook re-process on');
+} else {
+  console.log('Webhook re-process off (INTERNAL_API_TOKEN unset)');
+}
+
 const app = createAdminApp({
   db: pool,
   verifyAccess,
@@ -60,6 +69,8 @@ const app = createAdminApp({
   rcConfig,
   appStore: appStoreClients,
   appStoreConfig,
+  internalApiUrl,
+  internalApiToken,
 });
 
 app.listen(port, '0.0.0.0', () => {
