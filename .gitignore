@@ -32,3 +32,6 @@ adminFront/.flutter-plugins-dependencies
 adminFront/.pub-cache/
 adminFront/.pub/
 
+
+# Apple private keys (APNs, In-App Purchase, App Store Connect API): never commit
+*.p8
