@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from './middleware/auth.js';
+import { requireDeviceKey } from './middleware/deviceKey.js';
 import { logLoginHistory } from './middleware/audit.js';
 import { requireAdmin } from './middleware/rbac.js';
 import { familyHeartbeat } from './middleware/heartbeat.js';
@@ -17,6 +18,7 @@ import { statsRouter } from './routes/stats.js';
 import { absencesRouter } from './routes/absences.js';
 import { personalTimeRouter } from './routes/personalTime.js';
 import { eventsRouter } from './routes/events.js';
+import { quickRouter } from './routes/quick.js';
 import { internalRouter } from './routes/internal.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +77,15 @@ const adminLimiter = rateLimit({
   keyGenerator: (req) => req.auth.uid,
 });
 
+const quickLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+  keyGenerator: (req) => 'dk' + req.device.id,
+});
+
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'carecoins-backend' });
 });
@@ -98,6 +109,9 @@ app.use('/api/stats', requireAuth, perUserLimiter, familyHeartbeat, statsRouter)
 app.use('/api/absences', requireAuth, perUserLimiter, familyHeartbeat, absencesRouter);
 app.use('/api/personal-time', requireAuth, perUserLimiter, familyHeartbeat, personalTimeRouter);
 app.use('/api/events', requireAuth, perUserLimiter, familyHeartbeat, eventsRouter);
+
+// Device keys work here and nowhere else.
+app.use('/api/quick', requireDeviceKey, quickLimiter, familyHeartbeat, quickRouter);
 
 app.use((_req, res) => {
   sendError(res, 404, 'notFound', 'Not found.');

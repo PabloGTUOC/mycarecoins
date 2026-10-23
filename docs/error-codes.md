@@ -132,6 +132,11 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `personalTimeTooShort` | 400 | `{ minutes }` | Personal time must last at least 15 minutes. |
 | `personalTimeWithdrawInsteadOfDecline` | 403 | — | Withdraw your own request instead of declining it. |
 | `personalTimeWithdrawOwnerOnly` | 403 | — | Only the person who asked can withdraw a request. |
+| `quickClientRefRequired` | 400 | — | clientRef is required. |
+| `quickStartInvalid` | 400 | — | Choose a task or a type. |
+| `quickTaskAlreadyRunning` | 409 | `{ title }` | You already have a task running. |
+| `quickTaskNotRunning` | 409 | — | This task is not running. |
+| `quickUndoExpired` | 409 | — | Too late to undo. Change it in the app. |
 | `rateLimited` | 429 | — | Too many requests. Please try again later. Operator console API only. |
 | `recurrenceEndBeforeStart` | 400 | — | The repeat end date is before the first occurrence. |
 | `recurrenceInvalidDate` | 400 | — | The repeat end date is not a valid date. |
