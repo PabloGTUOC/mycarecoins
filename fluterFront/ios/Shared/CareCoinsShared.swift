@@ -7,4 +7,7 @@ enum CareCoinsShared {
   /// Keychain access group, without the team prefix the system adds.
   static let keychainGroupSuffix = "com.carecoins.carecoinsFlutter.shared"
   static let deviceKeyAccount = "carecoins.deviceKey"
+  static let snapshotFile = "quick.json"
+  static let deviceKeyIdDefault = "deviceKeyId"
+  static let apiBaseDefault = "apiBase"
 }

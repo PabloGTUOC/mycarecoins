@@ -516,4 +516,44 @@ void main() {
       expect(find.text('CAREGIVER'), findsNothing);
     });
   });
+
+  group('QW-5: Widget & Watch entry', () {
+    testWidgets('shows for a caregiver and is absent for a member',
+        (tester) async {
+      final api = _FakeProfileApi();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 101,
+            'name': 'The Henderson Family',
+            'role': 'caregiver',
+            'alias': 'Dad',
+            'coin_balance': 488,
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Dad'};
+
+      await tester
+          .pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Widget & Watch'), findsOneWidget);
+
+      app.families = [
+        {
+          'family_id': 101,
+          'name': 'The Henderson Family',
+          'role': 'member',
+          'alias': 'Child',
+          'coin_balance': 100,
+        }
+      ];
+
+      await tester
+          .pumpWidget(_wrap(const Scaffold(body: ProfileScreen()), app));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Widget & Watch'), findsNothing);
+    });
+  });
 }

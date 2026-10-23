@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../services/extensions_bridge.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
@@ -253,6 +254,9 @@ class _DailyScreenState extends State<DailyScreen> {
         widget.onNeedsYouChanged?.call(items.isNotEmpty);
         _scrollToNow();
         _maybeTour();
+      }
+      if (app.isCaregiver) {
+        unawaited(ExtensionsBridge.refresh());
       }
     } catch (_) {
       if (mounted) {

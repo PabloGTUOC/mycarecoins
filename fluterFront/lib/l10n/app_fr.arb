@@ -1039,5 +1039,21 @@
   "srvErrSubscriptionPaymentPastDue": "Le paiement de l'abonnement de cette famille est en retard. Veuillez mettre à jour le moyen de paiement pour continuer.",
   "srvErrTimeWindowEndBeforeStart": "L'heure de fin doit être postérieure à l'heure de début.",
   "srvErrTimeWindowInvalidDates": "Le début et la fin doivent être des valeurs date/heure valides.",
-  "srvErrTokenRequired": "Le jeton est requis."
+  "srvErrTokenRequired": "Le jeton est requis.",
+  "devicesEntry": "Widget et montre",
+  "devicesTitle": "Widget et montre",
+  "devicesIntro": "Enregistrez, démarrez et arrêtez des tâches depuis l'écran d'accueil et l'Apple Watch sans ouvrir l'app.",
+  "devicesConnect": "Connecter cet iPhone",
+  "devicesConnected": "Cet iPhone et sa montre sont connectés.",
+  "devicesDisconnect": "Déconnecter",
+  "devicesIosOnly": "Le widget et l'app de la montre sont disponibles sur iPhone.",
+  "devicesLabelIphone": "iPhone",
+  "devicesThisIphone": "Cet iPhone",
+  "devicesListTitle": "Appareils connectés",
+  "devicesLastUsed": "Dernière utilisation : {date}",
+  "devicesNeverUsed": "Pas encore utilisé",
+  "devicesRemove": "Retirer",
+  "devicesRemoveConfirm": "Retirer cet appareil ? Il ne fonctionnera plus tant que vous ne l'aurez pas reconnecté.",
+  "devicesNone": "Aucun appareil connecté.",
+  "devicesWatchNote": "Votre Apple Watch utilise la connexion de cet iPhone. Ouvrez l'app CareCoins sur la montre après la connexion."
 }

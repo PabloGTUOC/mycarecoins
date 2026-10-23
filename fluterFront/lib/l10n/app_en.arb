@@ -2797,5 +2797,74 @@
   "srvErrTokenRequired": "token is required.",
   "@srvErrTokenRequired": {
     "description": "Server error: tokenRequired"
+  },
+  "devicesEntry": "Widget & Watch",
+  "@devicesEntry": {
+    "description": "Settings entry for connecting Apple widgets and watch"
+  },
+  "devicesTitle": "Widget & Watch",
+  "@devicesTitle": {
+    "description": "Title of the Widget & Watch settings screen"
+  },
+  "devicesIntro": "Log, start and stop tasks from your Home Screen and your Apple Watch without opening the app.",
+  "@devicesIntro": {
+    "description": "Intro text explaining what widgets and watch support do"
+  },
+  "devicesConnect": "Connect this iPhone",
+  "@devicesConnect": {
+    "description": "Button to connect the current iPhone"
+  },
+  "devicesConnected": "This iPhone and its watch are connected.",
+  "@devicesConnected": {
+    "description": "Status text when this iPhone is connected"
+  },
+  "devicesDisconnect": "Disconnect",
+  "@devicesDisconnect": {
+    "description": "Button to disconnect the current iPhone"
+  },
+  "devicesIosOnly": "The widget and watch app are available on iPhone.",
+  "@devicesIosOnly": {
+    "description": "Explanation shown on non-iOS platforms"
+  },
+  "devicesLabelIphone": "iPhone",
+  "@devicesLabelIphone": {
+    "description": "Default label when registering this iPhone"
+  },
+  "devicesThisIphone": "This iPhone",
+  "@devicesThisIphone": {
+    "description": "Marker prefix for the current device in the list"
+  },
+  "devicesListTitle": "Connected devices",
+  "@devicesListTitle": {
+    "description": "Header for the list of connected device keys"
+  },
+  "devicesLastUsed": "Last used {date}",
+  "@devicesLastUsed": {
+    "description": "Last used date of a connected device",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesNeverUsed": "Not used yet",
+  "@devicesNeverUsed": {
+    "description": "Shown when a device has never been used"
+  },
+  "devicesRemove": "Remove",
+  "@devicesRemove": {
+    "description": "Action/tooltip to remove a connected device"
+  },
+  "devicesRemoveConfirm": "Remove this device? It will stop working until you connect it again.",
+  "@devicesRemoveConfirm": {
+    "description": "Confirmation prompt before deleting a device key"
+  },
+  "devicesNone": "No devices connected.",
+  "@devicesNone": {
+    "description": "Empty state when no devices are connected"
+  },
+  "devicesWatchNote": "Your Apple Watch uses this iPhone's connection. Open the CareCoins app on the watch after connecting.",
+  "@devicesWatchNote": {
+    "description": "Footnote explaining watch connectivity through the iPhone"
   }
 }

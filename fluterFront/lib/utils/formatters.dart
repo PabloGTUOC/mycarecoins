@@ -19,3 +19,16 @@ String formatChartMonth(String raw, [String? locale]) {
     return raw;
   }
 }
+
+/// Formats a DateTime or ISO timestamp string to a localized short date
+/// using `DateFormat.yMMMd(locale)` (e.g. "Oct 23, 2026").
+String formatShortDate(dynamic dateOrString, [String? locale]) {
+  try {
+    final dt = dateOrString is DateTime
+        ? dateOrString
+        : DateTime.parse(dateOrString.toString());
+    return DateFormat.yMMMd(locale).format(dt.toLocal());
+  } catch (_) {
+    return dateOrString?.toString() ?? '';
+  }
+}

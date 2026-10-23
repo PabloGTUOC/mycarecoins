@@ -11,6 +11,7 @@ import '../utils/avatar_upload.dart';
 import '../utils/json.dart';
 import '../services/tour_service.dart';
 import 'admin_screen.dart';
+import 'devices_screen.dart';
 import 'stats_screen.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/family_circle.dart';
@@ -231,29 +232,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadLedger();
   }
 
-  Future<bool> _confirm(String title, String body,
-      {bool danger = false}) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.lg)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-        content: Text(body),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(AppLocalizations.of(ctx).cancel)),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(AppLocalizations.of(ctx).confirm,
-                  style: TextStyle(
-                      color: danger ? AppColors.danger : AppColors.primary))),
-        ],
-      ),
-    );
-    return ok == true;
-  }
+  Future<bool> _confirm(String title, String body, {bool danger = false}) =>
+      showConfirmDialog(context, title: title, body: body, danger: danger);
 
   Future<void> _updateProfile() async {
     final app = context.read<AppState>();
@@ -741,6 +721,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+          if (app.isCaregiver && app.familyId != 0) ...[
+            const Divider(height: 32),
+            Tappable(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DevicesScreen()),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.watch_outlined,
+                      size: 20, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(l.devicesEntry,
+                        style: const TextStyle(
+                            fontSize: 13.5, fontWeight: FontWeight.w700)),
+                  ),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: AppColors.textSecondary),
+                ],
+              ),
+            ),
+          ],
           const Divider(height: 32),
           // Help entry (docs/onboarding-help-plan.md Phase 1): same sheet
           // as the header's ? button, for people who look in settings.

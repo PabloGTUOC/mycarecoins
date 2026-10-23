@@ -1039,5 +1039,21 @@
   "srvErrSubscriptionPaymentPastDue": "Die Zahlung für das Abonnement dieser Familie ist überfällig. Bitte aktualisiere die Zahlungsmethode, um fortzufahren.",
   "srvErrTimeWindowEndBeforeStart": "Die Endzeit muss nach der Startzeit liegen.",
   "srvErrTimeWindowInvalidDates": "Start- und Endzeit müssen gültige Datums-/Zeitwerte sein.",
-  "srvErrTokenRequired": "Token ist erforderlich."
+  "srvErrTokenRequired": "Token ist erforderlich.",
+  "devicesEntry": "Widget & Uhr",
+  "devicesTitle": "Widget & Uhr",
+  "devicesIntro": "Erfasse, starte und beende Aufgaben über den Home-Bildschirm und die Apple Watch, ohne die App zu öffnen.",
+  "devicesConnect": "Dieses iPhone verbinden",
+  "devicesConnected": "Dieses iPhone und seine Uhr sind verbunden.",
+  "devicesDisconnect": "Trennen",
+  "devicesIosOnly": "Das Widget und die Uhr-App gibt es auf dem iPhone.",
+  "devicesLabelIphone": "iPhone",
+  "devicesThisIphone": "Dieses iPhone",
+  "devicesListTitle": "Verbundene Geräte",
+  "devicesLastUsed": "Zuletzt genutzt: {date}",
+  "devicesNeverUsed": "Noch nicht genutzt",
+  "devicesRemove": "Entfernen",
+  "devicesRemoveConfirm": "Dieses Gerät entfernen? Es funktioniert erst wieder, wenn du es neu verbindest.",
+  "devicesNone": "Keine Geräte verbunden.",
+  "devicesWatchNote": "Deine Apple Watch nutzt die Verbindung dieses iPhones. Öffne danach die CareCoins-App auf der Uhr."
 }

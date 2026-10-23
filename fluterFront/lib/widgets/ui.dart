@@ -853,3 +853,41 @@ class AssigneeBadge extends StatelessWidget {
     );
   }
 }
+
+/// Standard confirmation dialog with cancel and confirm buttons.
+Future<bool> showConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String body,
+  bool danger = false,
+  String? confirmLabel,
+  String? cancelLabel,
+}) async {
+  final l = AppLocalizations.of(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+      content: Text(body),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(cancelLabel ?? l.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(
+            confirmLabel ?? l.confirm,
+            style: TextStyle(
+              color: danger ? AppColors.danger : AppColors.primary,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}

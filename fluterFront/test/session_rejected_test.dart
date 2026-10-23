@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:carecoins_flutter/services/api_client.dart';
+import 'package:carecoins_flutter/services/extensions_bridge.dart';
 import 'package:carecoins_flutter/state/app_state.dart';
 
 /// When `/api/me` failed, the app used to swallow the error and leave
@@ -74,4 +76,47 @@ void main() {
       expect(app.profileUnknown, isFalse);
     });
   });
+
+  group('logout', () {
+    test('calls DELETE /api/me/device-keys and channel clear', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final channelCalls = <String>[];
+      messenger.setMockMethodCallHandler(ExtensionsBridge.channel, (call) async {
+        channelCalls.add(call.method);
+        return null;
+      });
+
+      final api = _FakeLogoutApi()..token = 'test_token';
+      final app = AppState(api: api);
+
+      try {
+        await app.logout();
+      } catch (_) {
+        // AppState.logout() reaches fb.FirebaseAuth.instance.signOut() at the end,
+        // which throws [core/no-app] when Firebase is not initialized.
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+        messenger.setMockMethodCallHandler(ExtensionsBridge.channel, null);
+      }
+
+      expect(api.deletedPath, '/api/me/device-keys');
+      expect(channelCalls.contains('clear'), isTrue);
+    });
+  });
+}
+
+class _FakeLogoutApi extends ApiClient {
+  String? deletedPath;
+
+  @override
+  Future<dynamic> post(String path, [Object? body]) async => {};
+
+  @override
+  Future<dynamic> delete(String path, [Object? body]) async {
+    deletedPath = path;
+    return {};
+  }
 }

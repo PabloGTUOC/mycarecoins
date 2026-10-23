@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/server_errors.dart';
 import '../services/api_client.dart';
+import '../services/extensions_bridge.dart';
 import '../services/purchase_service.dart';
 import '../services/telemetry.dart';
 import '../utils/json.dart';
@@ -169,6 +170,7 @@ class AppState extends ChangeNotifier {
       // events carry it (plan Phase 4). Fire-and-forget: purchases must
       // never block login, and the service no-ops on web.
       PurchaseService.syncIdentity(profile?['id']?.toString());
+      unawaited(ExtensionsBridge.refresh());
     } on ApiException catch (e) {
       if (isSessionRejected(e)) {
         // The backend rejected the session. Falling through would leave
@@ -271,6 +273,14 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('Failed to safely track backend logout: $e');
     }
+    try {
+      if (api.token.isNotEmpty) {
+        await api.delete('/api/me/device-keys');
+      }
+    } catch (e) {
+      debugPrint('Failed to revoke device keys on logout: $e');
+    }
+    await ExtensionsBridge.clear();
     await PurchaseService.logOut();
     api.token = '';
     loginEventId = null;
