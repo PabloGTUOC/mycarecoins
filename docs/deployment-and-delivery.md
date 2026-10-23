@@ -50,6 +50,11 @@ The app works against the older backend either way. Probe for the codes:
 `curl -s https://mycarecoins.app/api/nope` answers `{"error":…,"code":"notFound"}` once
 they are live.
 
+Also waiting (as of 2026-10-23): the widget and watch backend (`docs/ios-widget-watch-plan.md`
+Phase 1). It needs two migrations (`migrate-device-keys.sql`, `migrate-quick-tasks.sql`), which
+`db:init` runs on container start. Nothing calls `/api/quick` until the widget ships. Probe:
+`curl -s https://mycarecoins.app/api/quick` answers 401 `deviceKeyInvalid` once it is live (404 before).
+
 Repeat the probe any time you want to know what is actually deployed — an unmounted route
 falls through to the 404 handler, a mounted one answers 401:
 
