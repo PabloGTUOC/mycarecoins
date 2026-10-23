@@ -1003,8 +1003,7 @@ class _MemberRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final soft = AppColors.softAccents[colorIndex % 4];
-    final accent = AppColors.accents[colorIndex % 4];
+    final pc = AppColors.people[colorIndex % AppColors.people.length];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -1013,8 +1012,8 @@ class _MemberRow extends StatelessWidget {
             name: name,
             size: 36,
             imageUrl: imageUrl,
-            background: soft,
-            foreground: accent,
+            background: pc.soft,
+            foreground: pc.ink,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1047,7 +1046,7 @@ class _MemberRow extends StatelessWidget {
           ),
           if (balance != null) ...[
             const SizedBox(width: 8),
-            PillBadge(text: '$balance cc'),
+            PillBadge(text: '$balance cc', color: AppColors.coinInk, background: AppColors.coinSoft),
           ],
         ],
       ),

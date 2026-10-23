@@ -10,9 +10,9 @@ abstract class AppColors {
   static const textPrimary = Color(0xFF0E1726);
   static const textSecondary = Color(0xFF5B6478);
 
-  static const primary = Color(0xFF2563EB);
-  static const primarySoft = Color(0xFFE8EFFE);
-  static const primaryInk = Color(0xFF1D4ED8);
+  static const primary = Color(0xFF006EB8);
+  static const primarySoft = Color(0xFFE6F0F8);
+  static const primaryInk = Color(0xFF005B8D);
   static const success = Color(0xFF16A34A);
   static const successSoft = Color(0xFFE7F6EC);
   static const successInk = Color(0xFF166534);
@@ -25,43 +25,35 @@ abstract class AppColors {
   static const dangerSoft = Color(0xFFFCE8E8);
   static const dangerInk = Color(0xFFB91C1C);
 
-  static const accentSecondary = Color(0xFF60A5FA);
+  static const accentSecondary = Color(0xFF5A82B3);
   static const inputBg = Color(0xFFF1F5F9);
   static const inputBorder = Color(0xFFCBD5E1);
 
   // Wallet / dark panel palette
   static const ink = Color(0xFF0F172A);
   static const inkMuted = Color(0xFF94A3B8);
-  static const gold = Color(0xFFFBBF24);
   static const successOnDark = Color(0xFF34D399); // +amounts on the dark wallet card
   static const dangerOnDark = Color(0xFFF87171); // −amounts on the dark wallet card
 
-  // Profile family-banner gradient
-  static const indigo = Color(0xFF6366F1);
-  static const violet = Color(0xFF8B5CF6);
-  static const violetSoft = Color(0xFFEDE9FE); // 5th reward-banner tint
+  // Coins (Wada combination 267). Never household amber, never text on coin.
+  static const coin = Color(0xFFF99D1B);      // Yellow Orange: the coin mark
+  static const coinSoft = Color(0xFFFEE9CA);  // Cream Yellow at 35 %: coin pill fill
+  static const coinInk = Color(0xFF7C4226);   // Wada Brown: text on coinSoft, 6.65:1
 
-  // Dependent badges on the Family circle (playful names kept, P4 decision).
-  static const badgeChild = indigo;
-  static const badgePet = Color(0xFF10B981);
-  static const badgeElderly = Color(0xFFF59E0B);
-  static const badgeCaregiver = Color(0xFF059669);
-  static const badgeMember = Color(0xFF3B82F6);
-
-  static const accentGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [primary, accentSecondary],
-  );
-
-  /// Rotating pastel accents used by dashboard member cards / reward banners.
-  static const softAccents = [
-    primarySoft,
-    successSoft,
-    warningSoft,
-    dangerSoft
+  // People: who someone is, never a status. Mark for fills and bars, soft for
+  // tints, ink for text and icons on the soft (all >= 5.9:1).
+  static const people = [
+    PersonColor(Color(0xFF006EB8), Color(0xFFE0EEF6), Color(0xFF005B8D)), // Blue
+    PersonColor(Color(0xFF00978D), Color(0xFFE0F3F1), Color(0xFF00665F)), // Benzol Green
+    PersonColor(Color(0xFFF99D1B), Color(0xFFFEF3E4), Color(0xFF7C4226)), // Yellow Orange
+    PersonColor(Color(0xFFA36AA5), Color(0xFFF4EDF4), Color(0xFF6E3F70)), // Aconite Violet
   ];
-  static const accents = [primary, success, warning, danger];
+}
+
+@immutable
+class PersonColor {
+  final Color mark, soft, ink;
+  const PersonColor(this.mark, this.soft, this.ink);
 }
 
 abstract class AppRadii {

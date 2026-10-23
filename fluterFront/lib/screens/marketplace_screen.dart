@@ -35,12 +35,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   DateTime? _validFrom;
   DateTime? _validUntil;
 
-  static const _bannerColors = [
-    AppColors.primarySoft,
-    AppColors.successSoft,
-    AppColors.warningSoft,
-    AppColors.dangerSoft,
-    AppColors.violetSoft,
+  static final _bannerColors = [
+    for (final p in AppColors.people) p.soft,
+    AppColors.coinSoft,
   ];
 
   final _tourTabsKey = GlobalKey();
@@ -377,7 +374,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 width: w,
                 child: _RewardCard(
                     r: _rewards[i],
-                    banner: _bannerColors[(_rewards[i]['id'].hashCode) % 5],
+                    banner: _bannerColors[(_rewards[i]['id'].hashCode) % _bannerColors.length],
                     onRedeem: () => _redeem(_rewards[i]))),
         ],
       );
@@ -716,8 +713,8 @@ class _RedeemConfirmSheetState extends State<_RedeemConfirmSheet> {
                         ),
                         PillBadge(
                           text: '$cost cc',
-                          color: AppColors.warningInk,
-                          background: AppColors.warningSoft,
+                          color: AppColors.coinInk,
+                          background: AppColors.coinSoft,
                           fontSize: 13,
                         ),
                       ],

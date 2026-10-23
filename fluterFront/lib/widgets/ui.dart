@@ -456,15 +456,17 @@ class AvatarCircle extends StatelessWidget {
         style: TextStyle(
             fontSize: size * 0.42,
             fontWeight: FontWeight.w800,
-            color: foreground ?? Colors.white));
+            color: foreground ??
+                (background == null
+                    ? AppColors.primaryInk
+                    : Colors.white)));
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: background,
-        gradient: background == null ? AppColors.accentGradient : null,
+        color: background ?? AppColors.primarySoft,
         shape: BoxShape.circle,
       ),
       child: resolved == null
@@ -758,7 +760,7 @@ class CoinBalancePill extends StatelessWidget {
     final pill = Container(
       padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
       decoration: BoxDecoration(
-        color: AppColors.warningSoft,
+        color: AppColors.coinSoft,
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(
@@ -767,15 +769,15 @@ class CoinBalancePill extends StatelessWidget {
           AvatarCircle(
             name: alias,
             size: 24,
-            background: AppColors.warning,
-            foreground: Colors.white,
+            background: AppColors.coin,
+            foreground: AppColors.textPrimary,
           ),
           const SizedBox(width: 8),
           Text(
             balance,
             style: const TextStyle(
               fontWeight: FontWeight.w800,
-              color: AppColors.warningInk,
+              color: AppColors.coinInk,
             ),
           ),
           const SizedBox(width: 3),
@@ -784,7 +786,7 @@ class CoinBalancePill extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: AppColors.warningInk,
+              color: AppColors.coinInk,
             ),
           ),
         ],

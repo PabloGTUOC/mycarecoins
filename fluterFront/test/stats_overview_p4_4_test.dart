@@ -332,13 +332,13 @@ void main() {
 
     test('lib/screens/stats_screen.dart source: _caregiverColors list does not contain AppColors.danger', () {
       final source = File('lib/screens/stats_screen.dart').readAsStringSync();
-      final match = RegExp(r'_caregiverColors\s*=\s*\[(.*?)\];', dotAll: true).firstMatch(source);
+      final match = RegExp(r'_caregiverColors\s*=\s*(.*?);', dotAll: true).firstMatch(source);
       expect(match, isNotNull);
       final listBody = match!.group(1)!;
       expect(listBody.contains('AppColors.danger'), isFalse,
           reason: '_caregiverColors must not contain AppColors.danger');
-      expect(listBody.contains('AppColors.violet'), isTrue,
-          reason: '_caregiverColors must contain AppColors.violet');
+      expect(listBody.contains('AppColors.people'), isTrue,
+          reason: '_caregiverColors must use AppColors.people');
     });
   });
 }
