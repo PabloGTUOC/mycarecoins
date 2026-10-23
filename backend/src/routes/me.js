@@ -1,9 +1,15 @@
 import { Router } from 'express';
 import { withTransaction, pool } from '../db/pool.js';
 import { upsertUserFromAuth, assertActiveMember } from '../db/users.js';
-import { validateBody, string, email } from '../middleware/validate.js';
+import { validateBody, string, email, required, positiveInt } from '../middleware/validate.js';
 import { deleteFirebaseUser } from '../middleware/auth.js';
-import { sendError } from '../utils/httpError.js';
+import { sendError, sendServiceError } from '../utils/httpError.js';
+import {
+  createDeviceKey,
+  listDeviceKeys,
+  revokeDeviceKey,
+  revokeAllDeviceKeys,
+} from '../services/deviceKeyService.js';
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -415,3 +421,94 @@ meRouter.put('/notification-preferences', async (req, res) => {
     return sendError(res, 500, 'internal', 'Failed to save preferences.');
   }
 });
+
+// ─────────────────────────────────────────────
+// Device keys (docs/ios-widget-watch-plan.md §3.1)
+// ─────────────────────────────────────────────
+
+meRouter.post(
+  '/device-keys',
+  validateBody({
+    familyId: [required(), positiveInt()],
+    label: [required(), string(1, 60)],
+  }),
+  async (req, res) => {
+    try {
+      const result = await withTransaction(async (client) => {
+        const user = await upsertUserFromAuth(client, req.auth);
+        return await createDeviceKey(client, user.id, {
+          familyId: Number(req.body.familyId),
+          label: req.body.label,
+        });
+      });
+
+      if (result.error) {
+        return sendServiceError(res, result.error);
+      }
+
+      return res.status(201).json({ deviceKey: result.data });
+    } catch (err) {
+      console.error('POST /device-keys error:', err);
+      return sendError(res, 500, 'internal', 'Failed to create device key.');
+    }
+  }
+);
+
+meRouter.get('/device-keys', async (req, res) => {
+  try {
+    const result = await withTransaction(async (client) => {
+      const user = await upsertUserFromAuth(client, req.auth);
+      return await listDeviceKeys(client, user.id);
+    });
+
+    if (result.error) {
+      return sendServiceError(res, result.error);
+    }
+
+    return res.json({ deviceKeys: result.data });
+  } catch (err) {
+    console.error('GET /device-keys error:', err);
+    return sendError(res, 500, 'internal', 'Failed to list device keys.');
+  }
+});
+
+meRouter.delete('/device-keys', async (req, res) => {
+  try {
+    const result = await withTransaction(async (client) => {
+      const user = await upsertUserFromAuth(client, req.auth);
+      return await revokeAllDeviceKeys(client, user.id);
+    });
+
+    if (result.error) {
+      return sendServiceError(res, result.error);
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /device-keys error:', err);
+    return sendError(res, 500, 'internal', 'Failed to revoke device keys.');
+  }
+});
+
+meRouter.delete('/device-keys/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return sendError(res, 404, 'deviceKeyNotFound', 'Device not found.');
+    }
+    const result = await withTransaction(async (client) => {
+      const user = await upsertUserFromAuth(client, req.auth);
+      return await revokeDeviceKey(client, user.id, id);
+    });
+
+    if (result.error) {
+      return sendServiceError(res, result.error);
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('DELETE /device-keys/:id error:', err);
+    return sendError(res, 500, 'internal', 'Failed to revoke device key.');
+  }
+});
+

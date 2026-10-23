@@ -65,6 +65,10 @@ async function main() {
   await pool.query(await fs.readFile(adminConsolePath, 'utf8'));
   console.log('Operator console views and queues ready.');
 
+  const deviceKeysPath = path.join(__dirname, 'migrate-device-keys.sql');
+  await pool.query(await fs.readFile(deviceKeysPath, 'utf8'));
+  console.log('Device keys ready.');
+
   const adminRole = await applyAdminRole(pool);
   console.log(adminRole.granted
     ? 'Operator console database role ready.'

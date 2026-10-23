@@ -31,7 +31,7 @@ Out of scope: creating templates, approving, validating, bounties, personal time
 | **Done** on a started task (early finish) | Completes the instance and pays its coins now | `completeActivity` |
 | **Start care now / household now** (unplanned, real time) | Creates a one-off running instance with no template (§3.3) | **New** |
 | **Stop** a running unplanned task | Fixes the end and the duration, works out the coins, then completes it | **New** |
-| **Undo** (30 s after any of the above) | Unschedules the instance if it has not been paid yet; if it has, writes reversal rows (the ledger stays append-only) | `DELETE /:id`, `revert` |
+| **Undo** (30 s after a Start or Done; the server allows 60 s) | Unschedules the instance if it has not been paid yet; if it has, reverts it with reversal rows (the ledger stays append-only). Not offered after Stop: fix the time in the app | `deleteActivity`, `revertActivity` |
 
 Every rule still applies: the overlap check (409 `scheduleOverlap`), the absence check, the budget
 warning, read-only (`past_due`) families, and the existing pushes to the other caregivers.
@@ -63,7 +63,7 @@ The API takes Firebase ID tokens (`middleware/auth.js`), which expire after an h
 short bursts, and a watch can't share the phone's Firebase session. So each device gets a long-lived key
 that only works on `/api/quick/*`:
 
-- `POST /api/me/device-keys` (Firebase auth, **caregiver** in the family, recent login) returns
+- `POST /api/me/device-keys` (Firebase auth, **caregiver** in the family, at most 10 live keys) returns
   `{ id, key }` once. The key is 32 random bytes, base64url, prefixed `cck_`. The server stores only
   `sha256(key)`.
 - New table `device_keys(id, user_id, family_id, label, key_hash UNIQUE, created_at, last_used_at,
@@ -102,18 +102,18 @@ Today every instance has a fixed end, and the auto-complete sweep (`db/autoCompl
 `approved` instance whose `ends_at` has passed. A running timer must not be paid early, so:
 
 - **New column `activities.running_since timestamptz NULL`.** Start creates a non-template instance:
-  `category 'care'`, the chosen `type`, title = the dictated or typed one or the localized default
-  ("Care" / "Household", stored as a `title_key`), `status 'approved'`, `starts_at = now`, and a
-  provisional `ends_at = now + 4 h` (the cap). Because it holds the slot, the overlap check keeps working
-  while it runs.
+  `category 'care'`, the chosen `type`, `status 'approved'`, `starts_at = now`, and a placeholder
+  `ends_at = now + 15 min`. The title is the dictated one or a localized default ("Care" / "Household");
+  the device sends it already localized, because titles are stored as plain text. A unique index allows
+  one running row per user.
 - **The sweep skips rows with `running_since IS NOT NULL`.**
 - **Stop** sets `ends_at = now`, with duration = elapsed minutes rounded up to 15 (minimum 15, the app's
   rule) and `coin_value` = minutes, the same default as `createActivity`. It clears `running_since` and
   then completes through the same payout path as `completeActivity`. All of this happens in one
   transaction, and the ledger is untouched until Stop.
 - **One running task per user.** Starting another returns `409 quickTaskAlreadyRunning`.
-- **Cap:** at 4 h the sweep stops the task at the cap and pushes "We stopped *Care* at 4 h. Fix the time
-  in the app if needed". The time can be corrected with the existing `PATCH /:id/time`.
+- **Cap:** the sweep stops a task at 4 h and pays it as a 240-minute task. No push in v1. The time can be
+  corrected in the app.
 - Coins come out of the residual like any other log, so the economy doesn't change (CLAUDE.md, the
   two-layer rule).
 

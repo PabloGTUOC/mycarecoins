@@ -20,7 +20,7 @@ export const FORBIDDEN_TABLES = [
   'marketplace_rewards', 'reward_redemptions', 'absences', 'personal_time_requests',
   'family_invitations', 'invite_links', 'fcm_tokens', 'notification_preferences',
   'login_history', 'onboarding_events', 'family_deletion_requests',
-  'family_deletion_approvals',
+  'family_deletion_approvals', 'device_keys',
 ];
 
 export const GRANT_STATEMENTS = [

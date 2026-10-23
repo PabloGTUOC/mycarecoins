@@ -68,6 +68,11 @@ The Flutter mobile application maps `code` to an ARB localization key formatted 
 | `coverageAlreadyPaid` | 400 | — | Coverage shifts cannot be moved once completed. |
 | `coverageEndsWithPersonalTime` | 400 | — | Coverage ends when the personal time ends; delete the personal time instead. |
 | `coverageMovesWithPersonalTime` | 400 | — | Coverage shifts move with their personal time — move the personal time instead. |
+| `deviceKeyCaregiverOnly` | 403 | — | Only caregivers can connect a widget or watch. |
+| `deviceKeyInvalid` | 401 | — | This device is no longer connected. |
+| `deviceKeyLimit` | 409 | `{ max }` | Too many connected devices. Remove one first. |
+| `deviceKeyNotFound` | 404 | — | Device not found. |
+| `deviceKeyRevoked` | 401 | — | This device was disconnected. |
 | `eventDetailNotObject` | 400 | — | detail must be an object. |
 | `eventDetailTooLarge` | 400 | — | detail payload too large. |
 | `eventUnknown` | 400 | — | Unknown event name. |
