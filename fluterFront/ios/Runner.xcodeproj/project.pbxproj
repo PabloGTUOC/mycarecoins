@@ -10,13 +10,16 @@
 		13F507E637C5F95A8560F4AD /* CareCoinsWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 560ACF494625D7222A195857 /* CareCoinsWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		1B8D23A26872500EBA2668D2 /* CareCoinsWatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85016FE53E512A684A118C9F /* CareCoinsWatchWidget.swift */; };
+		1BBFF91E2C5A43C4BBB9E36F /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		1E4A143221B1580F7F7FD59F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		347E8024F7F67E90F14AF380 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B46CE35BC8EF13E0FA4BCA3F /* Pods_Runner.framework */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		42646EC79332CB77BE67E2C5 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 		49B707BD51E94A66B0C36950 /* CareCoinsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0BC201766061949A947920E5 /* CareCoinsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4C934D67C411A7BD5245E498 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		4E9C6F82ED0DA2F162CE9C87 /* CareCoinsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */; };
+		5D7C3EFDC8DDE20103403E68 /* ExtensionsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
@@ -29,7 +32,9 @@
 		A81D582CB21B98B3EA71B062 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 		A9DF98D123A67D949D518126 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77FE791D6F2CF860C4393C44 /* Foundation.framework */; };
 		BD29A7239B11E310044FED0D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
+		CC301BF2E726DE856E5C762F /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		CE4C4020E0913B2B4214058B /* CareCoinsWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89BE399C910620266A79A578 /* CareCoinsWatchApp.swift */; };
+		DAE1D2B8BF840D07D9F03E14 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		E2055EBACC0DF89F1062CF60 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B15646EF325ADD91A5210DA4 /* Pods_RunnerTests.framework */; };
 		F41BFF91C887B419C78F3534 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 /* End PBXBuildFile section */
@@ -122,6 +127,7 @@
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3FDB6D9074287C750618CB28 /* CareCoinsWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CareCoinsWatch.entitlements; sourceTree = "<group>"; };
 		43C6CFD64DFDB85B27A0BD0A /* CareCoinsWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CareCoinsWidget.entitlements; sourceTree = "<group>"; };
+		542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		560ACF494625D7222A195857 /* CareCoinsWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CareCoinsWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C14FB82C1B55BF8890EBB45 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		60A366B8AFCC4BF864C6F001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -153,6 +159,7 @@
 		CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsShared.swift; sourceTree = "<group>"; };
 		D48FE8DDA4AFF22A6BBADB71 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		E152FD786B7A7E61CD763394 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtensionsBridge.swift; sourceTree = "<group>"; };
 		F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -283,6 +290,7 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				60A366B8AFCC4BF864C6F001 /* GoogleService-Info.plist */,
 				B66BD64AA7E2052CBEEE3E63 /* Runner.entitlements */,
+				F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -291,6 +299,7 @@
 			isa = PBXGroup;
 			children = (
 				CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */,
+				542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -639,6 +648,7 @@
 			files = (
 				1B8D23A26872500EBA2668D2 /* CareCoinsWatchWidget.swift in Sources */,
 				42646EC79332CB77BE67E2C5 /* CareCoinsShared.swift in Sources */,
+				CC301BF2E726DE856E5C762F /* DeviceKeyStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -648,6 +658,7 @@
 			files = (
 				CE4C4020E0913B2B4214058B /* CareCoinsWatchApp.swift in Sources */,
 				A4883EA8629A8EF4329996E4 /* CareCoinsShared.swift in Sources */,
+				1BBFF91E2C5A43C4BBB9E36F /* DeviceKeyStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -657,6 +668,7 @@
 			files = (
 				4E9C6F82ED0DA2F162CE9C87 /* CareCoinsWidget.swift in Sources */,
 				F41BFF91C887B419C78F3534 /* CareCoinsShared.swift in Sources */,
+				4C934D67C411A7BD5245E498 /* DeviceKeyStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -676,6 +688,8 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				A81D582CB21B98B3EA71B062 /* CareCoinsShared.swift in Sources */,
+				5D7C3EFDC8DDE20103403E68 /* ExtensionsBridge.swift in Sources */,
+				DAE1D2B8BF840D07D9F03E14 /* DeviceKeyStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
