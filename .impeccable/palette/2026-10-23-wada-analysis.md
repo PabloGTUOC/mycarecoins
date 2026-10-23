@@ -42,4 +42,5 @@ with no pigment analogue, and carried the "cold SaaS" read PRODUCT.md rejects. T
 5. Coin tokens: `#F99D1B` mark, `#FEE9CA` fill, `#7C4226` text (6.65:1).
 
 Kept: neutrals (DESIGN.md rejects cream grounds), success green (teal is too close to the
-blue to also mean done), danger (already Spectrum Red). `adminFront/` keeps the old blue.
+blue to also mean done), danger (already Spectrum Red). `adminFront/` takes the same blue, primarySoft and
+primaryInk (PAL-2); `guard_test.dart` reads `app_theme.dart` so the two cannot drift.

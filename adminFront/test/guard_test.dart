@@ -1,8 +1,37 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:admin_front/theme.dart';
 
 void main() {
   group('Guard tests', () {
+    test(
+        'AppColors.primary, primarySoft, primaryInk match fluterFront app_theme.dart',
+        () {
+      var file = File('../fluterFront/lib/theme/app_theme.dart');
+      if (!file.existsSync()) {
+        file = File('fluterFront/lib/theme/app_theme.dart');
+      }
+      expect(file.existsSync(), isTrue,
+          reason: 'fluterFront/lib/theme/app_theme.dart must exist');
+
+      final content = file.readAsStringSync();
+
+      Color parseToken(String tokenName) {
+        final match = RegExp(
+          'static\\s+const\\s+$tokenName\\s*=\\s*Color\\((0x[0-9a-fA-F]+)\\);',
+        ).firstMatch(content);
+        expect(match, isNotNull,
+            reason: 'Token $tokenName not found in fluterFront app_theme.dart');
+        return Color(int.parse(match!.group(1)!));
+      }
+
+      expect(AppColors.primary, equals(parseToken('primary')));
+      expect(AppColors.primarySoft, equals(parseToken('primarySoft')));
+      expect(AppColors.primaryInk, equals(parseToken('primaryInk')));
+    });
+
     test(
         'no file under adminFront/lib imports from fluterFront (package or relative path)',
         () {

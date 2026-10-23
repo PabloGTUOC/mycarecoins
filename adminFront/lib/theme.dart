@@ -9,9 +9,9 @@ abstract class AppColors {
   static const textPrimary = Color(0xFF0E1726);
   static const textSecondary = Color(0xFF5B6478);
 
-  static const primary = Color(0xFF2563EB);
-  static const primarySoft = Color(0xFFE8EFFE);
-  static const primaryInk = Color(0xFF1D4ED8);
+  static const primary = Color(0xFF006EB8);
+  static const primarySoft = Color(0xFFE6F0F8);
+  static const primaryInk = Color(0xFF005B8D);
 
   static const success = Color(0xFF16A34A);
   static const successSoft = Color(0xFFE7F6EC);
