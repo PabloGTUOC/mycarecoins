@@ -697,7 +697,8 @@ In production (Docker), the backend is not exposed to the internet. Nginx termin
 
 This is a transactional utility function (not a standalone script) called from within an existing database transaction. It sweeps activities for a given family and:
 
-1. Finds all activities with `status = 'approved'` and `ends_at <= NOW()` (locked with `FOR UPDATE`).
+0. Stops any running widget/watch task (`running_since` set) that started `RUNNING_CAP_MINUTES` (240) or more ago, as a 240-minute task.
+1. Finds all activities with `status = 'approved'`, `ends_at <= NOW()` and `running_since IS NULL` (locked with `FOR UPDATE`).
 2. Sets each to `status = 'completed'` and clears any bounty.
 3. Credits `coin_value + bounty_amount` to the assignee's `family_members.coin_balance`.
 4. Inserts corresponding `coin_ledger` entries with reasons `activity_completed` and `bounty_earned`.
@@ -925,4 +926,24 @@ Because the `carecoins_admin` role cannot read user identities or family members
 2. The public server (`src/server.js`) starts a background outbox poller via `startNoticeOutbox(pool, { intervalMs: 60000 })`.
 3. Every 60 seconds, `deliverPendingNotices(pool)` queries `admin_family_notices` for unsent notices (`sent_at IS NULL`), atomically claiming them with `FOR UPDATE SKIP LOCKED` by stamping `sent_at = NOW()`.
 4. The worker dispatches push notifications to all active caregivers using `notifyFamilyCaregivers(familyId, 0, message)`. If delivery fails after the claim, the audit row records the event and it is not endlessly retried.
+
+---
+
+## 20. Widget & Watch API (`/api/quick`)
+
+Plan and decisions: `docs/ios-widget-watch-plan.md`.
+
+**Auth.** `Authorization: Device cck_…` only (`middleware/deviceKey.js` → `deviceKeyService.resolveDeviceKey`). The key must be live and its owner an active caregiver of the key's family, checked on every request; `req.auth` is then shaped like a Firebase identity so services keep calling `upsertUserFromAuth`. The family always comes from the key (`req.device.familyId`), never from the request. Own limiter: 120 requests / 15 min per key. Every other route still rejects device keys.
+
+**Keys** (Firebase auth, `routes/me.js`): `POST /api/me/device-keys {familyId, label}` → 201 with the key, shown once; `GET` lists, `DELETE /:id` revokes one, `DELETE` revokes all (sign-out).
+
+| Route | Does |
+|---|---|
+| `GET /api/quick` | Runs the sweep; returns `family`, `balance`, `needsYou` (others' `pending_validation` + `pending` templates), `tasks` (≤ 8, ranked by `utils/trayRanking.js`, the port of the Today tray's `tray_ranking.dart`), `upcoming` (own instances from −2 h to +24 h, for watch reminders), `running`, `serverTime` |
+| `POST /start` | `{templateId, clientRef}` schedules the template now; `{type, title, clientRef}` starts an unplanned running task (15-min placeholder end, one per user) |
+| `POST /done` | `{templateId, clientRef}` logs it as just done (`startsAt = now − duration`); `{activityId}` completes a started task, or stops it if running |
+| `POST /stop` | `{activityId}`: duration = elapsed rounded up to 15 min (15…240), coins = minutes, then `completeActivity` |
+| `POST /undo` | `{clientRef}` within 60 s: `revertActivity` if paid (reversal rows), else `deleteActivity` |
+
+`clientRef` (8–64 chars) makes every write idempotent: a replay returns the existing row with `replayed: true`. IDs come back as strings (BIGINT). The JS ranking and the Dart tray read one fixture, `backend/tests/fixtures/tray_ranking_cases.json`, so they cannot drift.
 

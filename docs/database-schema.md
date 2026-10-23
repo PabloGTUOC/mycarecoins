@@ -179,6 +179,8 @@ NULL and let a bad row through.
 | `bounty_offered_by` | BIGINT | FK → users(id) ON DELETE SET NULL | User who offered the bounty |
 | `personal_time_request_id` | BIGINT | FK → personal_time_requests(id) ON DELETE SET NULL | The request this row was materialized from, if any |
 | `counterpart_activity_id` | BIGINT | FK → activities(id) ON DELETE SET NULL | The row on the other side of the pair: self ↔ coverage |
+| `running_since` | TIMESTAMPTZ | — | Set while an unplanned widget/watch task is running; the auto-complete sweep skips the row until Stop (or the 240-minute cap). Unique per `assigned_to` while set |
+| `client_ref` | TEXT | UNIQUE (`assigned_to`, `client_ref`) where set | Device-made id that makes `/api/quick` writes idempotent |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Creation timestamp |
 | _(check)_ | — | CHECK (ends_at > starts_at) OR both NULL | End must be strictly after start if either is set |
 | _(check)_ | — | compound CHECK on (`category`, `type`) | Each subclass may only carry its own types |
@@ -606,6 +608,25 @@ Tracks synchronization of free-plan grants into RevenueCat (plan §4). One row p
 | `last_error` | TEXT | — | Error message from most recent failed attempt |
 | `synced_at` | TIMESTAMPTZ | — | Successful sync timestamp |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | Last update timestamp |
+
+---
+
+## 25a. `device_keys`
+
+Long-lived credentials for the iOS widget and the Apple Watch (`docs/ios-widget-watch-plan.md` §3.1). They work only on `/api/quick`. In `FORBIDDEN_TABLES`.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | BIGSERIAL | PRIMARY KEY | |
+| `user_id` | BIGINT | NOT NULL, FK → users(id) ON DELETE CASCADE | Key owner |
+| `family_id` | BIGINT | NOT NULL, FK → families(id) ON DELETE CASCADE | The family every quick request acts in |
+| `label` | TEXT | NOT NULL | Device name shown in Me ▸ Widget & Watch (≤ 60 chars) |
+| `key_hash` | TEXT | NOT NULL, UNIQUE | SHA-256 hex of the `cck_…` key; the key itself is never stored |
+| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+| `last_used_at` | TIMESTAMPTZ | — | Stamped on every successful request |
+| `revoked_at` | TIMESTAMPTZ | — | Set by revoke or revoke-all (sign-out); a revoked key never works again |
+
+**Logic notes:** the owner must be an active caregiver of `family_id` both at creation and on every request; at most 10 live keys per user. Index `device_keys_user_idx` on `user_id` where not revoked.
 
 ---
 

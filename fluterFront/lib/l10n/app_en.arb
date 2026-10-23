@@ -2420,6 +2420,27 @@
   "@srvErrCoverageMovesWithPersonalTime": {
     "description": "Server error: coverageMovesWithPersonalTime"
   },
+  "srvErrDeviceKeyCaregiverOnly": "Only caregivers can connect a widget or watch.",
+  "@srvErrDeviceKeyCaregiverOnly": {
+    "description": "Server error: deviceKeyCaregiverOnly"
+  },
+  "srvErrDeviceKeyInvalid": "This device is no longer connected.",
+  "@srvErrDeviceKeyInvalid": {
+    "description": "Server error: deviceKeyInvalid"
+  },
+  "srvErrDeviceKeyLimit": "You can connect up to {max} devices. Remove one first.",
+  "@srvErrDeviceKeyLimit": {
+    "description": "Server error: deviceKeyLimit",
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "srvErrDeviceKeyNotFound": "Device not found.",
+  "@srvErrDeviceKeyNotFound": {
+    "description": "Server error: deviceKeyNotFound"
+  },
+  "srvErrDeviceKeyRevoked": "This device was disconnected.",
+  "@srvErrDeviceKeyRevoked": {
+    "description": "Server error: deviceKeyRevoked"
+  },
   "srvErrEventDetailNotObject": "detail must be an object.",
   "@srvErrEventDetailNotObject": {
     "description": "Server error: eventDetailNotObject"
@@ -2668,6 +2689,27 @@
   "srvErrPersonalTimeWithdrawOwnerOnly": "Only the person who asked can withdraw a request.",
   "@srvErrPersonalTimeWithdrawOwnerOnly": {
     "description": "Server error: personalTimeWithdrawOwnerOnly"
+  },
+  "srvErrQuickClientRefRequired": "Something went wrong sending this. Try again.",
+  "@srvErrQuickClientRefRequired": {
+    "description": "Server error: quickClientRefRequired"
+  },
+  "srvErrQuickStartInvalid": "Choose a task or a type.",
+  "@srvErrQuickStartInvalid": {
+    "description": "Server error: quickStartInvalid"
+  },
+  "srvErrQuickTaskAlreadyRunning": "\"{title}\" is already running. Stop it first.",
+  "@srvErrQuickTaskAlreadyRunning": {
+    "description": "Server error: quickTaskAlreadyRunning",
+    "placeholders": { "title": { "type": "String" } }
+  },
+  "srvErrQuickTaskNotRunning": "This task is not running.",
+  "@srvErrQuickTaskNotRunning": {
+    "description": "Server error: quickTaskNotRunning"
+  },
+  "srvErrQuickUndoExpired": "Too late to undo. Change it in the app.",
+  "@srvErrQuickUndoExpired": {
+    "description": "Server error: quickUndoExpired"
   },
   "srvErrRecurrenceEndBeforeStart": "The repeat end date is before the first occurrence.",
   "@srvErrRecurrenceEndBeforeStart": {

@@ -93,6 +93,16 @@ String? localizeServerError(
       return l.srvErrCoverageEndsWithPersonalTime;
     case 'coverageMovesWithPersonalTime':
       return l.srvErrCoverageMovesWithPersonalTime;
+    case 'deviceKeyCaregiverOnly':
+      return l.srvErrDeviceKeyCaregiverOnly;
+    case 'deviceKeyInvalid':
+      return l.srvErrDeviceKeyInvalid;
+    case 'deviceKeyLimit':
+      return l.srvErrDeviceKeyLimit((params['max'] as num?)?.toInt() ?? 0);
+    case 'deviceKeyNotFound':
+      return l.srvErrDeviceKeyNotFound;
+    case 'deviceKeyRevoked':
+      return l.srvErrDeviceKeyRevoked;
     case 'eventDetailNotObject':
       return l.srvErrEventDetailNotObject;
     case 'eventDetailTooLarge':
@@ -230,6 +240,16 @@ String? localizeServerError(
       return l.srvErrPersonalTimeWithdrawInsteadOfDecline;
     case 'personalTimeWithdrawOwnerOnly':
       return l.srvErrPersonalTimeWithdrawOwnerOnly;
+    case 'quickClientRefRequired':
+      return l.srvErrQuickClientRefRequired;
+    case 'quickStartInvalid':
+      return l.srvErrQuickStartInvalid;
+    case 'quickTaskAlreadyRunning':
+      return l.srvErrQuickTaskAlreadyRunning('${params['title'] ?? ''}');
+    case 'quickTaskNotRunning':
+      return l.srvErrQuickTaskNotRunning;
+    case 'quickUndoExpired':
+      return l.srvErrQuickUndoExpired;
     case 'recurrenceEndBeforeStart':
       return l.srvErrRecurrenceEndBeforeStart;
     case 'recurrenceInvalidDate':

@@ -1,7 +1,7 @@
 # iOS widget and Apple Watch app: fast tasks — plan
 
-**Status (2026-10-23):** Phase 0 done (empty targets build, sign and run; see §10). Next: Phase 1
-(backend). The owner answered the open decisions on 2026-10-23 (§9).
+**Status (2026-10-23):** Phases 0 and 1 done on `main` (§10). Phase 1 is **not deployed**. Next:
+Phase 2 (app bridge). The owner answered the open decisions on 2026-10-23 (§9).
 
 ## 1. Goal
 
@@ -248,3 +248,28 @@ the owner's OK.
   - `xcodebuild archive -allowProvisioningUpdates` succeeds, with all four bundles signed by the team
     and carrying the expected entitlements.
   - The watch app launches on the Series 12 simulator, paired with the iPhone 17e simulator.
+
+### Phase 1 (2026-10-23, agy QW-1…QW-4, reviewed by the lead)
+
+- **QW-1 `00ddeb8` — device keys.**
+  - `device_keys` table, in `FORBIDDEN_TABLES`.
+  - `deviceKeyService` and the `requireDeviceKey` middleware.
+  - `/api/me/device-keys` routes: create, list, revoke, revoke all.
+- **QW-2 `0ad6e19` — ranking and running tasks.**
+  - `utils/trayRanking.js`, with a shared fixture that runs against both JS and Dart (7 cases). They
+    agreed first time.
+  - New columns `running_since` and `client_ref`.
+  - The sweep skips running rows and caps them at 240 minutes.
+- **QW-3 `c486c80` — `/api/quick`:** GET, start, done, stop, undo (`services/quickService.js`,
+  `routes/quick.js`).
+- **QW-4 — translations:** `srvErr*` entries for the ten new codes in all four ARB files.
+- **Differences from §3:**
+  - Every new key returns BIGINT ids as strings, like the rest of the API. The Swift client must
+    decode `id` as a string.
+  - "Done just now" returns the instance as `approved`. The sweep's `NOW()` is the transaction start,
+    so the payout lands on the next sweep, usually the widget's next `GET /api/quick`.
+- **Verified:**
+  - `npm test` 406 passing; `flutter test` 329 passing.
+  - On Postgres 16 in Docker: `db:init` ran twice, `check-admin-role` passed, and a live route smoke
+    test (key auth, done, replay, start, a second start → 409, stop, undo with a revert, undo of a
+    deletion, expired undo) ended with ledger sum = balance.
