@@ -1,7 +1,7 @@
 # iOS widget and Apple Watch app: fast tasks — plan
 
-**Status (2026-10-23):** plan only, nothing built. The owner answered the open decisions on 2026-10-23
-(§9). Next step: Phase 0 (Apple account setup).
+**Status (2026-10-23):** Phase 0 done (empty targets build, sign and run; see §10). Next: Phase 1
+(backend). The owner answered the open decisions on 2026-10-23 (§9).
 
 ## 1. Goal
 
@@ -213,3 +213,38 @@ the owner's OK.
 5. Apple Developer account: Team ID `63CZCUTA77` (Individual, paid), signed in to Xcode. On 2026-10-23
    the owner registered the App Group `group.com.carecoins.carecoinsFlutter`, the App IDs `…carecoinsFlutter`,
    `.Widget`, `.watchkitapp` and `.watchkitapp.Widget`, and an APNs key for Firebase.
+
+## 10. As built
+
+### Phase 0 (2026-10-23, lead)
+
+- **Targets** in `fluterFront/ios/Runner.xcodeproj`, added with the `xcodeproj` gem that ships with
+  CocoaPods (not by hand):
+  - `CareCoinsWidget`: iOS 27 widget extension (`.Widget`), embedded by Runner's "Embed Foundation
+    Extensions" phase.
+  - `CareCoinsWatch`: watchOS 27 app (`.watchkitapp`), embedded by "Embed Watch Content"
+    (`$(CONTENTS_FOLDER_PATH)/Watch`).
+  - `CareCoinsWatchWidget`: the watch complications (`.watchkitapp.Widget`), embedded in the watch app.
+
+  Both embed phases sit **before Thin Binary**; after it, Flutter's script phases form a build cycle.
+  Each target holds one placeholder file. The real code replaces it in Phases 3–4.
+- **`Shared/CareCoinsShared.swift`**: the App Group, keychain group and key-account names. It is compiled
+  into all four targets.
+- **Signing:** team `63CZCUTA77` with automatic signing on every target.
+  - `Runner/Runner.entitlements`: push (`aps-environment`), App Group, keychain group
+    `$(AppIdentifierPrefix)com.carecoins.carecoinsFlutter.shared`.
+  - The widget has the App Group and the keychain group; the watch targets have the App Group only.
+- **Versions:** `Flutter/Extensions.xcconfig` includes `Generated.xcconfig`. The new targets use
+  `$(FLUTTER_BUILD_NAME)` and `$(FLUTTER_BUILD_NUMBER)`, so they always match the app, which the App Store
+  requires.
+- **Gotchas found:**
+  - The Flutter project sets `SUPPORTED_PLATFORMS = iphoneos` at the project level. The watch targets
+    override it (`watchos watchsimulator`), or the archive compiles them against the iOS SDK.
+  - `PRODUCT_NAME = $(TARGET_NAME)` must be set on new targets, or the build fails with "Multiple
+    commands produce .appex".
+  - With a watch app present, `flutter build ios --simulator` and `flutter run` need `-d <device id>`.
+- **Verified:**
+  - `flutter build ios --simulator -d <iPhone 17e>` builds.
+  - `xcodebuild archive -allowProvisioningUpdates` succeeds, with all four bundles signed by the team
+    and carrying the expected entitlements.
+  - The watch app launches on the Series 12 simulator, paired with the iPhone 17e simulator.

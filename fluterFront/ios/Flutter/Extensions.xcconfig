@@ -1,0 +1,3 @@
+// Base configuration for the widget and watch targets: gives them the app's
+// FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER, so their versions always match the Runner's.
+#include "Generated.xcconfig"
