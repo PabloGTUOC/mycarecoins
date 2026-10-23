@@ -1,7 +1,7 @@
 # iOS widget and Apple Watch app: fast tasks — plan
 
-**Status (2026-10-23):** Phases 0 and 1 done on `main` (§10). Phase 1 is **not deployed**. Next:
-Phase 2 (app bridge). The owner answered the open decisions on 2026-10-23 (§9).
+**Status (2026-10-23):** Phases 0–2 done on `main` (§10). The Phase 1 backend is **not deployed**, so
+Connect fails against production until it is. Next: Phase 3 (iPhone widgets). The owner answered the open decisions on 2026-10-23 (§9).
 
 ## 1. Goal
 
@@ -185,7 +185,7 @@ the owner's OK.
 |---|---|---|---|
 | **0. Setup** | The owner signs in to Xcode with the Apple account and gives the Team ID. The lead turns on automatic signing, adds the Widget Extension and watchOS app targets in Xcode, plus the App Groups, Keychain Sharing and Push capabilities. Paired iPhone + Watch simulators | Owner + lead | `flutter build ios` and both empty targets build |
 | **1. Backend** | `device_keys`, `requireDeviceKey`, `client_ref`, `running_since`, sweep exclusion and 4 h cap, `/api/quick/*`, ranking port + shared fixture, error codes, docs | agy (QW-1…QW-3) | `npm test`, `db:init` twice, `check-admin-role` |
-| **2. App bridge** | Me ▸ "Widget & Watch" (caregivers only): connect, list, revoke; MethodChannel; keychain + snapshot; reload after Today changes; sign-out cleanup; WCSession; four ARB files | agy (QW-4) | `flutter analyze && flutter test`; key visible in the shared keychain on the simulator |
+| **2. App bridge** | Me ▸ "Widget & Watch" (caregivers only): connect, list, revoke; MethodChannel; keychain + snapshot; reload after Today changes; sign-out cleanup; WCSession; four ARB files | agy (QW-5) | `flutter analyze && flutter test`; key visible in the shared keychain on the simulator |
 | **3. iPhone** | `Shared/` (API client, models, palette, strings), widgets, intents, Live Activity, controls, guard tests | agy (QW-5…QW-7) | Start, Stop, Done and Undo from the simulator Home Screen, reflected in Today |
 | **4. Watch** | Watch app, confirm and haptics, local reminders, offline queue, complications | agy (QW-8, QW-9) | Same actions on the paired watch simulator with the phone app killed; a reminder fires 15 min early |
 | **5. Release** | Backend deploy (owner's OK), TestFlight on a real phone and watch, App Review notes, `docs/deployment-and-delivery.md`, PRODUCT.md § "Widget and Watch" | Lead + owner | TestFlight pass on real devices |
@@ -273,3 +273,28 @@ the owner's OK.
   - On Postgres 16 in Docker: `db:init` ran twice, `check-admin-role` passed, and a live route smoke
     test (key auth, done, replay, start, a second start → 409, stop, undo with a revert, undo of a
     deletion, expired undo) ended with ledger sum = balance.
+
+### Phase 2 (2026-10-23, agy QW-5 + QW-5b, reviewed by the lead)
+
+- **Native:**
+  - `ios/Runner/ExtensionsBridge.swift` is the `carecoins/extensions` channel, with the methods
+    `isSupported`, `storeDeviceKey`, `status`, `refresh` and `clear`. It also activates `WCSession`.
+  - `ios/Shared/DeviceKeyStore.swift` holds the keychain helpers, compiled into all four targets.
+  - The team prefix comes from the Info.plist key `CareCoinsAppIdentifierPrefix`.
+  - New `CareCoinsShared` constants: `snapshotFile`, `deviceKeyIdDefault` and `apiBaseDefault`.
+- **Differences from §3.4:**
+  - There is no `writeSnapshot`. The Dart side never holds the key after connecting, so Swift's
+    `refresh` fetches `GET /api/quick` itself, writes `quick.json`, reloads timelines and calls
+    `updateApplicationContext({deviceKey, apiBase, snapshot})`.
+  - A 401 clears everything locally.
+  - If the shared access group is refused, the keychain helpers fall back to the default group. On a
+    simulator build without entitlements, the widget will not see the key.
+- **Dart:**
+  - `lib/services/extensions_bridge.dart` does nothing off iOS and coalesces refreshes.
+  - Refresh runs after each successful Today `_load()` for caregivers, and after `fetchUserData`.
+  - `logout()` calls `DELETE /api/me/device-keys`, then `clear`.
+  - Me ▸ Widget & Watch is `lib/screens/devices_screen.dart`, for caregivers only.
+  - The new `showConfirmDialog` in `widgets/ui.dart` now also backs `profile_screen`'s `_confirm`.
+  - `formatShortDate` added to `utils/formatters.dart`.
+- **Verified:** `flutter analyze` clean, `flutter test` 343 passing, and the simulator build succeeds.
+  The live Connect flow on the simulator waits for the backend deploy (or a local backend).
