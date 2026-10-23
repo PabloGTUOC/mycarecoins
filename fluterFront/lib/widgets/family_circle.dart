@@ -32,13 +32,13 @@ class _FamilyCircleState extends State<FamilyCircle> {
   bool _linkCopied = false;
   bool _editing = false;
 
-  Map<String, (String, Color)> _badges(AppLocalizations l) => {
-        'child': (l.badgeJuniorExplorer, AppColors.badgeChild),
-        'pet': (l.badgeFurryFriend, AppColors.badgePet),
-        'elderly': (l.badgeGuidingStar, AppColors.badgeElderly),
-        'caregiver': (l.fallbackCaregiver, AppColors.badgeCaregiver),
-        'member': (l.badgeFamilyMember, AppColors.badgeMember),
-        'person': (l.badgeFamilyMember, AppColors.badgeMember),
+  Map<String, (String, PersonColor)> _badges(AppLocalizations l) => {
+        'child': (l.badgeJuniorExplorer, AppColors.people[3]),
+        'pet': (l.badgeFurryFriend, AppColors.people[1]),
+        'elderly': (l.badgeGuidingStar, AppColors.people[2]),
+        'caregiver': (l.fallbackCaregiver, AppColors.people[0]),
+        'member': (l.badgeFamilyMember, AppColors.people[0]),
+        'person': (l.badgeFamilyMember, AppColors.people[0]),
       };
 
   @override
@@ -322,7 +322,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
                   badge: badges[item['type']] ??
                       (
                         item['type'].toString().replaceAll('_', ' '),
-                        AppColors.inkMuted,
+                        AppColors.people[0],
                       ),
                   onRemove: item['isActor'] == true && app.isCaregiver && isEditing
                       ? () => _removeActor(item['id'], item['name'].toString())
@@ -473,7 +473,7 @@ class _FamilyCircleState extends State<FamilyCircle> {
 
 class _CircleCard extends StatelessWidget {
   final String name;
-  final (String, Color) badge;
+  final (String, PersonColor) badge;
   final String? imageUrl;
   final VoidCallback? onRemove;
   final VoidCallback? onAvatarTap;
@@ -488,6 +488,7 @@ class _CircleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final pc = badge.$2;
     return Container(
       width: 132,
       padding: const EdgeInsets.all(14),
@@ -508,8 +509,8 @@ class _CircleCard extends StatelessWidget {
                     name: name,
                     size: 48,
                     imageUrl: imageUrl,
-                    background: badge.$2.withValues(alpha: 0.15),
-                    foreground: badge.$2),
+                    background: pc.soft,
+                    foreground: pc.ink),
               ),
               if (onAvatarTap != null)
                 Positioned(
@@ -523,7 +524,7 @@ class _CircleCard extends StatelessWidget {
                       height: 22,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                          color: badge.$2, shape: BoxShape.circle),
+                          color: pc.mark, shape: BoxShape.circle),
                       child: const Icon(Icons.photo_camera_rounded,
                           size: 12, color: Colors.white),
                     ),
@@ -564,8 +565,8 @@ class _CircleCard extends StatelessWidget {
           const SizedBox(height: 5),
           PillBadge(
               text: badge.$1,
-              color: badge.$2,
-              background: badge.$2.withValues(alpha: 0.12),
+              color: pc.ink,
+              background: pc.soft,
               fontSize: 12),
         ],
       ),

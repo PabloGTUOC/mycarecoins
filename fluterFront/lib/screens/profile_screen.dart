@@ -557,7 +557,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             height: 22,
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
-                                color: AppColors.indigo,
+                                color: AppColors.primary,
                                 shape: BoxShape.circle),
                             child: const Icon(Icons.photo_camera_rounded,
                                 size: 12, color: Colors.white),
@@ -589,7 +589,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? l.roleCaregiver
                                 : l.roleMember,
                             fontSize: 12,
-                            color: AppColors.indigo,
+                            color: AppColors.primaryInk,
                             background: AppColors.primarySoft),
                       ),
                   ],
@@ -1107,7 +1107,7 @@ class _WalletPanel extends StatelessWidget {
                                         text:
                                             '${row['duration_minutes']} min',
                                         fontSize: 12,
-                                        color: AppColors.violet,
+                                        color: AppColors.primaryInk,
                                         background: AppColors.primarySoft),
                                   ),
                               ],

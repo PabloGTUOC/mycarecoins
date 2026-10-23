@@ -58,12 +58,8 @@ class _StatsScreenState extends State<StatsScreen> {
   bool _compareMembers = false;
   int _tab = 0; // mobile: 0 overview, 1 members, 2 economy (debug only)
 
-  static const _caregiverColors = [
-    AppColors.primary,
-    AppColors.success,
-    AppColors.warning,
-    AppColors.violet,
-  ];
+  static final _caregiverColors =
+      AppColors.people.map((p) => p.mark).toList();
 
   final _tourHeadingKey = GlobalKey();
   final _tourCompareKey = GlobalKey();

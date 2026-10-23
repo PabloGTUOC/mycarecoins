@@ -2,9 +2,12 @@
 name: CareCoins
 description: Family caregiving coordination with a fair-share coin reward system.
 colors:
-  primary: "#2563EB"
-  primary-soft: "#E8EFFE"
-  primary-ink: "#1D4ED8"
+  primary: "#006EB8"
+  primary-soft: "#E6F0F8"
+  primary-ink: "#005B8D"
+  coin: "#F99D1B"
+  coin-soft: "#FEE9CA"
+  coin-ink: "#7C4226"
   success: "#16A34A"
   success-soft: "#E7F6EC"
   success-ink: "#166534"
@@ -126,7 +129,9 @@ This system explicitly rejects the social media aesthetic (no feeds, no engageme
 A restrained palette where each hue has one job. Primary blue drives every intentional action; semantic colors (green, amber, red) annotate status. Neutrals carry the load.
 
 ### Primary
-- **Trusted Action Blue** (`#2563EB`): The single primary action color. Used on all primary buttons, active nav states, links, focus rings, and the FAB back button. Its presence signals "tap here, something happens." Used in soft form (`#E8EFFE`) as a background tint for selected states.
+- **Trusted Action Blue** (`#006EB8`, Wada "Blue"): The single primary action color. Used on all primary buttons, active nav states, links, focus rings, and the FAB back button. Its presence signals "tap here, something happens." Soft form (`#E6F0F8`) tints selected states; ink form (`#005B8D`, Wada "Helvetia Blue") carries text on that tint. White on the blue is 5.35:1.
+
+The palette is anchored on Sanzo Wada's *Dictionary of Colour Combinations*, combination 267 (Cream Yellow, Yellow Orange, Benzol Green, Blue): pigment colours rather than screen-default hues, which is where warmth comes from without a cream background. Analysis: 2026-10-23, `.impeccable/palette/`.
 
 ### Secondary
 - **Task Done Green** (`#16A34A`): Marks completion. Completed activity chips, success toast backgrounds, the "+" add FAB, progress bar fill, care-category activity cards. Soft form (`#E7F6EC`) used for container backgrounds.
@@ -143,6 +148,14 @@ A restrained palette where each hue has one job. Primary blue drives every inten
 - **Soft Border** (`#E5E8EE`): Dividers, card borders, input strokes at rest.
 - **Input Fill** (`#F1F5F9`): Input field background. Slightly darker than the body bg to signal an editable zone.
 - **Input Border** (`#CBD5E1`): Input stroke at rest; shifts to primary blue on focus.
+
+### Coins
+- **Coin** (`#F99D1B`, Wada "Yellow Orange"): the coin mark only, never text. **Coin soft** (`#FEE9CA`, Cream Yellow at 35 %) fills the coin pill; **coin ink** (`#7C4226`, Wada "Brown") is the text on it (6.65:1). Coins never borrow household amber.
+
+### People
+Four colours that say *who*, never a status: Blue `#006EB8`, Benzol Green `#00978D`, Yellow Orange `#F99D1B`, Aconite Violet `#A36AA5` (Wada combinations 267 and 257). Each has a soft tint for fills and an ink for text and icons on it (all ≥ 5.9:1); `AppColors.people` (`PersonColor`). Used for member cards, Family circle badges, per-caregiver chart series and reward banners. A person is never drawn in green, amber or red, which mean done, household and alert.
+
+No gradients and no indigo/violet accents: the purple-to-blue gradient was removed in 2026-10.
 
 **The One Job Rule.** Every color has one semantic role and stays in it. Blue is not used for decoration. Green is not used for branding. Amber is not used for warnings unrelated to household tasks. If a new color feels necessary, it is probably a state variation of an existing token, not a new hue.
 **The Soft-Ink Rule.** Text on a soft fill uses that hue's ink token (`primary-ink`, `success-ink`, `warning-ink`, `danger-ink`), never the base colour, which fails contrast on its own soft tint. Solid fills carrying white text use the strong tokens (`success-strong`, `warning-strong`). In Flutter these live in the `CareColors` theme extension (`context.careColors`).
@@ -271,7 +284,7 @@ Three panels: AccountSettings (display name, avatar, alias, email), FamilyCircle
 
 - **Standalone mode:** the app runs without browser chrome. The nav bar is the only chrome. No browser back button — provide explicit back controls on every drilldown screen.
 - **Install prompt:** shown after a meaningful interaction, not immediately on first visit.
-- **Splash screen:** uses `background_color: #F7F8FA` and `theme_color: #2563EB` from the manifest — matches the app's visual identity without a custom splash asset.
+- **Splash screen:** uses `background_color: #F7F8FA` and `theme_color: #006EB8` from the manifest — matches the app's visual identity without a custom splash asset.
 - **Icon design:** a coin-mark icon at 192 × 192 and 512 × 512 (maskable variant included). The maskable version uses safe-zone padding so it adapts correctly to Android adaptive icon shapes.
 
 ---
@@ -279,7 +292,7 @@ Three panels: AccountSettings (display name, avatar, alias, email), FamilyCircle
 ## 8. Do's and Don'ts
 
 ### Do:
-- **Do** use `primary` (#2563EB) exclusively for primary actions, active states, and focus rings. Its scarcity is its power.
+- **Do** use `primary` (#006EB8) exclusively for primary actions, active states, and focus rings. Its scarcity is its power.
 - **Do** use full pill radius (9999px) on all buttons and inputs — it is the system's primary shape language.
 - **Do** reach for the stock Material 3 widget and let `buildAppTheme()` style it, before building a custom control.
 - **Do** use weight 800 for all headings, 700 for all labels and chips, 500 for body. Never go below 500 for any UI text.

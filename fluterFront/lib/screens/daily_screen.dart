@@ -1793,8 +1793,8 @@ class _DailyScreenState extends State<DailyScreen> {
           iconBg: AppColors.warningSoft,
           label: label,
           badge: sweetener > 0 ? '+${sweetener}cc' : null,
-          badgeColor: AppColors.warningInk,
-          badgeBg: AppColors.warningSoft,
+          badgeColor: AppColors.coinInk,
+          badgeBg: AppColors.coinSoft,
           actionLabel: l.acceptAction,
           onTap: () => _openRequest(request),
         );
@@ -1802,7 +1802,7 @@ class _DailyScreenState extends State<DailyScreen> {
       case NeedsMemberApproval(:final member):
         return _NeedsRow(
           icon: Icons.person_add_outlined,
-          iconColor: AppColors.indigo,
+          iconColor: AppColors.primaryInk,
           iconBg: AppColors.primarySoft,
           label: label,
           badge: null,
@@ -2118,7 +2118,7 @@ class _ActivityAction extends StatelessWidget {
     }
     if (mine && bounty > 0) {
       return pill(
-          l.pillOffering('$bounty'), AppColors.warningInk, AppColors.warningSoft);
+          l.pillOffering('$bounty'), AppColors.coinInk, AppColors.coinSoft);
     }
     if (!mine && bounty > 0 && app.isCaregiver) {
       return pill(l.pillTakeOver('$bounty'), AppColors.successInk,
@@ -4889,7 +4889,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.warningSoft,
+                        color: AppColors.coinSoft,
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                       child: Text(
@@ -4897,7 +4897,7 @@ class _ActivityDetailsSheet extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.warningInk,
+                          color: AppColors.coinInk,
                         ),
                       ),
                     ),

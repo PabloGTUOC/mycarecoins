@@ -39,11 +39,11 @@ class ActivationChecklist extends StatelessWidget {
         color: AppColors.surface,
         border: Border.all(color: AppColors.primary),
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-              color: Color(0x142563EB),
+              color: AppColors.primary.withValues(alpha: 0.08),
               blurRadius: 24,
-              offset: Offset(0, 6)),
+              offset: const Offset(0, 6)),
         ],
       ),
       child: Column(

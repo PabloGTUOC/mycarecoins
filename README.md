@@ -32,7 +32,7 @@ Single Dart codebase targeting iOS, Android and web. State is a single `ChangeNo
 Tokens live in `lib/theme/app_theme.dart` (see `docs/DESIGN.md`).
 
 - **Typeface:** Plus Jakarta Sans (500 / 700 / 800) via `google_fonts`. Hierarchy through weight and size only.
-- **Colour palette:** semantic-only. Blue `#2563EB` = action, green `#16A34A` = done, amber `#D97706` = household, red `#DC2626` = danger. Each colour has one job.
+- **Colour palette:** semantic-only. Blue `#006EB8` = action, green `#16A34A` = done, amber `#D97706` = household, red `#DC2626` = danger, Yellow Orange `#F99D1B` = coins; four people colours say who. Each colour has one job (anchored on Wada's Dictionary of Colour Combinations, `docs/DESIGN.md` §2).
 - **Radius tokens:** `sm` 8 · `md` 16 · `lg` 24 · `pill` 999.
 - **Accessibility:** WCAG AA contrast minimum, 44×44 touch targets, reduced-motion support, status never conveyed by colour alone.
 

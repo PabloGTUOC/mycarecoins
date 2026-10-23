@@ -186,10 +186,12 @@ has exactly one semantic job:
 
 | Token | Value | Job |
 |---|---|---|
-| `primary` | `#2563EB` | Action |
+| `primary` | `#006EB8` | Action (Wada "Blue") |
 | `success` | `#16A34A` | Done |
 | `warning` | `#D97706` | Household / caution |
 | `danger` | `#DC2626` | Destructive |
+| `coin` / `coinSoft` / `coinInk` | `#F99D1B` / `#FEE9CA` / `#7C4226` | Coins: mark, pill fill, text |
+| `people` (`PersonColor` mark/soft/ink) | Blue, Benzol Green, Yellow Orange, Aconite Violet | Who someone is, never a status |
 | `bg` / `surface` / `border` | `#F7F8FA` / `#FFFFFF` / `#E5E8EE` | Ground, cards, edges |
 | `textPrimary` / `textSecondary` | `#0E1726` / `#5B6478` | Hierarchy by weight and size, not colour |
 
