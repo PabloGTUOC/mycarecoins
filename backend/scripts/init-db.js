@@ -69,6 +69,10 @@ async function main() {
   await pool.query(await fs.readFile(deviceKeysPath, 'utf8'));
   console.log('Device keys ready.');
 
+  const quickTasksPath = path.join(__dirname, 'migrate-quick-tasks.sql');
+  await pool.query(await fs.readFile(quickTasksPath, 'utf8'));
+  console.log('Quick tasks (running timer, client refs) ready.');
+
   const adminRole = await applyAdminRole(pool);
   console.log(adminRole.granted
     ? 'Operator console database role ready.'

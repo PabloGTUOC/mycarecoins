@@ -5,10 +5,22 @@
  */
 import { payoutReasons } from './ledgerReasons.js';
 
+export const RUNNING_CAP_MINUTES = 240;
+
 export async function runAutoCompleteSweep(client, familyId) {
+  await client.query(
+    `UPDATE activities
+        SET running_since = NULL,
+            ends_at = starts_at + ($2 * interval '1 minute'),
+            duration_minutes = $2,
+            coin_value = $2
+      WHERE family_id = $1 AND running_since IS NOT NULL AND running_since <= NOW() - ($2 * interval '1 minute')`,
+    [familyId, RUNNING_CAP_MINUTES]
+  );
+
   const { rows: expired } = await client.query(
     `SELECT id, assigned_to, type, coin_value, bounty_amount, bounty_offered_by FROM activities
-     WHERE family_id = $1 AND status = 'approved' AND ends_at <= NOW()
+     WHERE family_id = $1 AND status = 'approved' AND ends_at <= NOW() AND running_since IS NULL
      FOR UPDATE`,
     [familyId]
   );

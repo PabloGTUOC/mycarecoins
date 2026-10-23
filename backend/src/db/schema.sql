@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS activities (
   approved_at TIMESTAMPTZ,
   bounty_amount INTEGER NOT NULL DEFAULT 0,
   bounty_offered_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  running_since TIMESTAMPTZ,
+  client_ref TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT activities_category_type_check CHECK (
     -- 'coverage' is care work created by accepting someone's personal-time
@@ -407,3 +409,7 @@ CREATE TABLE IF NOT EXISTS device_keys (
 );
 CREATE INDEX IF NOT EXISTS device_keys_user_idx ON device_keys (user_id) WHERE revoked_at IS NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS activities_client_ref_uniq
+  ON activities (assigned_to, client_ref) WHERE client_ref IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS activities_one_running_per_user
+  ON activities (assigned_to) WHERE running_since IS NOT NULL;
