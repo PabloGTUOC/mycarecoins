@@ -7,35 +7,63 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02E09BE6E3CEA1EB0741C66D /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
+		03C782AEE2161CDFA5F49281 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
+		0FCA2BD4E40D6B18CFD16D37 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
+		102575F228F1BA9455283B41 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
 		13F507E637C5F95A8560F4AD /* CareCoinsWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 560ACF494625D7222A195857 /* CareCoinsWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		14E0A3C7C7E18F90B56AADEC /* QuickIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */; };
 		1B8D23A26872500EBA2668D2 /* CareCoinsWatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85016FE53E512A684A118C9F /* CareCoinsWatchWidget.swift */; };
 		1BBFF91E2C5A43C4BBB9E36F /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		1E4A143221B1580F7F7FD59F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
+		242CEA793FFD5630A3A864D8 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
+		2B35C962814B4BC20932DFCC /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
+		313EE9BA216557FEB2B5A27F /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		347E8024F7F67E90F14AF380 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B46CE35BC8EF13E0FA4BCA3F /* Pods_Runner.framework */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		42646EC79332CB77BE67E2C5 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
+		4538BD27675CE52429E83884 /* QuickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588B699A3DACD592D6755AAA /* QuickModels.swift */; };
+		47386B495A7F48796FD65604 /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
 		49B707BD51E94A66B0C36950 /* CareCoinsWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0BC201766061949A947920E5 /* CareCoinsWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4C934D67C411A7BD5245E498 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
+		4D48C8B69E60B41B684409C5 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
+		4E44FAC51BB3A108B81932A3 /* QuickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588B699A3DACD592D6755AAA /* QuickModels.swift */; };
 		4E9C6F82ED0DA2F162CE9C87 /* CareCoinsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */; };
+		5A37F48569CC604FE8828584 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
 		5D7C3EFDC8DDE20103403E68 /* ExtensionsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */; };
+		60B3C2431390B69EA85EC95F /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
+		66547BC304A71F212D43E823 /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
+		76AB6A62CC121B194948BF00 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		7C797E7989DA0D5FD2B6E0F1 /* CareCoinsWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6C85D33948E4F76BFB6B8392 /* CareCoinsWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		880DC0423791704882BBA592 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
+		88D891D3DB2E538341CDD639 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
+		8E57B544F9EC0112FBE09695 /* QuickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588B699A3DACD592D6755AAA /* QuickModels.swift */; };
+		958E84A31317ABA23A6D3FB6 /* QuickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588B699A3DACD592D6755AAA /* QuickModels.swift */; };
 		97A95EB52C27745541E17EDB /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 60A366B8AFCC4BF864C6F001 /* GoogleService-Info.plist */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		998BDF0BB21A36A7A653B52D /* QuickWidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F2C4996CBB68B45A1B0F49 /* QuickWidgetViews.swift */; };
+		9C9C9544ECD28B8646E62DFB /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
+		A349F661C04F77D2758BFD01 /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
 		A4883EA8629A8EF4329996E4 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 		A81D582CB21B98B3EA71B062 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 		A9DF98D123A67D949D518126 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77FE791D6F2CF860C4393C44 /* Foundation.framework */; };
+		AA80B1913E2CBDA1722F58BE /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
+		B08FFA0D28EA5BE776690315 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
+		B84782DEDDE5EBC2B046FDB7 /* AccessoryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */; };
 		BD29A7239B11E310044FED0D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
+		C7A28E1E614F3D4C18E6ABDA /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
 		CC301BF2E726DE856E5C762F /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		CE4C4020E0913B2B4214058B /* CareCoinsWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89BE399C910620266A79A578 /* CareCoinsWatchApp.swift */; };
 		DAE1D2B8BF840D07D9F03E14 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		E2055EBACC0DF89F1062CF60 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B15646EF325ADD91A5210DA4 /* Pods_RunnerTests.framework */; };
+		EB2E898707C81BA4D925786C /* QuickProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E1F3BE08B7787580315EC0 /* QuickProvider.swift */; };
 		F41BFF91C887B419C78F3534 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
 /* End PBXBuildFile section */
 
@@ -118,19 +146,25 @@
 
 /* Begin PBXFileReference section */
 		0BC201766061949A947920E5 /* CareCoinsWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CareCoinsWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0D62BE1C2BFD0A4C8063C95E /* Palette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		16A69E0BDCB6E536538DADBD /* Extensions.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Extensions.xcconfig; path = Flutter/Extensions.xcconfig; sourceTree = "<group>"; };
+		29E1F3BE08B7787580315EC0 /* QuickProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickProvider.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		35853F1241FACA7ABE4ADB03 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		3FDB6D9074287C750618CB28 /* CareCoinsWatch.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CareCoinsWatch.entitlements; sourceTree = "<group>"; };
 		43C6CFD64DFDB85B27A0BD0A /* CareCoinsWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CareCoinsWidget.entitlements; sourceTree = "<group>"; };
+		4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		560ACF494625D7222A195857 /* CareCoinsWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CareCoinsWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		588B699A3DACD592D6755AAA /* QuickModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickModels.swift; sourceTree = "<group>"; };
 		5C14FB82C1B55BF8890EBB45 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5FFD3C88223C4942A326745D /* QuickAPI.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickAPI.swift; sourceTree = "<group>"; };
 		60A366B8AFCC4BF864C6F001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		67E4979E96510C0822CDBE52 /* SnapshotStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotStore.swift; sourceTree = "<group>"; };
 		6C85D33948E4F76BFB6B8392 /* CareCoinsWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CareCoinsWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -140,6 +174,7 @@
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7BCE44C5D5A1924F4588413C /* CareCoinsWatchWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = CareCoinsWatchWidget.entitlements; sourceTree = "<group>"; };
 		7F7247516974AD9EF99F16EA /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		82F2C4996CBB68B45A1B0F49 /* QuickWidgetViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickWidgetViews.swift; sourceTree = "<group>"; };
 		85016FE53E512A684A118C9F /* CareCoinsWatchWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsWatchWidget.swift; sourceTree = "<group>"; };
 		861B24517F8CBB863C4AD8C1 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		89BE399C910620266A79A578 /* CareCoinsWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsWatchApp.swift; sourceTree = "<group>"; };
@@ -157,8 +192,11 @@
 		B66BD64AA7E2052CBEEE3E63 /* Runner.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsShared.swift; sourceTree = "<group>"; };
+		D31BC8D883B35F6D4E224DB4 /* L10n.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		D48FE8DDA4AFF22A6BBADB71 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickIntents.swift; sourceTree = "<group>"; };
 		E152FD786B7A7E61CD763394 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccessoryWidget.swift; sourceTree = "<group>"; };
 		F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtensionsBridge.swift; sourceTree = "<group>"; };
 		F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -300,6 +338,12 @@
 			children = (
 				CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */,
 				542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */,
+				588B699A3DACD592D6755AAA /* QuickModels.swift */,
+				5FFD3C88223C4942A326745D /* QuickAPI.swift */,
+				67E4979E96510C0822CDBE52 /* SnapshotStore.swift */,
+				0D62BE1C2BFD0A4C8063C95E /* Palette.swift */,
+				D31BC8D883B35F6D4E224DB4 /* L10n.swift */,
+				4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */,
 			);
 			name = Shared;
 			path = Shared;
@@ -354,6 +398,10 @@
 				F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */,
 				5C14FB82C1B55BF8890EBB45 /* Info.plist */,
 				43C6CFD64DFDB85B27A0BD0A /* CareCoinsWidget.entitlements */,
+				29E1F3BE08B7787580315EC0 /* QuickProvider.swift */,
+				82F2C4996CBB68B45A1B0F49 /* QuickWidgetViews.swift */,
+				DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */,
+				E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */,
 			);
 			name = CareCoinsWidget;
 			path = CareCoinsWidget;
@@ -501,6 +549,9 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				es,
+				fr,
+				de,
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
@@ -532,6 +583,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5A37F48569CC604FE8828584 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -539,6 +591,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				102575F228F1BA9455283B41 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -551,6 +604,7 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				97A95EB52C27745541E17EDB /* GoogleService-Info.plist in Resources */,
+				242CEA793FFD5630A3A864D8 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,6 +612,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				02E09BE6E3CEA1EB0741C66D /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -649,6 +704,11 @@
 				1B8D23A26872500EBA2668D2 /* CareCoinsWatchWidget.swift in Sources */,
 				42646EC79332CB77BE67E2C5 /* CareCoinsShared.swift in Sources */,
 				CC301BF2E726DE856E5C762F /* DeviceKeyStore.swift in Sources */,
+				8E57B544F9EC0112FBE09695 /* QuickModels.swift in Sources */,
+				60B3C2431390B69EA85EC95F /* QuickAPI.swift in Sources */,
+				C7A28E1E614F3D4C18E6ABDA /* SnapshotStore.swift in Sources */,
+				B08FFA0D28EA5BE776690315 /* Palette.swift in Sources */,
+				313EE9BA216557FEB2B5A27F /* L10n.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -659,6 +719,11 @@
 				CE4C4020E0913B2B4214058B /* CareCoinsWatchApp.swift in Sources */,
 				A4883EA8629A8EF4329996E4 /* CareCoinsShared.swift in Sources */,
 				1BBFF91E2C5A43C4BBB9E36F /* DeviceKeyStore.swift in Sources */,
+				958E84A31317ABA23A6D3FB6 /* QuickModels.swift in Sources */,
+				2B35C962814B4BC20932DFCC /* QuickAPI.swift in Sources */,
+				A349F661C04F77D2758BFD01 /* SnapshotStore.swift in Sources */,
+				76AB6A62CC121B194948BF00 /* Palette.swift in Sources */,
+				880DC0423791704882BBA592 /* L10n.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -669,6 +734,15 @@
 				4E9C6F82ED0DA2F162CE9C87 /* CareCoinsWidget.swift in Sources */,
 				F41BFF91C887B419C78F3534 /* CareCoinsShared.swift in Sources */,
 				4C934D67C411A7BD5245E498 /* DeviceKeyStore.swift in Sources */,
+				4538BD27675CE52429E83884 /* QuickModels.swift in Sources */,
+				AA80B1913E2CBDA1722F58BE /* QuickAPI.swift in Sources */,
+				66547BC304A71F212D43E823 /* SnapshotStore.swift in Sources */,
+				88D891D3DB2E538341CDD639 /* Palette.swift in Sources */,
+				03C782AEE2161CDFA5F49281 /* L10n.swift in Sources */,
+				EB2E898707C81BA4D925786C /* QuickProvider.swift in Sources */,
+				998BDF0BB21A36A7A653B52D /* QuickWidgetViews.swift in Sources */,
+				14E0A3C7C7E18F90B56AADEC /* QuickIntents.swift in Sources */,
+				B84782DEDDE5EBC2B046FDB7 /* AccessoryWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -690,6 +764,11 @@
 				A81D582CB21B98B3EA71B062 /* CareCoinsShared.swift in Sources */,
 				5D7C3EFDC8DDE20103403E68 /* ExtensionsBridge.swift in Sources */,
 				DAE1D2B8BF840D07D9F03E14 /* DeviceKeyStore.swift in Sources */,
+				4E44FAC51BB3A108B81932A3 /* QuickModels.swift in Sources */,
+				9C9C9544ECD28B8646E62DFB /* QuickAPI.swift in Sources */,
+				47386B495A7F48796FD65604 /* SnapshotStore.swift in Sources */,
+				0FCA2BD4E40D6B18CFD16D37 /* Palette.swift in Sources */,
+				4D48C8B69E60B41B684409C5 /* L10n.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
