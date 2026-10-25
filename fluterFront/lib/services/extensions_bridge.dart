@@ -97,4 +97,17 @@ class ExtensionsBridge {
       debugPrint('ExtensionsBridge.clear error: $e');
     }
   }
+
+  static Future<void> setLanguage(String? code) async {
+    if (!available) return;
+    try {
+      await channel.invokeMethod<void>('setLanguage', {'code': code});
+    } on PlatformException catch (e) {
+      debugPrint('ExtensionsBridge.setLanguage platform error: $e');
+    } on MissingPluginException catch (e) {
+      debugPrint('ExtensionsBridge.setLanguage missing plugin: $e');
+    } catch (e) {
+      debugPrint('ExtensionsBridge.setLanguage error: $e');
+    }
+  }
 }

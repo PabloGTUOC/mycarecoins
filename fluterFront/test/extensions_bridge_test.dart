@@ -29,6 +29,8 @@ void main() {
           return 'ok';
         case 'clear':
           return null;
+        case 'setLanguage':
+          return null;
         default:
           return null;
       }
@@ -106,7 +108,21 @@ void main() {
     await ExtensionsBridge.status();
     await ExtensionsBridge.refresh();
     await ExtensionsBridge.clear();
+    await ExtensionsBridge.setLanguage('es');
     expect(methodCalls, isEmpty);
+  });
+
+  test('setLanguage passes code', () async {
+    await ExtensionsBridge.setLanguage('es');
+    expect(methodCalls.length, 1);
+    expect(methodCalls.first.method, 'setLanguage');
+    expect(methodCalls.first.arguments, {'code': 'es'});
+
+    methodCalls.clear();
+    await ExtensionsBridge.setLanguage(null);
+    expect(methodCalls.length, 1);
+    expect(methodCalls.first.method, 'setLanguage');
+    expect(methodCalls.first.arguments, {'code': null});
   });
 
   test('Two concurrent refresh() calls -> a single platform call', () async {

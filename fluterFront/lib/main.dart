@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'screens/landing_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/shell.dart';
+import 'services/extensions_bridge.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'widgets/ui.dart';
@@ -44,6 +47,7 @@ Future<void> main() async {
   // Read the persisted language before the first frame so the UI never paints
   // in the device locale and then visibly snaps to the chosen one.
   final initialLocale = await AppState.loadPersistedLocale();
+  unawaited(ExtensionsBridge.setLanguage(initialLocale?.languageCode));
 
   runApp(CareCoinsApp(
       firebaseAvailable: firebaseAvailable, initialLocale: initialLocale));

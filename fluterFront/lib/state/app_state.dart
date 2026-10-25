@@ -107,6 +107,7 @@ class AppState extends ChangeNotifier {
     } else {
       await prefs.setString(_localePrefKey, value.languageCode);
     }
+    unawaited(ExtensionsBridge.setLanguage(value?.languageCode));
   }
 
   void init() {

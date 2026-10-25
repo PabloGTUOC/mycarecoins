@@ -15,15 +15,6 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
     }
   }
 
-  private var accessGroup: String? {
-    guard let prefix = Bundle.main.object(forInfoDictionaryKey: "CareCoinsAppIdentifierPrefix") as? String,
-          !prefix.isEmpty,
-          !prefix.hasPrefix("$") else {
-      return nil
-    }
-    return prefix + CareCoinsShared.keychainGroupSuffix
-  }
-
   override init() {
     super.init()
     if WCSession.isSupported() {
@@ -53,7 +44,7 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
         result(FlutterError(code: "invalid_arguments", message: "Missing arguments for storeDeviceKey", details: nil))
         return
       }
-      DeviceKeyStore.storeKey(key, accessGroup: accessGroup)
+      DeviceKeyStore.storeKey(key, accessGroup: CareCoinsShared.keychainAccessGroup)
       if let defaults = UserDefaults(suiteName: CareCoinsShared.appGroup) {
         defaults.set(deviceKeyId, forKey: CareCoinsShared.deviceKeyIdDefault)
         defaults.set(apiBase, forKey: CareCoinsShared.apiBaseDefault)
@@ -61,7 +52,7 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
       refresh(result: result)
 
     case "status":
-      let key = DeviceKeyStore.readKey(accessGroup: accessGroup)
+      let key = DeviceKeyStore.readKey(accessGroup: CareCoinsShared.keychainAccessGroup)
       let defaults = UserDefaults(suiteName: CareCoinsShared.appGroup)
       let deviceKeyId = defaults?.string(forKey: CareCoinsShared.deviceKeyIdDefault)
       let connected = key != nil && !(key?.isEmpty ?? true) && deviceKeyId != nil && !(deviceKeyId?.isEmpty ?? true)
@@ -82,22 +73,26 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
       clearInternal()
       result(nil)
 
+    case "setLanguage":
+      let args = call.arguments as? [String: Any]
+      let code = args?["code"] as? String
+      if let defaults = UserDefaults(suiteName: CareCoinsShared.appGroup) {
+        if let code = code, !code.isEmpty {
+          defaults.set(code, forKey: CareCoinsShared.languageDefault)
+        } else {
+          defaults.removeObject(forKey: CareCoinsShared.languageDefault)
+        }
+      }
+      WidgetCenter.shared.reloadAllTimelines()
+      result(nil)
+
     default:
       result(FlutterMethodNotImplemented)
     }
   }
 
   private func clearInternal() {
-    DeviceKeyStore.deleteKey(accessGroup: accessGroup)
-    if let defaults = UserDefaults(suiteName: CareCoinsShared.appGroup) {
-      defaults.removeObject(forKey: CareCoinsShared.deviceKeyIdDefault)
-      defaults.removeObject(forKey: CareCoinsShared.apiBaseDefault)
-    }
-    if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: CareCoinsShared.appGroup) {
-      let fileURL = containerURL.appendingPathComponent(CareCoinsShared.snapshotFile)
-      try? FileManager.default.removeItem(at: fileURL)
-    }
-    WidgetCenter.shared.reloadAllTimelines()
+    CareCoinsShared.disconnectLocally()
     if WCSession.isSupported() {
       do {
         try WCSession.default.updateApplicationContext([:])
@@ -108,7 +103,7 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
   }
 
   private func refresh(result: @escaping FlutterResult) {
-    guard let key = DeviceKeyStore.readKey(accessGroup: accessGroup), !key.isEmpty,
+    guard let key = DeviceKeyStore.readKey(accessGroup: CareCoinsShared.keychainAccessGroup), !key.isEmpty,
           let defaults = UserDefaults(suiteName: CareCoinsShared.appGroup),
           let apiBase = defaults.string(forKey: CareCoinsShared.apiBaseDefault), !apiBase.isEmpty else {
       result("none")
@@ -126,10 +121,8 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
     let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
       if let httpResponse = response as? HTTPURLResponse {
         if httpResponse.statusCode == 200 {
-          if let data = data,
-             let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: CareCoinsShared.appGroup) {
-            let fileURL = containerURL.appendingPathComponent(CareCoinsShared.snapshotFile)
-            try? data.write(to: fileURL, options: .atomic)
+          if let data = data {
+            SnapshotStore.save(data)
           }
           WidgetCenter.shared.reloadAllTimelines()
           if WCSession.isSupported() {
