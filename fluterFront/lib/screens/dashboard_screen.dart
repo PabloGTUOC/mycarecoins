@@ -8,6 +8,7 @@ import '../services/tour_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
+import '../utils/dates.dart';
 import '../utils/json.dart';
 import '../utils/needs_you.dart';
 import '../widgets/absence_dialog.dart';
@@ -298,10 +299,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<DateTime> get _weekDays {
     final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1))
-        .add(Duration(days: _weekOffset * 7));
-    return [for (var d = 0; d < 7; d++) monday.add(Duration(days: d))];
+    final monday = addCalendarDays(
+        DateTime(now.year, now.month, now.day), -(now.weekday - 1) + _weekOffset * 7);
+    return [for (var d = 0; d < 7; d++) addCalendarDays(monday, d)];
   }
 
   /// Phone variant of the week: a rolling window that always starts on
@@ -309,9 +309,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   /// "what's ahead", not calendar weeks.
   List<DateTime> get _rollingDays {
     final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day)
-        .add(Duration(days: _weekOffset * 7));
-    return [for (var d = 0; d < 8; d++) start.add(Duration(days: d))];
+    final start = addCalendarDays(
+        DateTime(now.year, now.month, now.day), _weekOffset * 7);
+    return [for (var d = 0; d < 8; d++) addCalendarDays(start, d)];
   }
 
   String _rangeLabel(List<DateTime> days, String loc) {
@@ -324,7 +324,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<Map<String, dynamic>> _absencesOn(DateTime day) {
     final dayStart = DateTime(day.year, day.month, day.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
+    final dayEnd = addCalendarDays(dayStart, 1);
     return _absences.where((a) {
       final start = DateTime.tryParse(a['start_time']?.toString() ?? '');
       final end = DateTime.tryParse(a['end_time']?.toString() ?? '');

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/dates.dart';
 import 'ui.dart';
 
 /// The half-open midnight-to-midnight window an inclusive picker range maps to.
@@ -33,10 +34,8 @@ Future<bool> showLogAbsenceDialog(BuildContext context,
   final title = TextEditingController();
   // The picker asserts that the initial range sits inside its bounds, and the
   // Daily view can be scrolled arbitrarily far, so clamp the anchor day.
-  final firstDate =
-      DateUtils.dateOnly(DateTime.now().subtract(const Duration(days: 365)));
-  final lastDate =
-      DateUtils.dateOnly(DateTime.now().add(const Duration(days: 365)));
+  final firstDate = addCalendarDays(DateTime.now(), -365);
+  final lastDate = addCalendarDays(DateTime.now(), 365);
   var anchor = DateUtils.dateOnly(day);
   if (anchor.isBefore(firstDate)) anchor = firstDate;
   if (anchor.isAfter(lastDate)) anchor = lastDate;

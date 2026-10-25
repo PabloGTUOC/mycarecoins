@@ -12,6 +12,7 @@ import '../services/extensions_bridge.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/activity_title.dart';
+import '../utils/dates.dart';
 import '../utils/json.dart';
 import '../utils/needs_you.dart';
 import '../utils/tray_ranking.dart';
@@ -427,7 +428,7 @@ class _DailyScreenState extends State<DailyScreen> {
         final end = DateTime.tryParse(a['end_time']?.toString() ?? '');
         if (start == null) return false;
         final dayStart = DateTime(_day.year, _day.month, _day.day);
-        final dayEnd = dayStart.add(const Duration(days: 1));
+        final dayEnd = addCalendarDays(dayStart, 1);
         return start.isBefore(dayEnd) && (end ?? start).isAfter(dayStart);
       }).toList();
 
@@ -440,7 +441,7 @@ class _DailyScreenState extends State<DailyScreen> {
         final end = DateTime.tryParse(r['ends_at']?.toString() ?? '');
         if (start == null) return false;
         final dayStart = DateTime(_day.year, _day.month, _day.day);
-        final dayEnd = dayStart.add(const Duration(days: 1));
+        final dayEnd = addCalendarDays(dayStart, 1);
         return start.toLocal().isBefore(dayEnd) &&
             (end ?? start).toLocal().isAfter(dayStart);
       }).toList();
@@ -818,7 +819,7 @@ class _DailyScreenState extends State<DailyScreen> {
     final l = AppLocalizations.of(context);
     final loc = l.localeName;
     var frequency = 'daily';
-    DateTime? until = _day.add(const Duration(days: 1));
+    DateTime? until = addCalendarDays(_day, 1);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -850,9 +851,9 @@ class _DailyScreenState extends State<DailyScreen> {
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: ctx,
-                    initialDate: until ?? _day.add(const Duration(days: 7)),
+                    initialDate: until ?? addCalendarDays(_day, 7),
                     firstDate: _day,
-                    lastDate: _day.add(const Duration(days: 365)),
+                    lastDate: addCalendarDays(_day, 365),
                   );
                   if (picked != null) setLocal(() => until = picked);
                 },

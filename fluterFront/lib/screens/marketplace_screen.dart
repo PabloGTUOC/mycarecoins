@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/coach_marks.dart';
 import '../widgets/ui.dart';
+import '../utils/dates.dart';
 import '../utils/json.dart';
 
 /// Marketplace: Store / History / Create tabs,
@@ -170,8 +171,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final d = await showDatePicker(
         context: context,
         initialDate: initial,
-        firstDate: DateTime.now().subtract(const Duration(days: 1)),
-        lastDate: DateTime.now().add(const Duration(days: 365 * 2)));
+        firstDate: addCalendarDays(DateTime.now(), -1),
+        lastDate: addCalendarDays(DateTime.now(), 365 * 2));
     if (d == null || !mounted) return;
     final t = await showTimePicker(
         context: context, initialTime: TimeOfDay.fromDateTime(initial));
