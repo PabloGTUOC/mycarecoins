@@ -23,14 +23,16 @@ struct CoinPill: View {
   var body: some View {
     HStack(spacing: 3) {
       Text("\(balance)")
-        .font(.caption.bold())
+        .font(.caption2.bold())
         .foregroundColor(renderingMode == .accented ? .primary : Palette.coinInk)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
       Circle()
         .fill(renderingMode == .accented ? Color.primary : Palette.coin)
         .frame(width: 5, height: 5)
     }
     .padding(.horizontal, 6)
-    .padding(.vertical, 1)
+    .frame(height: 14)
     .background(
       Group {
         if renderingMode != .accented {
@@ -59,11 +61,12 @@ struct HeaderRow: View {
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
           .lineLimit(1)
+          .minimumScaleFactor(0.75)
       }
       Spacer()
       CoinPill(balance: balance)
     }
-    .frame(height: 16)
+    .frame(height: 14)
   }
 }
 
@@ -85,13 +88,16 @@ struct TaskRow: View {
           .font(.subheadline.weight(.semibold))
           .foregroundColor(Palette.widgetText(colorScheme))
           .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .truncationMode(.tail)
         Text("\(task.durationMinutes) min")
           .font(.caption2)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
           .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .layoutPriority(1)
       }
+      .frame(height: 30)
       Spacer(minLength: 4)
 
       if isRunningThisTask, let started = startedTask {
@@ -100,13 +106,16 @@ struct TaskRow: View {
             .font(.caption.weight(.semibold))
             .foregroundColor(renderingMode == .accented ? .primary : .white)
             .padding(.horizontal, 10)
-            .frame(height: 28)
+            .padding(.vertical, 2)
+            .frame(height: 26)
             .background(
               Capsule()
                 .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
             )
         }
         .buttonStyle(.plain)
+        .padding(.vertical, 2)
+        .frame(height: 26)
         .contentShape(Rectangle())
         .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
         .widgetAccentable(renderingMode == .accented)
@@ -117,13 +126,16 @@ struct TaskRow: View {
               .font(.caption.weight(.semibold))
               .foregroundColor(renderingMode == .accented ? .primary : .white)
               .padding(.horizontal, 10)
-              .frame(height: 28)
+              .padding(.vertical, 2)
+              .frame(height: 26)
               .background(
                 Capsule()
                   .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.primary)
               )
           }
           .buttonStyle(.plain)
+          .padding(.vertical, 2)
+          .frame(height: 26)
           .contentShape(Rectangle())
           .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
           .widgetAccentable(renderingMode == .accented)
@@ -133,20 +145,24 @@ struct TaskRow: View {
               .font(.caption.weight(.semibold))
               .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
               .padding(.horizontal, 10)
-              .frame(height: 28)
+              .padding(.vertical, 2)
+              .frame(height: 26)
               .background(
                 Capsule()
                   .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
               )
           }
           .buttonStyle(.plain)
+          .padding(.vertical, 2)
+          .frame(height: 26)
           .contentShape(Rectangle())
           .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
           .widgetAccentable(renderingMode == .accented)
         }
+        .frame(height: 26)
       }
     }
-    .frame(height: 34)
+    .frame(height: 30)
   }
 }
 
@@ -162,10 +178,13 @@ struct RunningBanner: View {
           .font(.caption2.weight(.medium))
           .foregroundColor(Palette.widgetText(colorScheme))
           .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .truncationMode(.tail)
         Text(running.startedAt, style: .timer)
           .font(.system(.subheadline, design: .rounded).weight(.bold))
           .monospacedDigit()
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .foregroundColor(renderingMode == .accented ? .primary : Palette.danger)
       }
       Spacer(minLength: 4)
@@ -174,19 +193,22 @@ struct RunningBanner: View {
           .font(.caption.weight(.semibold))
           .foregroundColor(renderingMode == .accented ? .primary : .white)
           .padding(.horizontal, 10)
-          .frame(height: 28)
+          .padding(.vertical, 2)
+          .frame(height: 26)
           .background(
             Capsule()
               .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.danger)
           )
       }
       .buttonStyle(.plain)
+      .padding(.vertical, 2)
+      .frame(height: 26)
       .contentShape(Rectangle())
       .accessibilityLabel(L10n.t("widget.stop"))
       .widgetAccentable(renderingMode == .accented)
     }
     .padding(.horizontal, 8)
-    .frame(height: 34)
+    .frame(height: 30)
     .background(
       RoundedRectangle(cornerRadius: 10)
         .fill(renderingMode == .accented ? Color.clear : Palette.dangerSoft.opacity(0.5))
@@ -205,13 +227,17 @@ struct NowButtonsRow: View {
           .lineLimit(1)
           .minimumScaleFactor(0.75)
           .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
+          .padding(.vertical, 2)
           .frame(maxWidth: .infinity)
-          .frame(height: 28)
+          .frame(height: 26)
           .overlay(
             Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.primary, lineWidth: 1)
           )
       }
       .buttonStyle(.plain)
+      .padding(.vertical, 2)
+      .frame(maxWidth: .infinity)
+      .frame(height: 26)
       .contentShape(Rectangle())
       .widgetAccentable(renderingMode == .accented)
 
@@ -221,17 +247,21 @@ struct NowButtonsRow: View {
           .lineLimit(1)
           .minimumScaleFactor(0.75)
           .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
+          .padding(.vertical, 2)
           .frame(maxWidth: .infinity)
-          .frame(height: 28)
+          .frame(height: 26)
           .overlay(
             Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.primary, lineWidth: 1)
           )
       }
       .buttonStyle(.plain)
+      .padding(.vertical, 2)
+      .frame(maxWidth: .infinity)
+      .frame(height: 26)
       .contentShape(Rectangle())
       .widgetAccentable(renderingMode == .accented)
     }
-    .frame(height: 28)
+    .frame(height: 26)
   }
 }
 
@@ -269,18 +299,21 @@ struct FeedbackChip: View {
             .font(.caption2.weight(.bold))
             .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
             .padding(.horizontal, 8)
+            .padding(.vertical, 2)
             .frame(height: 22)
             .background(
               Capsule().fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Color.white)
             )
         }
         .buttonStyle(.plain)
+        .padding(.vertical, 2)
+        .frame(height: 22)
         .contentShape(Rectangle())
         .widgetAccentable(renderingMode == .accented)
       }
     }
     .padding(.horizontal, 10)
-    .frame(height: 28)
+    .frame(height: 26)
     .background(
       RoundedRectangle(cornerRadius: 10)
         .fill(renderingMode == .accented ? Color.clear : (isFailure ? Palette.dangerSoft : Palette.successSoft))
@@ -332,6 +365,8 @@ struct SmallWidgetView: View {
                 )
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .frame(height: 30)
             .contentShape(Rectangle())
             .controlSize(.small)
             .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
@@ -350,6 +385,8 @@ struct SmallWidgetView: View {
                   )
               }
               .buttonStyle(.plain)
+              .frame(maxWidth: .infinity)
+              .frame(height: 30)
               .contentShape(Rectangle())
               .controlSize(.small)
               .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
@@ -367,11 +404,14 @@ struct SmallWidgetView: View {
                   )
               }
               .buttonStyle(.plain)
+              .frame(maxWidth: .infinity)
+              .frame(height: 30)
               .contentShape(Rectangle())
               .controlSize(.small)
               .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
               .widgetAccentable(renderingMode == .accented)
             }
+            .frame(height: 30)
           }
         }
       } else {
@@ -385,6 +425,13 @@ struct SmallWidgetView: View {
   }
 }
 
+#if DEBUG
+private func recordDebugHeight(_ height: CGFloat, key: String) -> Color {
+  UserDefaults(suiteName: CareCoinsShared.appGroup)?.set(Double(height), forKey: key)
+  return Color.clear
+}
+#endif
+
 struct MediumWidgetView: View {
   let entry: QuickEntry
   let snapshot: QuickSnapshot
@@ -397,15 +444,30 @@ struct MediumWidgetView: View {
   var body: some View {
     ViewThatFits(in: .vertical) {
       layout(tasksToShow: maxTasks)
+        #if DEBUG
+        .background(
+          GeometryReader { proxy in
+            recordDebugHeight(proxy.size.height, key: "debug.widget.medium2RowHeight")
+          }
+        )
+        #endif
       if maxTasks >= 2 { layout(tasksToShow: 1) }
       layout(tasksToShow: 0)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    #if DEBUG
+    .background(
+      GeometryReader { proxy in
+        recordDebugHeight(proxy.size.height, key: "debug.widget.mediumHeight")
+      }
+      .hidden()
+    )
+    #endif
   }
 
   @ViewBuilder
   private func layout(tasksToShow: Int) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 4) {
       HeaderRow(familyName: snapshot.family.name, balance: snapshot.balance)
 
       if let running = snapshot.running {
@@ -417,6 +479,8 @@ struct MediumWidgetView: View {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .frame(maxWidth: .infinity, alignment: .center)
           .padding(.vertical, 4)
       } else {
@@ -457,7 +521,7 @@ struct LargeWidgetView: View {
 
   @ViewBuilder
   private func layout(tasksToShow: Int) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 4) {
       HeaderRow(familyName: snapshot.family.name, balance: snapshot.balance)
 
       if let running = snapshot.running {
@@ -469,6 +533,8 @@ struct LargeWidgetView: View {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .frame(maxWidth: .infinity, alignment: .center)
           .padding(.vertical, 4)
       } else {
@@ -486,6 +552,8 @@ struct LargeWidgetView: View {
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
           .lineLimit(1)
+          .minimumScaleFactor(0.75)
+          .frame(height: 14)
       }
     }
   }
