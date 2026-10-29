@@ -18,6 +18,7 @@
 		1BBFF91E2C5A43C4BBB9E36F /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 542B5B80B9944D8E765D9202 /* DeviceKeyStore.swift */; };
 		1E4A143221B1580F7F7FD59F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
 		242CEA793FFD5630A3A864D8 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
+		27D3962103C0742F7D34AD27 /* QuickControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = B015B372617186D68B11536C /* QuickControls.swift */; };
 		2B35C962814B4BC20932DFCC /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
 		313EE9BA216557FEB2B5A27F /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
@@ -32,6 +33,7 @@
 		4E44FAC51BB3A108B81932A3 /* QuickModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588B699A3DACD592D6755AAA /* QuickModels.swift */; };
 		4E9C6F82ED0DA2F162CE9C87 /* CareCoinsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */; };
 		5A37F48569CC604FE8828584 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */; };
+		5CE751CF3CE0CA6072A473E3 /* QuickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73714971C5A3D477E813A163 /* QuickActivityAttributes.swift */; };
 		5D7C3EFDC8DDE20103403E68 /* ExtensionsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */; };
 		60B3C2431390B69EA85EC95F /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
 		66547BC304A71F212D43E823 /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
@@ -39,6 +41,7 @@
 		76AB6A62CC121B194948BF00 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		78F455A7B5AB3D78218E306F /* QuickActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73714971C5A3D477E813A163 /* QuickActivityAttributes.swift */; };
 		7C797E7989DA0D5FD2B6E0F1 /* CareCoinsWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6C85D33948E4F76BFB6B8392 /* CareCoinsWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		880DC0423791704882BBA592 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31BC8D883B35F6D4E224DB4 /* L10n.swift */; };
 		88D891D3DB2E538341CDD639 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
@@ -56,6 +59,7 @@
 		A9DF98D123A67D949D518126 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77FE791D6F2CF860C4393C44 /* Foundation.framework */; };
 		AA80B1913E2CBDA1722F58BE /* QuickAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFD3C88223C4942A326745D /* QuickAPI.swift */; };
 		B08FFA0D28EA5BE776690315 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D62BE1C2BFD0A4C8063C95E /* Palette.swift */; };
+		B1EDAE501E3767F9F2A4F495 /* QuickIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */; };
 		B84782DEDDE5EBC2B046FDB7 /* AccessoryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */; };
 		BD29A7239B11E310044FED0D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3FBDEF8AD0872D9111DEF14 /* Foundation.framework */; };
 		C7A28E1E614F3D4C18E6ABDA /* SnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4979E96510C0822CDBE52 /* SnapshotStore.swift */; };
@@ -65,6 +69,7 @@
 		E2055EBACC0DF89F1062CF60 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B15646EF325ADD91A5210DA4 /* Pods_RunnerTests.framework */; };
 		EB2E898707C81BA4D925786C /* QuickProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E1F3BE08B7787580315EC0 /* QuickProvider.swift */; };
 		F41BFF91C887B419C78F3534 /* CareCoinsShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEB5995CED1F75C6B42135A5 /* CareCoinsShared.swift */; };
+		F92D619768CFABEE0F521FC1 /* QuickLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5983077443595A8EF0A7C3 /* QuickLiveActivity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -166,6 +171,7 @@
 		60A366B8AFCC4BF864C6F001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		67E4979E96510C0822CDBE52 /* SnapshotStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotStore.swift; sourceTree = "<group>"; };
 		6C85D33948E4F76BFB6B8392 /* CareCoinsWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CareCoinsWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		73714971C5A3D477E813A163 /* QuickActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickActivityAttributes.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		77FE791D6F2CF860C4393C44 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
@@ -186,6 +192,7 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A62C5F0A70507D3C1A472590 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B015B372617186D68B11536C /* QuickControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickControls.swift; sourceTree = "<group>"; };
 		B15646EF325ADD91A5210DA4 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1FD22C72C86BEB5C61464D2 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		B46CE35BC8EF13E0FA4BCA3F /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -197,6 +204,7 @@
 		DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickIntents.swift; sourceTree = "<group>"; };
 		E152FD786B7A7E61CD763394 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccessoryWidget.swift; sourceTree = "<group>"; };
+		EC5983077443595A8EF0A7C3 /* QuickLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickLiveActivity.swift; sourceTree = "<group>"; };
 		F0B32B638F52FB8318AB65D9 /* ExtensionsBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExtensionsBridge.swift; sourceTree = "<group>"; };
 		F19B416CAAF43A2BF1975AD0 /* CareCoinsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CareCoinsWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -344,6 +352,7 @@
 				0D62BE1C2BFD0A4C8063C95E /* Palette.swift */,
 				D31BC8D883B35F6D4E224DB4 /* L10n.swift */,
 				4513B7C01130A56CC75A4DBF /* Localizable.xcstrings */,
+				73714971C5A3D477E813A163 /* QuickActivityAttributes.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -402,6 +411,8 @@
 				82F2C4996CBB68B45A1B0F49 /* QuickWidgetViews.swift */,
 				DB0F376951AA8C39E7B920D1 /* QuickIntents.swift */,
 				E354F0F8EF3150ED6CDFCB2E /* AccessoryWidget.swift */,
+				EC5983077443595A8EF0A7C3 /* QuickLiveActivity.swift */,
+				B015B372617186D68B11536C /* QuickControls.swift */,
 			);
 			name = CareCoinsWidget;
 			path = CareCoinsWidget;
@@ -743,6 +754,9 @@
 				998BDF0BB21A36A7A653B52D /* QuickWidgetViews.swift in Sources */,
 				14E0A3C7C7E18F90B56AADEC /* QuickIntents.swift in Sources */,
 				B84782DEDDE5EBC2B046FDB7 /* AccessoryWidget.swift in Sources */,
+				5CE751CF3CE0CA6072A473E3 /* QuickActivityAttributes.swift in Sources */,
+				F92D619768CFABEE0F521FC1 /* QuickLiveActivity.swift in Sources */,
+				27D3962103C0742F7D34AD27 /* QuickControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -769,6 +783,8 @@
 				47386B495A7F48796FD65604 /* SnapshotStore.swift in Sources */,
 				0FCA2BD4E40D6B18CFD16D37 /* Palette.swift in Sources */,
 				4D48C8B69E60B41B684409C5 /* L10n.swift in Sources */,
+				78F455A7B5AB3D78218E306F /* QuickActivityAttributes.swift in Sources */,
+				B1EDAE501E3767F9F2A4F495 /* QuickIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

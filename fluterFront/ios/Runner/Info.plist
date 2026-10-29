@@ -52,6 +52,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>CareCoins uses your photo library to set profile pictures for family members.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -1,6 +1,13 @@
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
+#if canImport(AppIntents)
 import AppIntents
+#endif
 import Foundation
+import WidgetKit
 
+@available(iOS 17.0, *)
 func widgetMessage(for error: Error) -> String {
   if let apiError = error as? QuickAPIError {
     switch apiError {
@@ -27,13 +34,18 @@ func widgetMessage(for error: Error) -> String {
   return L10n.t("widget.error.generic")
 }
 
-private func refreshSnapshot(api: QuickAPI) async {
-  if let (_, data) = try? await api.snapshot() {
+@available(iOS 17.0, *)
+@discardableResult
+private func refreshSnapshot(api: QuickAPI) async -> QuickSnapshot? {
+  if let (snapshot, data) = try? await api.snapshot() {
     SnapshotStore.save(data)
+    return snapshot
   }
+  return nil
 }
 
-public struct StartTaskIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct StartTaskIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Start Task"
   public static var isDiscoverable = false
 
@@ -55,7 +67,11 @@ public struct StartTaskIntent: AppIntent {
     do {
       let result = try await api.start(templateId: taskId, clientRef: clientRef)
       SnapshotStore.recordAction(LastAction(kind: .started, taskId: taskId, activityId: result.activity?.id, clientRef: clientRef))
-      await refreshSnapshot(api: api)
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }
@@ -63,7 +79,8 @@ public struct StartTaskIntent: AppIntent {
   }
 }
 
-public struct DoneTaskIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct DoneTaskIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Done Task"
   public static var isDiscoverable = false
 
@@ -83,9 +100,19 @@ public struct DoneTaskIntent: AppIntent {
     }
     let clientRef = QuickAPI.newClientRef()
     do {
-      _ = try await api.done(templateId: taskId, clientRef: clientRef)
-      SnapshotStore.recordAction(LastAction(kind: .logged, taskId: taskId, clientRef: clientRef))
-      await refreshSnapshot(api: api)
+      if taskId.isEmpty {
+        let title = L10n.t("widget.title.care")
+        let result = try await api.startNow(type: "care", title: title, clientRef: clientRef)
+        SnapshotStore.recordAction(LastAction(kind: .started, activityId: result.activity?.id, clientRef: clientRef))
+      } else {
+        _ = try await api.done(templateId: taskId, clientRef: clientRef)
+        SnapshotStore.recordAction(LastAction(kind: .logged, taskId: taskId, clientRef: clientRef))
+      }
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }
@@ -93,7 +120,8 @@ public struct DoneTaskIntent: AppIntent {
   }
 }
 
-public struct FinishTaskIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct FinishTaskIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Finish Task"
   public static var isDiscoverable = false
 
@@ -114,7 +142,15 @@ public struct FinishTaskIntent: AppIntent {
     do {
       _ = try await api.finish(activityId: activityId)
       SnapshotStore.recordAction(LastAction(kind: .logged, activityId: activityId))
-      await refreshSnapshot(api: api)
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      } else {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.endAll()
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }
@@ -122,7 +158,8 @@ public struct FinishTaskIntent: AppIntent {
   }
 }
 
-public struct StartNowIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct StartNowIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Start Now"
   public static var isDiscoverable = false
 
@@ -145,7 +182,11 @@ public struct StartNowIntent: AppIntent {
     do {
       let result = try await api.startNow(type: type, title: title, clientRef: clientRef)
       SnapshotStore.recordAction(LastAction(kind: .started, activityId: result.activity?.id, clientRef: clientRef))
-      await refreshSnapshot(api: api)
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }
@@ -153,7 +194,8 @@ public struct StartNowIntent: AppIntent {
   }
 }
 
-public struct StopTaskIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct StopTaskIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Stop Task"
   public static var isDiscoverable = false
 
@@ -174,7 +216,15 @@ public struct StopTaskIntent: AppIntent {
     do {
       _ = try await api.stop(activityId: activityId)
       SnapshotStore.recordAction(LastAction(kind: .stopped, activityId: activityId))
-      await refreshSnapshot(api: api)
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      } else {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.endAll()
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }
@@ -182,7 +232,8 @@ public struct StopTaskIntent: AppIntent {
   }
 }
 
-public struct UndoIntent: AppIntent {
+@available(iOS 17.0, *)
+public struct UndoIntent: LiveActivityIntent {
   public static var title: LocalizedStringResource = "Undo"
   public static var isDiscoverable = false
 
@@ -203,7 +254,15 @@ public struct UndoIntent: AppIntent {
     do {
       _ = try await api.undo(clientRef: clientRef)
       SnapshotStore.recordAction(LastAction(kind: .undone, clientRef: clientRef))
-      await refreshSnapshot(api: api)
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      } else {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.endAll()
+        #endif
+      }
     } catch {
       SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
     }

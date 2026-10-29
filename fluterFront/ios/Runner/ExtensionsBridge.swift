@@ -93,6 +93,11 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
 
   private func clearInternal() {
     CareCoinsShared.disconnectLocally()
+    #if canImport(ActivityKit)
+    if #available(iOS 17.0, *) {
+      QuickLiveActivities.endAll()
+    }
+    #endif
     if WCSession.isSupported() {
       do {
         try WCSession.default.updateApplicationContext([:])
@@ -123,6 +128,13 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
         if httpResponse.statusCode == 200 {
           if let data = data {
             SnapshotStore.save(data)
+            #if canImport(ActivityKit)
+            if #available(iOS 17.0, *) {
+              if let snapshot = try? JSONDecoder.quick.decode(QuickSnapshot.self, from: data) {
+                QuickLiveActivities.sync(with: snapshot, now: Date())
+              }
+            }
+            #endif
           }
           WidgetCenter.shared.reloadAllTimelines()
           if WCSession.isSupported() {
