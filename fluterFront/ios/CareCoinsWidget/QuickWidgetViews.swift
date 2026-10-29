@@ -21,16 +21,16 @@ struct CoinPill: View {
   @Environment(\.widgetRenderingMode) var renderingMode
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: 3) {
       Text("\(balance)")
-        .font(.system(.footnote, design: .rounded).weight(.bold))
+        .font(.caption.bold())
         .foregroundColor(renderingMode == .accented ? .primary : Palette.coinInk)
       Circle()
         .fill(renderingMode == .accented ? Color.primary : Palette.coin)
-        .frame(width: 6, height: 6)
+        .frame(width: 5, height: 5)
     }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 3)
+    .padding(.horizontal, 6)
+    .padding(.vertical, 1)
     .background(
       Group {
         if renderingMode != .accented {
@@ -57,20 +57,19 @@ struct HeaderRow: View {
       if let familyName = familyName, !familyName.isEmpty {
         Text(familyName)
           .font(.caption)
-          .fontWeight(.medium)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
           .lineLimit(1)
       }
       Spacer()
       CoinPill(balance: balance)
     }
+    .frame(height: 16)
   }
 }
 
 struct TaskRow: View {
   let task: QuickSnapshot.Task
   let startedTask: QuickSnapshot.Upcoming?
-  let isLarge: Bool
   @Environment(\.colorScheme) var colorScheme
   @Environment(\.widgetRenderingMode) var renderingMode
 
@@ -81,69 +80,73 @@ struct TaskRow: View {
 
   var body: some View {
     HStack(alignment: .center, spacing: 8) {
-      VStack(alignment: .leading, spacing: 2) {
+      HStack(alignment: .firstTextBaseline, spacing: 4) {
         Text(task.title)
-          .font(.subheadline)
-          .fontWeight(.medium)
+          .font(.subheadline.weight(.semibold))
           .foregroundColor(Palette.widgetText(colorScheme))
           .lineLimit(1)
           .truncationMode(.tail)
         Text("\(task.durationMinutes) min")
           .font(.caption2)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
+          .lineLimit(1)
+          .layoutPriority(1)
       }
       Spacer(minLength: 4)
 
       if isRunningThisTask, let started = startedTask {
         Button(intent: FinishTaskIntent(activityId: started.id)) {
           Text(L10n.t("widget.done"))
-            .font(.caption)
-            .fontWeight(.semibold)
+            .font(.caption.weight(.semibold))
             .foregroundColor(renderingMode == .accented ? .primary : .white)
-            .frame(minWidth: 54, minHeight: isLarge ? 36 : 28)
+            .padding(.horizontal, 10)
+            .frame(height: 28)
             .background(
-              RoundedRectangle(cornerRadius: 10)
+              Capsule()
                 .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
             )
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
         .widgetAccentable(renderingMode == .accented)
       } else {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
           Button(intent: StartTaskIntent(taskId: task.id)) {
             Text(L10n.t("widget.start"))
-              .font(.caption)
-              .fontWeight(.semibold)
+              .font(.caption.weight(.semibold))
               .foregroundColor(renderingMode == .accented ? .primary : .white)
-              .frame(minWidth: 48, minHeight: isLarge ? 36 : 28)
+              .padding(.horizontal, 10)
+              .frame(height: 28)
               .background(
-                RoundedRectangle(cornerRadius: 10)
+                Capsule()
                   .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.primary)
               )
           }
           .buttonStyle(.plain)
+          .contentShape(Rectangle())
           .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
           .widgetAccentable(renderingMode == .accented)
 
           Button(intent: DoneTaskIntent(taskId: task.id)) {
             Text(L10n.t("widget.done"))
-              .font(.caption)
-              .fontWeight(.semibold)
+              .font(.caption.weight(.semibold))
               .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
-              .frame(minWidth: 48, minHeight: isLarge ? 36 : 28)
+              .padding(.horizontal, 10)
+              .frame(height: 28)
               .background(
-                RoundedRectangle(cornerRadius: 10)
+                Capsule()
                   .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
               )
           }
           .buttonStyle(.plain)
+          .contentShape(Rectangle())
           .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
           .widgetAccentable(renderingMode == .accented)
         }
       }
     }
-    .frame(minHeight: isLarge ? 44 : 32)
+    .frame(height: 34)
   }
 }
 
@@ -154,34 +157,36 @@ struct RunningBanner: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: 1) {
         Text(L10n.t("widget.running", running.title))
-          .font(.caption)
-          .fontWeight(.medium)
+          .font(.caption2.weight(.medium))
           .foregroundColor(Palette.widgetText(colorScheme))
           .lineLimit(1)
+          .truncationMode(.tail)
         Text(running.startedAt, style: .timer)
           .font(.system(.subheadline, design: .rounded).weight(.bold))
           .monospacedDigit()
           .foregroundColor(renderingMode == .accented ? .primary : Palette.danger)
       }
-      Spacer()
+      Spacer(minLength: 4)
       Button(intent: StopTaskIntent(activityId: running.id)) {
         Text(L10n.t("widget.stop"))
-          .font(.caption)
-          .fontWeight(.semibold)
+          .font(.caption.weight(.semibold))
           .foregroundColor(renderingMode == .accented ? .primary : .white)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 6)
+          .padding(.horizontal, 10)
+          .frame(height: 28)
           .background(
-            RoundedRectangle(cornerRadius: 10)
+            Capsule()
               .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.danger)
           )
       }
       .buttonStyle(.plain)
+      .contentShape(Rectangle())
+      .accessibilityLabel(L10n.t("widget.stop"))
       .widgetAccentable(renderingMode == .accented)
     }
-    .padding(8)
+    .padding(.horizontal, 8)
+    .frame(height: 34)
     .background(
       RoundedRectangle(cornerRadius: 10)
         .fill(renderingMode == .accented ? Color.clear : Palette.dangerSoft.opacity(0.5))
@@ -196,32 +201,37 @@ struct NowButtonsRow: View {
     HStack(spacing: 8) {
       Button(intent: StartNowIntent(type: "care")) {
         Text(L10n.t("widget.careNow"))
-          .font(.caption)
-          .fontWeight(.medium)
+          .font(.caption.weight(.medium))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, 6)
+          .frame(height: 28)
           .overlay(
             Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.primary, lineWidth: 1)
           )
       }
       .buttonStyle(.plain)
+      .contentShape(Rectangle())
       .widgetAccentable(renderingMode == .accented)
 
       Button(intent: StartNowIntent(type: "household")) {
         Text(L10n.t("widget.householdNow"))
-          .font(.caption)
-          .fontWeight(.medium)
+          .font(.caption.weight(.medium))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
           .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
           .frame(maxWidth: .infinity)
-          .padding(.vertical, 6)
+          .frame(height: 28)
           .overlay(
             Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.primary, lineWidth: 1)
           )
       }
       .buttonStyle(.plain)
+      .contentShape(Rectangle())
       .widgetAccentable(renderingMode == .accented)
     }
+    .frame(height: 28)
   }
 }
 
@@ -247,30 +257,30 @@ struct FeedbackChip: View {
   var body: some View {
     HStack(spacing: 6) {
       Text(chipText)
-        .font(.caption)
-        .fontWeight(.medium)
-        .foregroundColor(renderingMode == .accented ? .primary : (isFailure ? Palette.dangerInk : Palette.successInk))
+        .font(.caption.weight(.medium))
         .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .foregroundColor(renderingMode == .accented ? .primary : (isFailure ? Palette.dangerInk : Palette.successInk))
         .truncationMode(.tail)
       Spacer(minLength: 4)
       if canUndo, let ref = action.clientRef, !ref.isEmpty {
         Button(intent: UndoIntent(clientRef: ref)) {
           Text(L10n.t("widget.undo"))
-            .font(.caption2)
-            .fontWeight(.bold)
+            .font(.caption2.weight(.bold))
             .foregroundColor(renderingMode == .accented ? .primary : Palette.primary)
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .frame(height: 22)
             .background(
               Capsule().fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Color.white)
             )
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .widgetAccentable(renderingMode == .accented)
       }
     }
     .padding(.horizontal, 10)
-    .padding(.vertical, 6)
+    .frame(height: 28)
     .background(
       RoundedRectangle(cornerRadius: 10)
         .fill(renderingMode == .accented ? Color.clear : (isFailure ? Palette.dangerSoft : Palette.successSoft))
@@ -294,23 +304,14 @@ struct SmallWidgetView: View {
       }
 
       if let running = snapshot.running {
-        Spacer(minLength: 0)
         RunningBanner(running: running)
-        Spacer(minLength: 0)
       } else if let task = snapshot.tasks.first {
-        Spacer(minLength: 0)
-        VStack(alignment: .leading, spacing: 2) {
-          Text(task.title)
-            .font(.subheadline)
-            .fontWeight(.semibold)
-            .foregroundColor(Palette.widgetText(colorScheme))
-            .lineLimit(1)
-          Text("\(task.durationMinutes) min")
-            .font(.caption2)
-            .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-        }
-
-        Spacer(minLength: 0)
+        Text(task.title)
+          .font(.subheadline.weight(.semibold))
+          .foregroundColor(Palette.widgetText(colorScheme))
+          .lineLimit(2)
+          .minimumScaleFactor(0.8)
+          .frame(maxWidth: .infinity, alignment: .leading)
 
         if let action = entry.lastAction {
           FeedbackChip(action: action, canUndo: entry.canUndo)
@@ -321,61 +322,66 @@ struct SmallWidgetView: View {
           if isRunningThisTask, let started = started {
             Button(intent: FinishTaskIntent(activityId: started.id)) {
               Text(L10n.t("widget.done"))
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.caption.weight(.semibold))
                 .foregroundColor(renderingMode == .accented ? .primary : .white)
-                .frame(maxWidth: .infinity, minHeight: 28)
+                .frame(maxWidth: .infinity)
+                .frame(height: 30)
                 .background(
-                  RoundedRectangle(cornerRadius: 10)
+                  Capsule()
                     .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
                 )
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
+            .controlSize(.small)
             .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
             .widgetAccentable(renderingMode == .accented)
           } else {
-            VStack(spacing: 4) {
+            HStack(spacing: 8) {
               Button(intent: StartTaskIntent(taskId: task.id)) {
                 Text(L10n.t("widget.start"))
-                  .font(.caption)
-                  .fontWeight(.semibold)
+                  .font(.caption.weight(.semibold))
                   .foregroundColor(renderingMode == .accented ? .primary : .white)
-                  .frame(maxWidth: .infinity, minHeight: 26)
+                  .frame(maxWidth: .infinity)
+                  .frame(height: 30)
                   .background(
-                    RoundedRectangle(cornerRadius: 10)
+                    Capsule()
                       .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.primary)
                   )
               }
               .buttonStyle(.plain)
+              .contentShape(Rectangle())
+              .controlSize(.small)
               .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
               .widgetAccentable(renderingMode == .accented)
 
               Button(intent: DoneTaskIntent(taskId: task.id)) {
                 Text(L10n.t("widget.done"))
-                  .font(.caption)
-                  .fontWeight(.semibold)
+                  .font(.caption.weight(.semibold))
                   .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
-                  .frame(maxWidth: .infinity, minHeight: 26)
+                  .frame(maxWidth: .infinity)
+                  .frame(height: 30)
                   .background(
-                    RoundedRectangle(cornerRadius: 10)
+                    Capsule()
                       .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
                   )
               }
               .buttonStyle(.plain)
+              .contentShape(Rectangle())
+              .controlSize(.small)
               .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
               .widgetAccentable(renderingMode == .accented)
             }
           }
         }
       } else {
-        Spacer()
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-          .multilineTextAlignment(.center)
-        Spacer()
+          .frame(maxWidth: .infinity, alignment: .center)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 }
 
@@ -385,10 +391,20 @@ struct MediumWidgetView: View {
   @Environment(\.colorScheme) var colorScheme
 
   var maxTasks: Int {
-    snapshot.running != nil ? 2 : 3
+    snapshot.running != nil ? 1 : 2
   }
 
   var body: some View {
+    ViewThatFits(in: .vertical) {
+      layout(tasksToShow: maxTasks)
+      if maxTasks >= 2 { layout(tasksToShow: 1) }
+      layout(tasksToShow: 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+
+  @ViewBuilder
+  private func layout(tasksToShow: Int) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       HeaderRow(familyName: snapshot.family.name, balance: snapshot.balance)
 
@@ -396,24 +412,22 @@ struct MediumWidgetView: View {
         RunningBanner(running: running)
       }
 
-      let visibleTasks = Array(snapshot.tasks.prefix(maxTasks))
-      if visibleTasks.isEmpty {
-        Spacer()
+      let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
+      if snapshot.tasks.isEmpty && snapshot.running == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-        Spacer()
+          .frame(maxWidth: .infinity, alignment: .center)
+          .padding(.vertical, 4)
       } else {
         ForEach(visibleTasks) { task in
-          TaskRow(task: task, startedTask: snapshot.startedTask(now: entry.date), isLarge: false)
+          TaskRow(task: task, startedTask: snapshot.startedTask(now: entry.date))
         }
       }
 
-      Spacer(minLength: 0)
-
       if let action = entry.lastAction {
         FeedbackChip(action: action, canUndo: entry.canUndo)
-      } else if snapshot.running == nil {
+      } else {
         NowButtonsRow()
       }
     }
@@ -425,7 +439,24 @@ struct LargeWidgetView: View {
   let snapshot: QuickSnapshot
   @Environment(\.colorScheme) var colorScheme
 
+  var maxTasks: Int {
+    snapshot.running != nil ? 4 : 5
+  }
+
   var body: some View {
+    ViewThatFits(in: .vertical) {
+      layout(tasksToShow: maxTasks)
+      if maxTasks >= 5 { layout(tasksToShow: 4) }
+      if maxTasks >= 4 { layout(tasksToShow: 3) }
+      if maxTasks >= 3 { layout(tasksToShow: 2) }
+      if maxTasks >= 2 { layout(tasksToShow: 1) }
+      layout(tasksToShow: 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+
+  @ViewBuilder
+  private func layout(tasksToShow: Int) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       HeaderRow(familyName: snapshot.family.name, balance: snapshot.balance)
 
@@ -433,32 +464,28 @@ struct LargeWidgetView: View {
         RunningBanner(running: running)
       }
 
-      let visibleTasks = Array(snapshot.tasks.prefix(6))
-      if visibleTasks.isEmpty {
-        Spacer()
+      let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
+      if snapshot.tasks.isEmpty && snapshot.running == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-        Spacer()
+          .frame(maxWidth: .infinity, alignment: .center)
+          .padding(.vertical, 4)
       } else {
         ForEach(visibleTasks) { task in
-          TaskRow(task: task, startedTask: snapshot.startedTask(now: entry.date), isLarge: true)
+          TaskRow(task: task, startedTask: snapshot.startedTask(now: entry.date))
         }
       }
 
-      Spacer(minLength: 0)
-
       NowButtonsRow()
 
-      if let nextTask = snapshot.nextUpcoming(now: entry.date) {
+      if let action = entry.lastAction {
+        FeedbackChip(action: action, canUndo: entry.canUndo)
+      } else if let nextTask = snapshot.nextUpcoming(now: entry.date) {
         Text(L10n.t("widget.next", nextTask.title, formatShortTime(nextTask.startsAt)))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
           .lineLimit(1)
-      }
-
-      if let action = entry.lastAction {
-        FeedbackChip(action: action, canUndo: entry.canUndo)
       }
     }
   }
