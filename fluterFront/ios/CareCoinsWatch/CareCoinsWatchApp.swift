@@ -1,12 +1,37 @@
 import SwiftUI
+import WatchKit
 
-// Phase 0 placeholder (docs/ios-widget-watch-plan.md): proves the watch app builds, signs
-// and embeds. The real app replaces this file in a later phase.
 @main
 struct CareCoinsWatchApp: App {
+  @State private var store = WatchStore.shared
+  @Environment(\.scenePhase) private var phase
+
+  init() {
+    WatchConnector.shared.activate()
+  }
+
   var body: some Scene {
     WindowGroup {
-      Text(verbatim: "CareCoins")
+      WatchRootView()
+        .environment(store)
     }
+    .onChange(of: phase) { _, newPhase in
+      if newPhase == .active {
+        store.reloadFromDisk()
+        Task {
+          await store.refresh()
+          scheduleNextBackgroundRefresh()
+        }
+      }
+    }
+    .backgroundTask(.appRefresh("carecoins.refresh")) {
+      await store.refresh()
+      scheduleNextBackgroundRefresh()
+    }
+  }
+
+  private func scheduleNextBackgroundRefresh() {
+    let nextDate = Date().addingTimeInterval(30 * 60)
+    WKApplication.shared().scheduleBackgroundRefresh(withPreferredDate: nextDate, userInfo: nil) { _ in }
   }
 }

@@ -139,11 +139,13 @@ public final class ExtensionsBridge: NSObject, WCSessionDelegate {
           WidgetCenter.shared.reloadAllTimelines()
           if WCSession.isSupported() {
             let jsonString = data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+            let language = defaults.string(forKey: CareCoinsShared.languageDefault) ?? ""
             do {
               try WCSession.default.updateApplicationContext([
                 "deviceKey": key,
                 "apiBase": apiBase,
-                "snapshot": jsonString
+                "snapshot": jsonString,
+                "language": language
               ])
             } catch {
               // ignore errors
