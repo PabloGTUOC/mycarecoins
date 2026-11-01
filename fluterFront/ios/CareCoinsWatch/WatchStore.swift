@@ -51,6 +51,17 @@ public final class WatchStore {
   public var pending: [PendingAction] = []
   public var lastAction: LastAction?
   public var isRefreshing: Bool = false
+  public var remindersEnabled: Bool = WatchReminders.isEnabled {
+    didSet {
+      WatchReminders.isEnabled = remindersEnabled
+      if remindersEnabled {
+        WatchReminders.requestAuthorizationIfNeeded()
+        WatchReminders.reschedule(from: snapshot, now: .now)
+      } else {
+        WatchReminders.reschedule(from: nil, now: .now)
+      }
+    }
+  }
 
   public var canUndo: Bool {
     SnapshotStore.canUndo(now: Date())
@@ -65,6 +76,7 @@ public final class WatchStore {
     self.connected = QuickAPI.fromStore() != nil
     self.lastAction = SnapshotStore.lastAction()
     self.pending = loadPendingQueue()
+    self.remindersEnabled = WatchReminders.isEnabled
   }
 
   public func refresh() async {
@@ -74,6 +86,8 @@ public final class WatchStore {
 
     guard let api = QuickAPI.fromStore() else {
       reloadFromDisk()
+      WatchReminders.reschedule(from: nil, now: .now)
+      SnapshotStore.reloadWidgets()
       return
     }
 
@@ -81,10 +95,14 @@ public final class WatchStore {
       let (_, data) = try await api.snapshot()
       SnapshotStore.save(data)
       reloadFromDisk()
+      WatchReminders.reschedule(from: snapshot, now: .now)
+      SnapshotStore.reloadWidgets()
       await flushQueue()
     } catch let QuickAPIError.server(status, _, _, _) where status == 401 {
       CareCoinsShared.disconnectLocally()
       reloadFromDisk()
+      WatchReminders.reschedule(from: nil, now: .now)
+      SnapshotStore.reloadWidgets()
     } catch QuickAPIError.network {
       await flushQueue()
     } catch {

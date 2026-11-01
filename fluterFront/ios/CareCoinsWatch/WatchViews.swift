@@ -178,6 +178,16 @@ private struct WatchContentView: View {
           }
         }
       }
+
+      Section {
+        Toggle(isOn: Binding(
+          get: { store.remindersEnabled },
+          set: { store.remindersEnabled = $0 }
+        )) {
+          Text(L10n.t("watch.reminders.toggle"))
+            .font(.footnote)
+        }
+      }
     }
     .refreshable {
       await store.refresh()

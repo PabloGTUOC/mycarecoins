@@ -8,6 +8,7 @@ struct CareCoinsWatchApp: App {
 
   init() {
     WatchConnector.shared.activate()
+    WatchReminders.setupAtLaunch()
   }
 
   var body: some Scene {
@@ -18,6 +19,8 @@ struct CareCoinsWatchApp: App {
     .onChange(of: phase) { _, newPhase in
       if newPhase == .active {
         store.reloadFromDisk()
+        WatchReminders.reschedule(from: store.snapshot, now: .now)
+        SnapshotStore.reloadWidgets()
         Task {
           await store.refresh()
           scheduleNextBackgroundRefresh()

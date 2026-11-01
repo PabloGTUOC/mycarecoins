@@ -40,6 +40,8 @@ final class WatchConnector: NSObject, WCSessionDelegate {
       CareCoinsShared.disconnectLocally()
       Task { @MainActor in
         WatchStore.shared.reloadFromDisk()
+        WatchReminders.reschedule(from: nil, now: .now)
+        SnapshotStore.reloadWidgets()
       }
       return
     }
@@ -61,6 +63,9 @@ final class WatchConnector: NSObject, WCSessionDelegate {
 
     Task { @MainActor in
       WatchStore.shared.reloadFromDisk()
+      WatchReminders.requestAuthorizationIfNeeded()
+      WatchReminders.reschedule(from: WatchStore.shared.snapshot, now: .now)
+      SnapshotStore.reloadWidgets()
       await WatchStore.shared.refresh()
     }
   }
