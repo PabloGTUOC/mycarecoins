@@ -155,6 +155,27 @@ quickRouter.post('/stop', validateBody({
   }
 });
 
+quickRouter.post('/cancel', validateBody({
+  activityId: [required(), positiveInt()],
+}), async (req, res) => {
+  const familyId = req.device.familyId;
+  req.body.familyId = familyId;
+  const activityId = Number(req.body.activityId);
+  try {
+    const runner = req._withTransaction || withTransaction;
+    const result = await runner(async (client) => {
+      const user = await upsertUserFromAuth(client, req.auth);
+      return quickService.cancel(client, user.id, familyId, { activityId });
+    });
+    if (result.error) return sendServiceError(res, result.error);
+
+    return res.status(200).json(result.data);
+  } catch (err) {
+    console.error('POST /api/quick/cancel error:', err);
+    return sendError(res, 500, 'internal', 'Internal server error.');
+  }
+});
+
 quickRouter.post('/undo', validateBody({
   clientRef: [required(), string(8, 64)],
 }), async (req, res) => {

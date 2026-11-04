@@ -2690,6 +2690,10 @@
   "@srvErrPersonalTimeWithdrawOwnerOnly": {
     "description": "Server error: personalTimeWithdrawOwnerOnly"
   },
+  "srvErrQuickCancelRunning": "Stop the running task instead.",
+  "@srvErrQuickCancelRunning": {
+    "description": "Server error: quickCancelRunning"
+  },
   "srvErrQuickClientRefRequired": "Something went wrong sending this. Try again.",
   "@srvErrQuickClientRefRequired": {
     "description": "Server error: quickClientRefRequired"

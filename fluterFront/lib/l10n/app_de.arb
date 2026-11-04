@@ -1014,6 +1014,7 @@
   "srvErrPersonalTimeTooShort": "{minutes, plural, one{Persönliche Zeit muss mindestens 1 Minute dauern.} other{Persönliche Zeit muss mindestens {minutes} Minuten dauern.}}",
   "srvErrPersonalTimeWithdrawInsteadOfDecline": "Ziehe deine eigene Anfrage zurück, anstatt sie abzulehnen.",
   "srvErrPersonalTimeWithdrawOwnerOnly": "Nur die anfragende Person kann eine Anfrage zurückziehen.",
+  "srvErrQuickCancelRunning": "Beende stattdessen die laufende Aufgabe.",
   "srvErrQuickClientRefRequired": "Beim Senden ist etwas schiefgelaufen. Versuche es erneut.",
   "srvErrQuickStartInvalid": "Wähle eine Aufgabe oder eine Art.",
   "srvErrQuickTaskAlreadyRunning": "„{title}“ läuft bereits. Beende es zuerst.",

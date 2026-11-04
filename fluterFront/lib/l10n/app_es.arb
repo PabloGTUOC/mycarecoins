@@ -1014,6 +1014,7 @@
   "srvErrPersonalTimeTooShort": "{minutes, plural, one{El tiempo personal debe durar al menos 1 minuto.} other{El tiempo personal debe durar al menos {minutes} minutos.}}",
   "srvErrPersonalTimeWithdrawInsteadOfDecline": "Retira tu propia solicitud en lugar de rechazarla.",
   "srvErrPersonalTimeWithdrawOwnerOnly": "Solo quien hizo la solicitud puede retirarla.",
+  "srvErrQuickCancelRunning": "Detén la tarea en marcha en su lugar.",
   "srvErrQuickClientRefRequired": "Algo falló al enviarlo. Inténtalo de nuevo.",
   "srvErrQuickStartInvalid": "Elige una tarea o un tipo.",
   "srvErrQuickTaskAlreadyRunning": "\"{title}\" ya está en marcha. Detenla primero.",

@@ -87,6 +87,7 @@ that only works on `/api/quick/*`:
 | `POST /api/quick/start` | `{ templateId, clientRef }` → schedule at now; or `{ type: "care"\|"household", title?, clientRef }` → unplanned running task |
 | `POST /api/quick/done` | `{ templateId, clientRef }` → logged as done just now; or `{ activityId }` → finish a started task early |
 | `POST /api/quick/stop` | `{ activityId }` → stops the unplanned running task |
+| `POST /api/quick/cancel` | `{ activityId }` → removes a started instance from the calendar (not done) |
 | `POST /api/quick/undo` | `{ clientRef }` → allowed for 30 s, only on the key owner's own instance |
 
 - **Ranking moves to the server** (`services/quickService.js`, a port of `utils/tray_ranking.dart`), so the

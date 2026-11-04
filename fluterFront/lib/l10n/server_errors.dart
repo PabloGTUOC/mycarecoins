@@ -240,6 +240,8 @@ String? localizeServerError(
       return l.srvErrPersonalTimeWithdrawInsteadOfDecline;
     case 'personalTimeWithdrawOwnerOnly':
       return l.srvErrPersonalTimeWithdrawOwnerOnly;
+    case 'quickCancelRunning':
+      return l.srvErrQuickCancelRunning;
     case 'quickClientRefRequired':
       return l.srvErrQuickClientRefRequired;
     case 'quickStartInvalid':

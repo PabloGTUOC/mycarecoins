@@ -943,6 +943,7 @@ Plan and decisions: `docs/ios-widget-watch-plan.md`.
 | `POST /start` | `{templateId, clientRef}` schedules the template now; `{type, title, clientRef}` starts an unplanned running task (15-min placeholder end, one per user) |
 | `POST /done` | `{templateId, clientRef}` logs it as just done (`startsAt = now − duration`); `{activityId}` completes a started task, or stops it if running |
 | `POST /stop` | `{activityId}`: duration = elapsed rounded up to 15 min (15…240), coins = minutes, then `completeActivity` |
+| `POST /cancel` | `{activityId}`: removes the started instance from the calendar (`deleteActivity`, refunds bounty if any) |
 | `POST /undo` | `{clientRef}` within 60 s: `revertActivity` if paid (reversal rows), else `deleteActivity` |
 
 `clientRef` (8–64 chars) makes every write idempotent: a replay returns the existing row with `replayed: true`. IDs come back as strings (BIGINT). The JS ranking and the Dart tray read one fixture, `backend/tests/fixtures/tray_ranking_cases.json`, so they cannot drift.

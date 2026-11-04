@@ -7,6 +7,7 @@ import {
   start,
   done,
   stop,
+  cancel,
   undo,
 } from '../src/services/quickService.js';
 import { RUNNING_CAP_MINUTES } from '../src/db/autoComplete.js';
@@ -557,6 +558,121 @@ describe('stop', () => {
     assert.ok(res.error);
     assert.equal(res.error.code, 409);
     assert.equal(res.error.key, 'quickTaskNotRunning');
+  });
+});
+
+describe('cancel', () => {
+  test('success: delegates to deleteActivity and deletes', async () => {
+    const act = {
+      id: 301,
+      family_id: 1,
+      assigned_to: 10,
+      status: 'approved',
+      category: 'care',
+      type: 'care',
+      running_since: null,
+      bounty_amount: 0,
+      is_template: false,
+    };
+    const client = mockClient([
+      ok([act]), // cancel: SELECT * FROM activities ... FOR UPDATE
+      ok([act]), // deleteActivity: SELECT ... FROM activities ... FOR UPDATE
+      empty(),   // deleteActivity: assertMemberRole
+      empty(),   // deleteActivity: DELETE FROM activities WHERE id = $1
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 301 });
+    assert.ifError(res.error);
+    assert.deepEqual(res.data, { cancelled: true });
+
+    const deleteCalls = client._calls.filter((c) => c.sql.startsWith('DELETE FROM activities'));
+    assert.equal(deleteCalls.length, 1);
+    assert.equal(deleteCalls[0].params[0], 301);
+  });
+
+  test('not found -> 404 activityInstanceNotFoundOrCompleted', async () => {
+    const client = mockClient([
+      empty(), // cancel lookup finds nothing
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 999 });
+    assert.ok(res.error);
+    assert.equal(res.error.code, 404);
+    assert.equal(res.error.key, 'activityInstanceNotFoundOrCompleted');
+  });
+
+  test('running -> 409 quickCancelRunning', async () => {
+    const runningAct = {
+      id: 302,
+      family_id: 1,
+      assigned_to: 10,
+      status: 'approved',
+      category: 'care',
+      type: 'care',
+      running_since: new Date(),
+      is_template: false,
+    };
+    const client = mockClient([
+      ok([runningAct]),
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 302 });
+    assert.ok(res.error);
+    assert.equal(res.error.code, 409);
+    assert.equal(res.error.key, 'quickCancelRunning');
+  });
+
+  test('completed -> 409 activityNotUpcoming', async () => {
+    const completedAct = {
+      id: 303,
+      family_id: 1,
+      assigned_to: 10,
+      status: 'completed',
+      category: 'care',
+      type: 'care',
+      running_since: null,
+      is_template: false,
+    };
+    const client = mockClient([
+      ok([completedAct]),
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 303 });
+    assert.ok(res.error);
+    assert.equal(res.error.code, 409);
+    assert.equal(res.error.key, 'activityNotUpcoming');
+  });
+
+  test('coverage -> 409 coverageEndsWithPersonalTime', async () => {
+    const coverageAct = {
+      id: 304,
+      family_id: 1,
+      assigned_to: 10,
+      status: 'approved',
+      category: 'care',
+      type: 'coverage',
+      running_since: null,
+      is_template: false,
+    };
+    const client = mockClient([
+      ok([coverageAct]),
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 304 });
+    assert.ok(res.error);
+    assert.equal(res.error.code, 409);
+    assert.equal(res.error.key, 'coverageEndsWithPersonalTime');
+  });
+
+  test("another user's instance -> 404 activityInstanceNotFoundOrCompleted", async () => {
+    const client = mockClient([
+      empty(), // scoped query finds nothing for someone else's instance
+    ]);
+
+    const res = await cancel(client, 10, 1, { activityId: 305 });
+    assert.ok(res.error);
+    assert.equal(res.error.code, 404);
+    assert.equal(res.error.key, 'activityInstanceNotFoundOrCompleted');
   });
 });
 

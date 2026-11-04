@@ -361,3 +361,31 @@ export async function undo(client, userId, familyId, { clientRef }) {
   if (del.error) return del;
   return { data: { undone: true } };
 }
+
+export async function cancel(client, userId, familyId, { activityId }) {
+  const { rows } = await client.query(
+    `SELECT * FROM activities
+     WHERE id = $1 AND family_id = $2 AND assigned_to = $3 AND is_template = false AND category = 'care'
+     FOR UPDATE`,
+    [activityId, familyId, userId]
+  );
+  if (!rows.length) {
+    return serviceError(404, 'activityInstanceNotFoundOrCompleted', 'Instance not found, not yours, or already completed.');
+  }
+
+  const act = rows[0];
+  if (act.type === 'coverage') {
+    return serviceError(409, 'coverageEndsWithPersonalTime', 'Coverage ends when its personal time is cancelled.');
+  }
+  if (act.running_since != null) {
+    return serviceError(409, 'quickCancelRunning', 'Stop the running task instead.');
+  }
+  if (!['approved', 'pending_validation'].includes(act.status)) {
+    return serviceError(409, 'activityNotUpcoming', 'Can only un-schedule upcoming activities.');
+  }
+
+  const del = await activityService.deleteActivity(client, userId, activityId, false);
+  if (del.error) return del;
+  return { data: { cancelled: true } };
+}
+
