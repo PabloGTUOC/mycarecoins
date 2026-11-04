@@ -177,4 +177,16 @@ public struct QuickAPI {
     let (data, _) = try await send(request: request)
     return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
   }
+
+  public func cancel(activityId: String) async throws -> QuickActionResult {
+    guard let idNum = Int(activityId) else {
+      throw QuickAPIError.network
+    }
+    let body: [String: Any] = [
+      "activityId": idNum
+    ]
+    let request = try makeRequest(endpoint: "/api/quick/cancel", method: "POST", body: body)
+    let (data, _) = try await send(request: request)
+    return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
+  }
 }

@@ -38,6 +38,8 @@ public enum QuickLiveActivities {
         wanted = (activityId: running.id, title: running.title, kind: "running", startedAt: running.startedAt, plannedEnd: nil)
       } else if let started = snapshot.startedTask(now: now) {
         wanted = (activityId: started.id, title: started.title, kind: "started", startedAt: started.startsAt, plannedEnd: started.endsAt)
+      } else if let awaiting = snapshot.awaitingConfirmation(now: now) {
+        wanted = (activityId: awaiting.id, title: awaiting.title, kind: "started", startedAt: awaiting.startsAt, plannedEnd: awaiting.endsAt)
       } else {
         wanted = nil
       }

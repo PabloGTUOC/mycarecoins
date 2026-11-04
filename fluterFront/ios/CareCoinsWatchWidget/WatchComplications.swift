@@ -180,9 +180,15 @@ struct WatchRectangularNextView: View {
           Text(started.title)
             .font(.headline)
             .lineLimit(1)
-          Text(started.startsAt, style: .timer)
+          let endsAt = started.endsAt ?? started.startsAt.addingTimeInterval(15 * 60)
+          let timerRange = started.startsAt...max(endsAt, started.startsAt.addingTimeInterval(1))
+          Text(timerInterval: timerRange, countsDown: true)
             .font(.body.monospacedDigit())
             .foregroundColor(Palette.successOnDark)
+        } else if let awaiting = snapshot.awaitingConfirmation(now: entry.date) {
+          Text(L10n.t("widget.didYouFinish", awaiting.title))
+            .font(.headline)
+            .lineLimit(2)
         } else if let next = snapshot.nextUpcoming(now: entry.date) {
           Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
             .font(.headline)
@@ -208,9 +214,13 @@ struct WatchInlineNextView: View {
   var body: some View {
     if let snapshot = entry.snapshot {
       if let running = snapshot.running {
-        Text(verbatim: "\(running.title) ") + Text(running.startedAt, style: .timer)
+        Text("\(running.title) \(Text(running.startedAt, style: .timer))")
       } else if let started = snapshot.startedTask(now: entry.date) {
-        Text(verbatim: "\(started.title) ") + Text(started.startsAt, style: .timer)
+        let endsAt = started.endsAt ?? started.startsAt.addingTimeInterval(15 * 60)
+        let timerRange = started.startsAt...max(endsAt, started.startsAt.addingTimeInterval(1))
+        Text("\(started.title) \(Text(timerInterval: timerRange, countsDown: true))")
+      } else if let awaiting = snapshot.awaitingConfirmation(now: entry.date) {
+        Text(L10n.t("widget.didYouFinish", awaiting.title))
       } else if let next = snapshot.nextUpcoming(now: entry.date) {
         Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
       } else {

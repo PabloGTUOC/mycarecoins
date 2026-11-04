@@ -20,6 +20,8 @@ func widgetMessage(for error: Error) -> String {
         return L10n.t("widget.error.alreadyRunning", title)
       } else if code == "quickUndoExpired" {
         return L10n.t("widget.error.undoExpired")
+      } else if code == "quickCancelRunning" {
+        return L10n.t("widget.error.cancelRunning")
       } else if status == 401 {
         return L10n.t("widget.error.revoked")
       } else {
@@ -142,6 +144,44 @@ public struct FinishTaskIntent: LiveActivityIntent {
     do {
       _ = try await api.finish(activityId: activityId)
       SnapshotStore.recordAction(LastAction(kind: .logged, activityId: activityId))
+      if let snapshot = await refreshSnapshot(api: api) {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.sync(with: snapshot, now: Date())
+        #endif
+      } else {
+        #if canImport(ActivityKit)
+        QuickLiveActivities.endAll()
+        #endif
+      }
+    } catch {
+      SnapshotStore.recordAction(LastAction(kind: .failed, message: widgetMessage(for: error)))
+    }
+    return .result()
+  }
+}
+
+@available(iOS 17.0, *)
+public struct CancelTaskIntent: LiveActivityIntent {
+  public static var title: LocalizedStringResource = "Cancel Task"
+  public static var isDiscoverable = false
+
+  @Parameter(title: "Activity ID")
+  public var activityId: String
+
+  public init() {}
+
+  public init(activityId: String) {
+    self.activityId = activityId
+  }
+
+  public func perform() async throws -> some IntentResult {
+    guard let api = QuickAPI.fromStore() else {
+      SnapshotStore.recordAction(LastAction(kind: .failed, message: L10n.t("widget.error.revoked")))
+      return .result()
+    }
+    do {
+      _ = try await api.cancel(activityId: activityId)
+      SnapshotStore.recordAction(LastAction(kind: .cancelled, activityId: activityId))
       if let snapshot = await refreshSnapshot(api: api) {
         #if canImport(ActivityKit)
         QuickLiveActivities.sync(with: snapshot, now: Date())

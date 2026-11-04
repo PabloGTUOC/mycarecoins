@@ -3,7 +3,7 @@ import WidgetKit
 
 public struct LastAction: Codable, Equatable {
   public enum Kind: String, Codable {
-    case started, logged, stopped, undone, failed
+    case started, logged, stopped, undone, failed, cancelled
   }
 
   public let kind: Kind
