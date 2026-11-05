@@ -341,7 +341,106 @@ class QuickCoreTest {
             while (iter.hasNext()) {
                 expectedKeys.add(L10n.resourceName(iter.next()))
             }
-            assertEquals("Mismatch with Localizable.xcstrings keys", expectedKeys, enMap.keys)
+            assertTrue(
+                "Missing Localizable.xcstrings keys in strings.xml: ${expectedKeys - enMap.keys}",
+                enMap.keys.containsAll(expectedKeys),
+            )
+            val extraKeys = enMap.keys - expectedKeys
+            assertTrue(
+                "Unexpected extra keys in strings.xml: $extraKeys",
+                extraKeys.all { it.startsWith("android_") },
+            )
         }
+    }
+
+    @Test
+    fun `pickBanner prioritizes running, then started, then confirm, then none`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // Fixture has running ("701"), started ("503"), and awaitingConfirmation ("502")
+        val banner1 = QuickSurfaceState.pickBanner(snap, now)
+        assertTrue(banner1 is QuickBannerState.Running)
+        assertEquals("701", (banner1 as QuickBannerState.Running).running.id)
+
+        // Without running -> Started ("503")
+        val noRunning = snap.copy(running = null)
+        val banner2 = QuickSurfaceState.pickBanner(noRunning, now)
+        assertTrue(banner2 is QuickBannerState.Started)
+        assertEquals("503", (banner2 as QuickBannerState.Started).started.id)
+
+        // At 16:20:00Z (after 503's endsAt 16:15:00.123Z), nothing started -> Confirm ("502")
+        val afterStarted = Instant.parse("2026-11-05T16:20:00Z")
+        val banner3 = QuickSurfaceState.pickBanner(noRunning, afterStarted)
+        assertTrue(banner3 is QuickBannerState.Confirm)
+        assertEquals("502", (banner3 as QuickBannerState.Confirm).awaiting.id)
+
+        // Without running, started or awaiting -> None
+        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
+        val banner4 = QuickSurfaceState.pickBanner(noRunning, lateNight)
+        assertEquals(QuickBannerState.None, banner4)
+        assertEquals(QuickBannerState.None, QuickSurfaceState.pickBanner(null, now))
+    }
+
+    @Test
+    fun `pickNotification state machine selects state and actions and only confirms matching shownStartedActivityId`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // 1. Running task -> Running notification with STOP action
+        val runningState = QuickSurfaceState.pickNotification(snap, now, shownStartedActivityId = null)
+        assertTrue(runningState is QuickNotificationState.Running)
+        val r = runningState as QuickNotificationState.Running
+        assertEquals("701", r.activityId)
+        assertTrue(r.ongoing)
+        assertEquals(listOf(QuickNotificationAction(QuickNotificationActionKind.STOP, "701")), r.actions)
+
+        // 2. Started task -> Started notification with FINISH action
+        val noRunning = snap.copy(running = null)
+        val startedState = QuickSurfaceState.pickNotification(noRunning, now, shownStartedActivityId = null)
+        assertTrue(startedState is QuickNotificationState.Started)
+        val s = startedState as QuickNotificationState.Started
+        assertEquals("503", s.activityId)
+        assertTrue(s.ongoing)
+        assertEquals(listOf(QuickNotificationAction(QuickNotificationActionKind.FINISH, "503")), s.actions)
+
+        // 3. Awaiting confirmation when shownStartedActivityId matches -> Confirm with FINISH and CANCEL, not ongoing
+        val after503Ends = Instant.parse("2026-11-05T16:20:00Z")
+        val only503 = noRunning.copy(upcoming = listOf(snap.upcoming[2])) // 503 is index 2
+        val confirmMatch = QuickSurfaceState.pickNotification(
+            only503,
+            after503Ends,
+            shownStartedActivityId = "503",
+        )
+        assertTrue(confirmMatch is QuickNotificationState.Confirm)
+        val c = confirmMatch as QuickNotificationState.Confirm
+        assertEquals("503", c.activityId)
+        assertFalse(c.ongoing)
+        assertEquals(
+            listOf(
+                QuickNotificationAction(QuickNotificationActionKind.FINISH, "503"),
+                QuickNotificationAction(QuickNotificationActionKind.CANCEL, "503"),
+            ),
+            c.actions,
+        )
+
+        // 4. Awaiting confirmation when shownStartedActivityId does NOT match or is null -> None
+        assertEquals(
+            QuickNotificationState.None,
+            QuickSurfaceState.pickNotification(only503, after503Ends, shownStartedActivityId = null),
+        )
+        assertEquals(
+            QuickNotificationState.None,
+            QuickSurfaceState.pickNotification(only503, after503Ends, shownStartedActivityId = "other-id"),
+        )
+
+        // 5. Nothing active -> None
+        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
+        assertEquals(
+            QuickNotificationState.None,
+            QuickSurfaceState.pickNotification(noRunning, lateNight, shownStartedActivityId = "503"),
+        )
     }
 }

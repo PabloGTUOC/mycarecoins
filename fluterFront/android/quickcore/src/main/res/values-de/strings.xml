@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="android_channel_quick">Aufgabe läuft</string>
     <string name="widget_a11y_balance">Guthaben: %1$d Münzen</string>
     <string name="widget_a11y_done">%1$s als erledigt markieren</string>
     <string name="widget_a11y_start">%1$s starten, %2$d Minuten</string>

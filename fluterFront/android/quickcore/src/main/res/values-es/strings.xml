@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="android_channel_quick">Tarea en curso</string>
     <string name="widget_a11y_balance">Saldo: %1$d monedas</string>
     <string name="widget_a11y_done">Marcar %1$s como hecha</string>
     <string name="widget_a11y_start">Iniciar %1$s, %2$d minutos</string>

@@ -1,6 +1,7 @@
 package com.carecoins.carecoins_flutter
 
 import android.content.Context
+import com.carecoins.carecoins_flutter.quick.QuickRefresh
 import com.carecoins.quickcore.DeviceKeyStore
 import com.carecoins.quickcore.L10n
 import com.carecoins.quickcore.QuickApi
@@ -48,7 +49,11 @@ class ExtensionsBridge(
                             deviceKeyId = deviceKeyId,
                             apiBase = apiBase,
                         )
-                        refreshInternal()
+                        val res = refreshInternal()
+                        if (res == "ok") {
+                            QuickRefresh.schedule(context)
+                        }
+                        res
                     }
                     result.success(outcome)
                 }
@@ -93,10 +98,14 @@ class ExtensionsBridge(
                     withContext(Dispatchers.IO) {
                         L10n.setLanguage(context, code)
                         SnapshotStore.onChanged(context)
-                        WearSync.pushContext(
-                            context = context,
-                            language = L10n.getLanguage(context).orEmpty(),
-                        )
+                        val key = DeviceKeyStore.read(context)
+                        if (!key.isNullOrEmpty()) {
+                            WearSync.pushContext(
+                                context = context,
+                                deviceKey = key,
+                                language = L10n.getLanguage(context).orEmpty(),
+                            )
+                        }
                     }
                     result.success(null)
                 }
@@ -142,6 +151,7 @@ class ExtensionsBridge(
     private suspend fun clearInternal() {
         DeviceKeyStore.delete(context)
         SnapshotStore.clear(context)
+        QuickRefresh.cancelAll(context)
         SnapshotStore.onChanged(context)
         WearSync.clearContext(context)
     }
@@ -155,8 +165,13 @@ class ExtensionsBridge(
         const val CHANNEL_NAME = "carecoins/extensions"
 
         fun register(context: Context, messenger: BinaryMessenger): ExtensionsBridge {
+            val appCtx = context.applicationContext ?: context
+            QuickRefresh.ensureWired()
+            if (DeviceKeyStore.isConnected(appCtx)) {
+                QuickRefresh.schedule(appCtx)
+            }
             val channel = MethodChannel(messenger, CHANNEL_NAME)
-            val bridge = ExtensionsBridge(context.applicationContext ?: context, channel)
+            val bridge = ExtensionsBridge(appCtx, channel)
             channel.setMethodCallHandler(bridge)
             return bridge
         }

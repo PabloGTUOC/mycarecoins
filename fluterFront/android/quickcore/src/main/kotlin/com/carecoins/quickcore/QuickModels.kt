@@ -420,3 +420,98 @@ data class LastAction(
         fun fromJson(rawJson: String): LastAction = fromJson(JSONObject(rawJson))
     }
 }
+
+sealed interface QuickBannerState {
+    data object None : QuickBannerState
+    data class Running(val running: QuickSnapshot.Running) : QuickBannerState
+    data class Started(val started: QuickSnapshot.Upcoming) : QuickBannerState
+    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : QuickBannerState
+}
+
+enum class QuickNotificationActionKind {
+    STOP,
+    FINISH,
+    CANCEL,
+}
+
+data class QuickNotificationAction(
+    val kind: QuickNotificationActionKind,
+    val activityId: String,
+)
+
+sealed interface QuickNotificationState {
+    data object None : QuickNotificationState
+    data class Running(
+        val activityId: String,
+        val title: String,
+        val startedAt: Instant,
+        val ongoing: Boolean = true,
+        val actions: List<QuickNotificationAction> = listOf(
+            QuickNotificationAction(QuickNotificationActionKind.STOP, activityId),
+        ),
+    ) : QuickNotificationState
+
+    data class Started(
+        val activityId: String,
+        val title: String,
+        val startsAt: Instant,
+        val endsAt: Instant,
+        val ongoing: Boolean = true,
+        val actions: List<QuickNotificationAction> = listOf(
+            QuickNotificationAction(QuickNotificationActionKind.FINISH, activityId),
+        ),
+    ) : QuickNotificationState
+
+    data class Confirm(
+        val activityId: String,
+        val title: String,
+        val ongoing: Boolean = false,
+        val actions: List<QuickNotificationAction> = listOf(
+            QuickNotificationAction(QuickNotificationActionKind.FINISH, activityId),
+            QuickNotificationAction(QuickNotificationActionKind.CANCEL, activityId),
+        ),
+    ) : QuickNotificationState
+}
+
+object QuickSurfaceState {
+    fun pickBanner(snapshot: QuickSnapshot?, now: Instant = Instant.now()): QuickBannerState {
+        if (snapshot == null) return QuickBannerState.None
+        snapshot.running?.let { return QuickBannerState.Running(it) }
+        snapshot.startedTask(now)?.let { return QuickBannerState.Started(it) }
+        snapshot.awaitingConfirmation(now)?.let { return QuickBannerState.Confirm(it) }
+        return QuickBannerState.None
+    }
+
+    fun pickNotification(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+        shownStartedActivityId: String? = null,
+    ): QuickNotificationState {
+        if (snapshot == null) return QuickNotificationState.None
+        snapshot.running?.let { running ->
+            return QuickNotificationState.Running(
+                activityId = running.id,
+                title = running.title,
+                startedAt = running.startedAt,
+            )
+        }
+        snapshot.startedTask(now)?.let { started ->
+            val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
+            return QuickNotificationState.Started(
+                activityId = started.id,
+                title = started.title,
+                startsAt = started.startsAt,
+                endsAt = endsAt,
+            )
+        }
+        snapshot.awaitingConfirmation(now)?.let { awaiting ->
+            if (shownStartedActivityId != null && awaiting.id == shownStartedActivityId) {
+                return QuickNotificationState.Confirm(
+                    activityId = awaiting.id,
+                    title = awaiting.title,
+                )
+            }
+        }
+        return QuickNotificationState.None
+    }
+}
