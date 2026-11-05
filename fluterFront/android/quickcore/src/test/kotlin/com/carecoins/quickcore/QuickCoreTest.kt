@@ -443,4 +443,118 @@ class QuickCoreTest {
             QuickSurfaceState.pickNotification(noRunning, lateNight, shownStartedActivityId = "503"),
         )
     }
+
+    @Test
+    fun `PendingActionQueue prunes items older than 12h, dedupes by clientRef, and persists to pendingActions json`() {
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+        val expiredAt = now.minusSeconds(12 * 3600L + 1L)
+        val boundaryAt = now.minusSeconds(12 * 3600L)
+        val recentAt = now.minusSeconds(600L)
+
+        val items = listOf(
+            PendingAction(
+                kind = PendingAction.Kind.start,
+                taskId = "11",
+                clientRef = "ref-expired",
+                createdAt = expiredAt,
+            ),
+            PendingAction(
+                kind = PendingAction.Kind.done,
+                taskId = "11",
+                clientRef = "ref-boundary",
+                createdAt = boundaryAt,
+            ),
+            PendingAction(
+                kind = PendingAction.Kind.startNow,
+                type = "care",
+                title = "Care",
+                clientRef = "ref-dup",
+                createdAt = recentAt,
+            ),
+            PendingAction(
+                kind = PendingAction.Kind.startNow,
+                type = "care",
+                title = "Duplicate Care",
+                clientRef = "ref-dup",
+                createdAt = now,
+            ),
+            PendingAction(
+                kind = PendingAction.Kind.cancel,
+                activityId = "502",
+                clientRef = "ref-cancel",
+                createdAt = now,
+            ),
+        )
+
+        val pruned = PendingActionQueue.pruneAndDedupe(items, now)
+        assertEquals(3, pruned.size)
+        assertEquals(listOf("ref-boundary", "ref-dup", "ref-cancel"), pruned.map { it.clientRef })
+        assertEquals("Care", pruned[1].title)
+
+        // Disk persistence and enqueue dedupe
+        PendingActionQueue.save(testFilesDir, items)
+        val loaded = PendingActionQueue.load(testFilesDir, now)
+        assertEquals(3, loaded.size)
+        assertEquals(listOf("ref-boundary", "ref-dup", "ref-cancel"), loaded.map { it.clientRef })
+
+        // Enqueueing a duplicate clientRef does not add a second copy
+        val afterDup = PendingActionQueue.enqueue(
+            testFilesDir,
+            PendingAction(
+                kind = PendingAction.Kind.cancel,
+                activityId = "502",
+                clientRef = "ref-cancel",
+                createdAt = now,
+            ),
+            now,
+        )
+        assertEquals(3, afterDup.size)
+
+        PendingActionQueue.clear(testFilesDir)
+        assertTrue(PendingActionQueue.load(testFilesDir, now).isEmpty())
+    }
+
+    @Test
+    fun `wearSections orders Running, Started, Confirm, hides Now while running, and flips Started to Confirm at endsAt`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // 1. With running task ("701"): [Running, Tasks, Coins] — Now is hidden while running
+        val runningSections = QuickSurfaceState.wearSections(snap, now)
+        assertEquals(3, runningSections.size)
+        assertTrue(runningSections[0] is WearSection.Running)
+        assertEquals("701", (runningSections[0] as WearSection.Running).running.id)
+        assertTrue(runningSections[1] is WearSection.Tasks)
+        assertEquals(WearSection.Coins(240), runningSections[2])
+
+        // 2. Without running at 16:00 ("503" is started): [Started, Now, Tasks, Coins]
+        val noRunning = snap.copy(running = null)
+        val startedSections = QuickSurfaceState.wearSections(noRunning, now)
+        assertEquals(4, startedSections.size)
+        assertTrue(startedSections[0] is WearSection.Started)
+        assertEquals("503", (startedSections[0] as WearSection.Started).started.id)
+        assertEquals(WearSection.Now, startedSections[1])
+        assertTrue(startedSections[2] is WearSection.Tasks)
+        assertEquals(WearSection.Coins(240), startedSections[3])
+
+        // 3. Re-evaluating after 503's endsAt (16:15:00.123Z) flips Started to Confirm
+        val after503 = Instant.parse("2026-11-05T16:16:00Z")
+        val only503 = noRunning.copy(upcoming = listOf(snap.upcoming[2]))
+        val confirmSections = QuickSurfaceState.wearSections(only503, after503)
+        assertEquals(4, confirmSections.size)
+        assertTrue(confirmSections[0] is WearSection.Confirm)
+        assertEquals("503", (confirmSections[0] as WearSection.Confirm).awaiting.id)
+        assertEquals(WearSection.Now, confirmSections[1])
+        assertTrue(confirmSections[2] is WearSection.Tasks)
+        assertEquals(WearSection.Coins(240), confirmSections[3])
+
+        // 4. Late night (nothing running, started or awaiting): [Now, Tasks, Coins]
+        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
+        val idleSections = QuickSurfaceState.wearSections(noRunning, lateNight)
+        assertEquals(listOf(WearSection.Now, WearSection.Tasks(snap.tasks), WearSection.Coins(240)), idleSections)
+
+        // 5. Null snapshot -> empty
+        assertTrue(QuickSurfaceState.wearSections(null, now).isEmpty())
+    }
 }

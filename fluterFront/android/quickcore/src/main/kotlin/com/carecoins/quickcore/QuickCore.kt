@@ -6,6 +6,7 @@ import android.content.Context
 object QuickCore {
     const val SNAPSHOT_FILE = "quick.json"
     const val LAST_ACTION_FILE = "lastAction.json"
+    const val PENDING_ACTIONS_FILE = "pendingActions.json"
     const val PREFS_NAME = "carecoins.quick"
     const val KEY_ALIAS = "carecoins.deviceKey"
     const val PREF_DEVICE_KEY_ID = "deviceKeyId"
@@ -15,6 +16,7 @@ object QuickCore {
     fun disconnectLocally(context: Context) {
         DeviceKeyStore.delete(context)
         SnapshotStore.clear(context)
+        PendingActionQueue.clear(context)
         SnapshotStore.onChanged(context)
     }
 }

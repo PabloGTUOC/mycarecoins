@@ -1,11 +1,14 @@
 package com.carecoins.quickcore
 
+import android.content.Context
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 data class FlexibleString(val value: String) {
     companion object {
@@ -473,6 +476,168 @@ sealed interface QuickNotificationState {
     ) : QuickNotificationState
 }
 
+sealed interface WearSection {
+    data class Running(val running: QuickSnapshot.Running) : WearSection
+    data class Started(val started: QuickSnapshot.Upcoming) : WearSection
+    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : WearSection
+    data object Now : WearSection
+    data class Tasks(val tasks: List<QuickSnapshot.Task>) : WearSection
+    data class Coins(val balance: Int) : WearSection
+}
+
+data class PendingAction(
+    val kind: Kind,
+    val taskId: String? = null,
+    val activityId: String? = null,
+    val type: String? = null,
+    val title: String? = null,
+    val clientRef: String = QuickApi.newClientRef(),
+    val createdAt: Instant = Instant.now(),
+    val id: String = clientRef.ifEmpty { UUID.randomUUID().toString() },
+) {
+    enum class Kind {
+        start,
+        done,
+        finish,
+        cancel,
+        startNow,
+        stop;
+
+        companion object {
+            fun fromString(value: String): Kind {
+                return entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
+                    ?: throw JSONException("Unknown PendingAction.Kind: $value")
+            }
+        }
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("kind", kind.name)
+        if (taskId != null) put("taskId", taskId)
+        if (activityId != null) put("activityId", activityId)
+        if (type != null) put("type", type)
+        if (title != null) put("title", title)
+        put("clientRef", clientRef)
+        put("createdAt", createdAt.toString())
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): PendingAction {
+            val clientRef = json.optNullableString("clientRef").orEmpty()
+                .ifEmpty { json.optFlexibleString("id").orEmpty() }
+                .ifEmpty { QuickApi.newClientRef() }
+            val id = json.optFlexibleString("id").orEmpty().ifEmpty { clientRef }
+            return PendingAction(
+                id = id,
+                kind = Kind.fromString(json.getString("kind")),
+                taskId = json.optFlexibleString("taskId"),
+                activityId = json.optFlexibleString("activityId"),
+                type = json.optNullableString("type"),
+                title = json.optNullableString("title"),
+                clientRef = clientRef,
+                createdAt = json.getInstant("createdAt"),
+            )
+        }
+    }
+}
+
+object PendingActionQueue {
+    const val FILE_NAME = QuickCore.PENDING_ACTIONS_FILE
+    const val MAX_AGE_SECONDS = 12 * 3600L
+
+    fun pruneAndDedupe(
+        actions: List<PendingAction>,
+        now: Instant = Instant.now(),
+    ): List<PendingAction> {
+        val cutoff = now.minusSeconds(MAX_AGE_SECONDS)
+        val seenRefs = HashSet<String>()
+        return buildList {
+            for (action in actions) {
+                if (action.createdAt.isBefore(cutoff)) continue
+                val key = action.clientRef.ifEmpty { action.id }
+                if (seenRefs.add(key)) {
+                    add(action)
+                }
+            }
+        }
+    }
+
+    fun enqueue(
+        existing: List<PendingAction>,
+        action: PendingAction,
+        now: Instant = Instant.now(),
+    ): List<PendingAction> {
+        return pruneAndDedupe(existing + action, now)
+    }
+
+    private fun resolveFilesDir(context: Context?): File {
+        return context?.filesDir ?: SnapshotStore.fallbackFilesDir
+    }
+
+    fun load(context: Context, now: Instant = Instant.now()): List<PendingAction> =
+        load(resolveFilesDir(context), now)
+
+    fun load(
+        filesDir: File = SnapshotStore.fallbackFilesDir,
+        now: Instant = Instant.now(),
+    ): List<PendingAction> {
+        val file = File(filesDir, FILE_NAME)
+        if (!file.exists()) return emptyList()
+        val rawList = runCatching {
+            val arr = JSONArray(file.readText(Charsets.UTF_8))
+            buildList(arr.length()) {
+                for (i in 0 until arr.length()) {
+                    add(PendingAction.fromJson(arr.getJSONObject(i)))
+                }
+            }
+        }.getOrElse { return emptyList() }
+        val pruned = pruneAndDedupe(rawList, now)
+        if (pruned.size != rawList.size) {
+            save(filesDir, pruned)
+        }
+        return pruned
+    }
+
+    fun save(context: Context, actions: List<PendingAction>) =
+        save(resolveFilesDir(context), actions)
+
+    fun save(
+        filesDir: File = SnapshotStore.fallbackFilesDir,
+        actions: List<PendingAction>,
+    ) {
+        runCatching {
+            filesDir.mkdirs()
+            val arr = JSONArray(actions.map { it.toJson() })
+            File(filesDir, FILE_NAME).writeText(arr.toString(), Charsets.UTF_8)
+        }
+    }
+
+    fun enqueue(
+        context: Context,
+        action: PendingAction,
+        now: Instant = Instant.now(),
+    ): List<PendingAction> = enqueue(resolveFilesDir(context), action, now)
+
+    fun enqueue(
+        filesDir: File = SnapshotStore.fallbackFilesDir,
+        action: PendingAction,
+        now: Instant = Instant.now(),
+    ): List<PendingAction> {
+        val updated = enqueue(load(filesDir, now), action, now)
+        save(filesDir, updated)
+        return updated
+    }
+
+    fun clear(context: Context) = clear(resolveFilesDir(context))
+
+    fun clear(filesDir: File = SnapshotStore.fallbackFilesDir) {
+        runCatching {
+            File(filesDir, FILE_NAME).delete()
+        }
+    }
+}
+
 object QuickSurfaceState {
     fun pickBanner(snapshot: QuickSnapshot?, now: Instant = Instant.now()): QuickBannerState {
         if (snapshot == null) return QuickBannerState.None
@@ -480,6 +645,28 @@ object QuickSurfaceState {
         snapshot.startedTask(now)?.let { return QuickBannerState.Started(it) }
         snapshot.awaitingConfirmation(now)?.let { return QuickBannerState.Confirm(it) }
         return QuickBannerState.None
+    }
+
+    fun wearSections(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+    ): List<WearSection> {
+        if (snapshot == null) return emptyList()
+        return buildList {
+            when (val banner = pickBanner(snapshot, now)) {
+                is QuickBannerState.Running -> add(WearSection.Running(banner.running))
+                is QuickBannerState.Started -> add(WearSection.Started(banner.started))
+                is QuickBannerState.Confirm -> add(WearSection.Confirm(banner.awaiting))
+                QuickBannerState.None -> Unit
+            }
+            if (snapshot.running == null) {
+                add(WearSection.Now)
+            }
+            if (snapshot.tasks.isNotEmpty()) {
+                add(WearSection.Tasks(snapshot.tasks))
+            }
+            add(WearSection.Coins(snapshot.balance))
+        }
     }
 
     fun pickNotification(
