@@ -1,0 +1,66 @@
+{
+  "family": {
+    "id": "101",
+    "name": "The Hendersons"
+  },
+  "balance": 240,
+  "needsYou": 2,
+  "tasks": [
+    {
+      "id": "11",
+      "title": "Bath time",
+      "type": "care",
+      "durationMinutes": 30,
+      "coinValue": 30
+    },
+    {
+      "id": 12,
+      "title": "Dishes",
+      "type": "household",
+      "durationMinutes": "15",
+      "coinValue": "15"
+    }
+  ],
+  "upcoming": [
+    {
+      "id": "501",
+      "title": "Completed morning walk",
+      "type": "care",
+      "startsAt": "2026-11-05T14:30:00Z",
+      "endsAt": "2026-11-05T15:00:00Z",
+      "status": "completed"
+    },
+    {
+      "id": "502",
+      "title": "Finished nap time",
+      "type": "care",
+      "startsAt": "2026-11-05T14:30:00.000Z",
+      "endsAt": "2026-11-05T15:30:00.000Z",
+      "status": "approved"
+    },
+    {
+      "id": 503,
+      "title": "School pickup",
+      "type": "care",
+      "startsAt": "2026-11-05T15:45:00.123Z",
+      "endsAt": "2026-11-05T16:15:00.123Z",
+      "status": "approved"
+    },
+    {
+      "id": "504",
+      "title": "Dinner prep",
+      "type": "household",
+      "startsAt": "2026-11-05T18:00:00Z",
+      "endsAt": "2026-11-05T18:45:00Z",
+      "status": "approved"
+    }
+  ],
+  "running": {
+    "id": "701",
+    "title": "Care",
+    "type": "care",
+    "startedAt": "2026-11-05T15:50:00.000Z",
+    "clientRef": "11111111-2222-3333-4444-555555555555"
+  },
+  "serverTime": "2026-11-05T16:00:00.000Z"
+}

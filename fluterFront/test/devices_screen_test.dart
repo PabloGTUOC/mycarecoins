@@ -246,18 +246,68 @@ void main() {
   });
 
   testWidgets(
-      'On Android, the iOS-only text shows and there is no Connect button',
+      'On Android, renders Android texts, posts label "Android phone", and marks "This phone"',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      mockConnected = false;
+      await tester.pumpWidget(buildScreen());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+            'Log, start and stop tasks from your home screen and your Wear OS watch without opening the app.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+            "Your Wear OS watch uses this phone's connection. Open CareCoins on the watch after connecting."),
+        findsOneWidget,
+      );
+      expect(find.text('Connect this phone'), findsOneWidget);
+
+      fakeApi.deviceKeys = [
+        {
+          'id': 99,
+          'label': 'Android phone',
+          'last_used_at': null,
+        },
+      ];
+
+      await tester.tap(find.text('Connect this phone'));
+      await tester.pumpAndSettle();
+
+      expect(fakeApi.lastPostPath, '/api/me/device-keys');
+      expect(fakeApi.lastPosted, {
+        'familyId': 101,
+        'label': 'Android phone',
+      });
+
+      expect(
+        find.text('This phone and its watch are connected.'),
+        findsOneWidget,
+      );
+      expect(find.text('This phone · Not used yet'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets(
+      'On desktop platforms, the phone-only text shows and there is no Connect button',
+      (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
       await tester.pumpWidget(buildScreen());
       await tester.pumpAndSettle();
 
       expect(
-        find.text('The widget and watch app are available on iPhone.'),
+        find.text(
+            'The widget and watch app are available in the iPhone and Android apps.'),
         findsOneWidget,
       );
       expect(find.text('Connect this iPhone'), findsNothing);
+      expect(find.text('Connect this phone'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

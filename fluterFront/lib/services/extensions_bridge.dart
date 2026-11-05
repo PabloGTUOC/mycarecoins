@@ -6,9 +6,11 @@ import 'package:flutter/services.dart';
 class ExtensionsBridge {
   static const channel = MethodChannel('carecoins/extensions');
 
-  /// iOS only, never on web. Everything else is a no-op that returns null/false.
+  /// iOS and Android, never on web. Everything else is a no-op that returns null/false.
   static bool get available =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android);
 
   static Future<String?>? _inFlightRefresh;
 

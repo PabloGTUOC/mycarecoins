@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -51,16 +52,20 @@ class _DevicesScreenState extends State<DevicesScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   Future<void> _connect() async {
     if (_busy) return;
     if (mounted) setState(() => _busy = true);
     final app = context.read<AppState>();
     final l = AppLocalizations.of(context);
+    final label = _isAndroid ? l.devicesLabelAndroid : l.devicesLabelIphone;
     try {
       await app.runAction(() async {
         final res = await app.api.post('/api/me/device-keys', {
           'familyId': app.familyId,
-          'label': l.devicesLabelIphone,
+          'label': label,
         });
         final data = (res as Map).cast<String, dynamic>();
         final deviceKey = (data['deviceKey'] as Map).cast<String, dynamic>();
@@ -146,7 +151,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 Text(
-                  l.devicesIntro,
+                  _isAndroid ? l.devicesIntroAndroid : l.devicesIntro,
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.45,
@@ -190,8 +195,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             Localizations.localeOf(context).toString(),
                           ))
                         : l.devicesNeverUsed;
+                    final thisDeviceLabel =
+                        _isAndroid ? l.devicesThisPhone : l.devicesThisIphone;
                     final subtitleText = isThisIphone
-                        ? '${l.devicesThisIphone} · $dateStr'
+                        ? '$thisDeviceLabel · $dateStr'
                         : dateStr;
 
                     return ListTile(
@@ -216,7 +223,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   }),
                 const SizedBox(height: 16),
                 Text(
-                  l.devicesWatchNote,
+                  _isAndroid ? l.devicesWatchNoteAndroid : l.devicesWatchNote,
                   style: const TextStyle(
                     fontSize: 13,
                     height: 1.4,
@@ -240,7 +247,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.devicesConnected,
+            _isAndroid ? l.devicesConnectedAndroid : l.devicesConnected,
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -259,7 +266,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
       alignment: Alignment.centerLeft,
       child: FilledButton(
         onPressed: _busy ? null : _connect,
-        child: Text(l.devicesConnect),
+        child: Text(_isAndroid ? l.devicesConnectAndroid : l.devicesConnect),
       ),
     );
   }

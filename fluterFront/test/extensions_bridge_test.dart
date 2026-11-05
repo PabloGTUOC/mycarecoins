@@ -98,8 +98,37 @@ void main() {
     expect(() async => await ExtensionsBridge.clear(), returnsNormally);
   });
 
-  test('On Android, nothing reaches the channel', () async {
+  test('On Android, methods reach the channel', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    expect(ExtensionsBridge.available, isTrue);
+
+    final storeResult = await ExtensionsBridge.storeDeviceKey(
+      key: 'k',
+      deviceKeyId: 'd',
+      apiBase: 'a',
+    );
+    expect(storeResult, 'ok');
+
+    final status = await ExtensionsBridge.status();
+    expect(status.connected, isTrue);
+    expect(status.deviceKeyId, '42');
+
+    final refreshResult = await ExtensionsBridge.refresh();
+    expect(refreshResult, 'ok');
+
+    await ExtensionsBridge.clear();
+    await ExtensionsBridge.setLanguage('es');
+
+    expect(
+      methodCalls.map((c) => c.method).toList(),
+      ['storeDeviceKey', 'status', 'refresh', 'clear', 'setLanguage'],
+    );
+  });
+
+  test('On desktop platforms, nothing reaches the channel', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    expect(ExtensionsBridge.available, isFalse);
+
     await ExtensionsBridge.storeDeviceKey(
       key: 'k',
       deviceKeyId: 'd',

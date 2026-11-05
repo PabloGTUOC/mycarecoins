@@ -2826,9 +2826,9 @@
   "@devicesDisconnect": {
     "description": "Button to disconnect the current iPhone"
   },
-  "devicesIosOnly": "The widget and watch app are available on iPhone.",
+  "devicesIosOnly": "The widget and watch app are available in the iPhone and Android apps.",
   "@devicesIosOnly": {
-    "description": "Explanation shown on non-iOS platforms"
+    "description": "Explanation shown on non-phone platforms"
   },
   "devicesLabelIphone": "iPhone",
   "@devicesLabelIphone": {
@@ -2837,6 +2837,30 @@
   "devicesThisIphone": "This iPhone",
   "@devicesThisIphone": {
     "description": "Marker prefix for the current device in the list"
+  },
+  "devicesConnectAndroid": "Connect this phone",
+  "@devicesConnectAndroid": {
+    "description": "Button to connect the current Android phone"
+  },
+  "devicesConnectedAndroid": "This phone and its watch are connected.",
+  "@devicesConnectedAndroid": {
+    "description": "Status text when this Android phone is connected"
+  },
+  "devicesIntroAndroid": "Log, start and stop tasks from your home screen and your Wear OS watch without opening the app.",
+  "@devicesIntroAndroid": {
+    "description": "Intro text explaining what widgets and Wear OS support do on Android"
+  },
+  "devicesWatchNoteAndroid": "Your Wear OS watch uses this phone's connection. Open CareCoins on the watch after connecting.",
+  "@devicesWatchNoteAndroid": {
+    "description": "Footnote explaining Wear OS watch connectivity through the Android phone"
+  },
+  "devicesLabelAndroid": "Android phone",
+  "@devicesLabelAndroid": {
+    "description": "Default label when registering this Android phone"
+  },
+  "devicesThisPhone": "This phone",
+  "@devicesThisPhone": {
+    "description": "Marker prefix for the current Android phone in the list"
   },
   "devicesListTitle": "Connected devices",
   "@devicesListTitle": {
