@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="android_channel_quick">Task in progress</string>
+    <string name="android_tile_since">since %1$s</string>
     <string name="widget_a11y_balance">Balance: %1$d coins</string>
     <string name="widget_a11y_done">Mark %1$s done</string>
     <string name="widget_a11y_start">Start %1$s, %2$d minutes</string>

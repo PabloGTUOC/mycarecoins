@@ -1,13 +1,212 @@
 package com.carecoins.carecoins_flutter.wear.complication
 
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
+import androidx.wear.watchface.complications.data.ComplicationText
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.CountDownTimeReference
+import androidx.wear.watchface.complications.data.CountUpTimeReference
+import androidx.wear.watchface.complications.data.LongTextComplicationData
+import androidx.wear.watchface.complications.data.MonochromaticImage
+import androidx.wear.watchface.complications.data.PlainComplicationText
+import androidx.wear.watchface.complications.data.ShortTextComplicationData
+import androidx.wear.watchface.complications.data.TimeDifferenceComplicationText
+import androidx.wear.watchface.complications.data.TimeDifferenceStyle
+import androidx.wear.watchface.complications.datasource.ComplicationDataTimeline
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
-import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
+import androidx.wear.watchface.complications.datasource.SuspendingTimelineComplicationDataSourceService
+import androidx.wear.watchface.complications.datasource.TimeInterval
+import androidx.wear.watchface.complications.datasource.TimelineEntry
+import com.carecoins.carecoins_flutter.wear.MainActivity
+import com.carecoins.carecoins_flutter.wear.R
+import com.carecoins.quickcore.L10n
+import com.carecoins.quickcore.QuickSnapshot
+import com.carecoins.quickcore.QuickSurfaceState
+import com.carecoins.quickcore.SnapshotStore
+import com.carecoins.quickcore.WearNextState
+import java.time.Instant
 
-/** Minimal stub for QA-3; QA-4 implements the next-task complication data source. */
-class NextComplicationService : SuspendingComplicationDataSourceService() {
-    override fun getPreviewData(type: ComplicationType): ComplicationData? = null
+class NextComplicationService : SuspendingTimelineComplicationDataSourceService() {
+    override fun getPreviewData(type: ComplicationType): ComplicationData? {
+        val ctx = applicationContext ?: this
+        val now = Instant.now()
+        val previewState = WearNextState.Started(
+            started = QuickSnapshot.Upcoming(
+                id = "preview",
+                title = L10n.t(ctx, "widget.title.care"),
+                type = "care",
+                startsAt = now.minusSeconds(5 * 60L),
+                endsAt = now.plusSeconds(15 * 60L),
+                status = "approved",
+            ),
+            endsAt = now.plusSeconds(15 * 60L),
+        )
+        return buildNextData(
+            context = ctx,
+            type = type,
+            state = previewState,
+            includeTapAction = false,
+        )
+    }
 
-    override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? = null
+    override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationDataTimeline? {
+        val ctx = applicationContext ?: this
+        val now = Instant.now()
+        val snapshot = SnapshotStore.load(ctx)
+        val nowState = QuickSurfaceState.pickNext(snapshot, now, connected = snapshot != null)
+        val defaultData = buildNextData(
+            context = ctx,
+            type = request.complicationType,
+            state = nowState,
+            includeTapAction = true,
+        ) ?: return null
+
+        val entries = getTimelineEntries(
+            context = ctx,
+            type = request.complicationType,
+            snapshot = snapshot,
+            now = now,
+        )
+        return ComplicationDataTimeline(
+            defaultComplicationData = defaultData,
+            timelineEntries = entries,
+        )
+    }
+
+    fun getTimelineEntries(
+        context: Context,
+        type: ComplicationType,
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+    ): List<TimelineEntry> {
+        if (snapshot == null) return emptyList()
+        val instants = QuickSurfaceState.nextTimelineInstants(snapshot, now)
+        if (instants.isEmpty()) return emptyList()
+
+        return buildList(instants.size) {
+            for (i in instants.indices) {
+                val start = instants[i]
+                val end = if (i + 1 < instants.size) {
+                    instants[i + 1]
+                } else {
+                    start.plusSeconds(DEFAULT_LAST_ENTRY_DURATION_SECONDS)
+                }
+                if (!start.isBefore(end)) continue
+                val stateAtStart = QuickSurfaceState.pickNext(snapshot, start, connected = true)
+                val data = buildNextData(
+                    context = context,
+                    type = type,
+                    state = stateAtStart,
+                    includeTapAction = true,
+                ) ?: continue
+                add(TimelineEntry(TimeInterval(start, end), data))
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_OPEN = 3002
+        private const val DEFAULT_LAST_ENTRY_DURATION_SECONDS = 2 * 3600L
+
+        fun buildNextData(
+            context: Context,
+            type: ComplicationType,
+            state: WearNextState,
+            includeTapAction: Boolean,
+        ): ComplicationData? {
+            if (type != ComplicationType.SHORT_TEXT && type != ComplicationType.LONG_TEXT) {
+                return null
+            }
+
+            val icon = MonochromaticImage.Builder(
+                Icon.createWithResource(context, R.drawable.ic_stat_carecoins),
+            ).build()
+            val tapAction = if (includeTapAction) openAppPendingIntent(context) else null
+
+            val text: ComplicationText
+            val title: ComplicationText?
+            val contentDescription: ComplicationText
+
+            when (state) {
+                is WearNextState.Running -> {
+                    title = PlainComplicationText.Builder(state.running.title).build()
+                    text = TimeDifferenceComplicationText.Builder(
+                        TimeDifferenceStyle.STOPWATCH,
+                        CountUpTimeReference(state.running.startedAt),
+                    ).build()
+                    contentDescription = PlainComplicationText.Builder(
+                        L10n.t(context, "widget.running", state.running.title),
+                    ).build()
+                }
+                is WearNextState.Started -> {
+                    title = PlainComplicationText.Builder(state.started.title).build()
+                    text = TimeDifferenceComplicationText.Builder(
+                        TimeDifferenceStyle.SHORT_DUAL_UNIT,
+                        CountDownTimeReference(state.endsAt),
+                    ).build()
+                    val untilStr = L10n.t(context, "widget.until", L10n.shortTime(context, state.endsAt))
+                    contentDescription = PlainComplicationText.Builder(
+                        "${state.started.title} · $untilStr",
+                    ).build()
+                }
+                is WearNextState.Confirm -> {
+                    val prompt = L10n.t(context, "widget.didYouFinish", state.awaiting.title)
+                    title = null
+                    text = PlainComplicationText.Builder(prompt).build()
+                    contentDescription = text
+                }
+                is WearNextState.NextUpcoming -> {
+                    val shortStart = L10n.shortTime(context, state.upcoming.startsAt)
+                    val nextStr = L10n.t(context, "widget.next", state.upcoming.title, shortStart)
+                    title = null
+                    text = PlainComplicationText.Builder(nextStr).build()
+                    contentDescription = text
+                }
+                WearNextState.NoTasks -> {
+                    val noTasksStr = L10n.t(context, "widget.noTasks")
+                    title = null
+                    text = PlainComplicationText.Builder(noTasksStr).build()
+                    contentDescription = text
+                }
+                WearNextState.NotConnected -> {
+                    val notConnectedStr = L10n.t(context, "widget.notConnected")
+                    title = null
+                    text = PlainComplicationText.Builder(notConnectedStr).build()
+                    contentDescription = text
+                }
+            }
+
+            return when (type) {
+                ComplicationType.SHORT_TEXT -> {
+                    ShortTextComplicationData.Builder(text, contentDescription)
+                        .setTitle(title)
+                        .setMonochromaticImage(icon)
+                        .setTapAction(tapAction)
+                        .build()
+                }
+                else -> {
+                    LongTextComplicationData.Builder(text, contentDescription)
+                        .setTitle(title)
+                        .setMonochromaticImage(icon)
+                        .setTapAction(tapAction)
+                        .build()
+                }
+            }
+        }
+
+        private fun openAppPendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            return PendingIntent.getActivity(
+                context,
+                REQUEST_CODE_OPEN,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+    }
 }

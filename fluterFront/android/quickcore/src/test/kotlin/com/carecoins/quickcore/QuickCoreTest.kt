@@ -557,4 +557,97 @@ class QuickCoreTest {
         // 5. Null snapshot -> empty
         assertTrue(QuickSurfaceState.wearSections(null, now).isEmpty())
     }
+
+    @Test
+    fun `selectReminders filters excluded statuses, enforces startsAt minus 15m gt now, respects enabled and caps at 20`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // Fixture has 504 at 18:00Z (status pending_validation -> allowed, reminder at 17:45Z)
+        val fixtureReminders = QuickSurfaceState.selectReminders(snap, now, enabled = true)
+        assertEquals(1, fixtureReminders.size)
+        assertEquals("504", fixtureReminders[0].id)
+        assertEquals(Instant.parse("2026-11-05T17:45:00Z"), fixtureReminders[0].at)
+
+        // Disabled, disconnected or null snapshot -> empty
+        assertTrue(QuickSurfaceState.selectReminders(snap, now, enabled = false).isEmpty())
+        assertTrue(QuickSurfaceState.selectReminders(snap, now, enabled = true, connected = false).isEmpty())
+        assertTrue(QuickSurfaceState.selectReminders(null, now, enabled = true).isEmpty())
+
+        // Status filtering and exact 15-min boundary: startsAt - 15m == now must be excluded, > now included
+        val customUpcoming = buildList {
+            // Excluded statuses
+            add(Upcoming("ex-1", "Done", "care", now.plusSeconds(3600), null, "completed"))
+            add(Upcoming("ex-2", "Rejected", "care", now.plusSeconds(3600), null, "rejected"))
+            add(Upcoming("ex-3", "Cancelled UK", "care", now.plusSeconds(3600), null, "cancelled"))
+            add(Upcoming("ex-4", "Canceled US", "care", now.plusSeconds(3600), null, "canceled"))
+            // Exact boundary: startsAt = now + 15m -> startsAt - 15m == now (excluded)
+            add(Upcoming("boundary", "Boundary", "care", now.plusSeconds(15 * 60L), null, "approved"))
+            // 25 valid future items (1 second after boundary onwards)
+            for (i in 1..25) {
+                val starts = now.plusSeconds(15 * 60L + i * 60L)
+                val status = if (i % 2 == 0) "approved" else "pending_validation"
+                add(Upcoming("ok-$i", "Task $i", "care", starts, starts.plusSeconds(900), status))
+            }
+        }
+        val manySnap = snap.copy(upcoming = customUpcoming)
+        val selected = QuickSurfaceState.selectReminders(manySnap, now, enabled = true)
+        assertEquals(20, selected.size)
+        assertEquals("ok-1", selected.first().id)
+        assertEquals(now.plusSeconds(60L), selected.first().at)
+        assertEquals("ok-20", selected.last().id)
+        assertEquals(now.plusSeconds(20 * 60L), selected.last().at)
+    }
+
+    @Test
+    fun `pickNext orders Running, Started, Confirm, NextUpcoming, NoTasks, and NotConnected`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // 0. Not connected or null snapshot
+        assertEquals(WearNextState.NotConnected, QuickSurfaceState.pickNext(null, now))
+        assertEquals(WearNextState.NotConnected, QuickSurfaceState.pickNext(snap, now, connected = false))
+
+        // 1. Running ("701") takes top priority
+        val s1 = QuickSurfaceState.pickNext(snap, now)
+        assertTrue(s1 is WearNextState.Running)
+        assertEquals("701", (s1 as WearNextState.Running).running.id)
+
+        // 2. Without running -> Started ("503", endsAt 16:15:00.123Z)
+        val noRunning = snap.copy(running = null)
+        val s2 = QuickSurfaceState.pickNext(noRunning, now)
+        assertTrue(s2 is WearNextState.Started)
+        assertEquals("503", (s2 as WearNextState.Started).started.id)
+        assertEquals(Instant.parse("2026-11-05T16:15:00.123Z"), s2.endsAt)
+
+        // 3. After 503's endsAt (16:20:00Z), nothing started -> Confirm ("502")
+        val after503 = Instant.parse("2026-11-05T16:20:00Z")
+        val s3 = QuickSurfaceState.pickNext(noRunning, after503)
+        assertTrue(s3 is WearNextState.Confirm)
+        assertEquals("502", (s3 as WearNextState.Confirm).awaiting.id)
+
+        // 4. At 17:45:00Z (more than 2h after 502 and 503's startsAt, before 504 at 18:00Z) -> NextUpcoming ("504")
+        val before504 = Instant.parse("2026-11-05T17:50:00Z")
+        val only504 = noRunning.copy(upcoming = listOf(snap.upcoming[3]))
+        val s4 = QuickSurfaceState.pickNext(only504, before504)
+        assertTrue(s4 is WearNextState.NextUpcoming)
+        assertEquals("504", (s4 as WearNextState.NextUpcoming).upcoming.id)
+
+        // 5. Late night (nothing running, started, awaiting or upcoming) -> NoTasks
+        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
+        assertEquals(WearNextState.NoTasks, QuickSurfaceState.pickNext(noRunning, lateNight))
+
+        // Timeline instants include started endsAt and next upcoming startsAt/endsAt
+        val instants = QuickSurfaceState.nextTimelineInstants(noRunning, now)
+        assertEquals(
+            listOf(
+                Instant.parse("2026-11-05T16:15:00.123Z"),
+                Instant.parse("2026-11-05T18:00:00Z"),
+                Instant.parse("2026-11-05T18:45:00Z"),
+            ),
+            instants,
+        )
+    }
 }

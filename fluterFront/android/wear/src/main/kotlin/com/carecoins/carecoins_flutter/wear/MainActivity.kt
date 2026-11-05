@@ -1,8 +1,11 @@
 package com.carecoins.carecoins_flutter.wear
 
+import android.Manifest
 import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,8 +59,10 @@ import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.TimeText
+import com.carecoins.carecoins_flutter.wear.reminders.Reminders
 import com.carecoins.quickcore.L10n
 import com.carecoins.quickcore.LastAction
 import com.carecoins.quickcore.Palette
@@ -66,6 +71,8 @@ import com.carecoins.quickcore.QuickSurfaceState
 import com.carecoins.quickcore.SnapshotStore
 import com.carecoins.quickcore.WearSection
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -75,15 +82,39 @@ import kotlin.math.roundToInt
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        consumeStartNowIntent(intent)
         WearStore.reloadFromDisk(applicationContext)
         setContent {
             WearApp()
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeStartNowIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         WearStore.reloadFromDisk(applicationContext)
+    }
+
+    private fun consumeStartNowIntent(intent: Intent?) {
+        val type = intent?.getStringExtra(EXTRA_START_NOW_TYPE)?.takeIf { it.isNotBlank() } ?: return
+        intent.removeExtra(EXTRA_START_NOW_TYPE)
+        _pendingStartNowType.value = type
+    }
+
+    companion object {
+        const val EXTRA_START_NOW_TYPE = "carecoins.extra.START_NOW_TYPE"
+
+        private val _pendingStartNowType = MutableStateFlow<String?>(null)
+        val pendingStartNowType = _pendingStartNowType.asStateFlow()
+
+        fun clearPendingStartNowType() {
+            _pendingStartNowType.value = null
+        }
     }
 }
 
@@ -156,16 +187,46 @@ private fun lastActionLabel(context: Context, action: LastAction): String {
 fun WearApp() {
     val context = LocalContext.current
     val state by WearStore.state.collectAsState()
+    val pendingStartNowType by MainActivity.pendingStartNowType.collectAsState()
     val scope = rememberCoroutineScope()
 
     var nowEpochMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var dialogState by remember { mutableStateOf<ConfirmDialogState?>(null) }
+    var remindersEnabled by remember { mutableStateOf(Reminders.isEnabled(context)) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { _ -> }
 
     LaunchedEffect(Unit) {
         WearContextListener.readCurrentDataItemAtLaunch(context)
         WearStore.reloadFromDisk(context)
+        remindersEnabled = Reminders.isEnabled(context)
         if (WearStore.state.value.connected) {
             WearStore.refresh(context)
+        }
+    }
+
+    LaunchedEffect(state.connected) {
+        if (state.connected) {
+            remindersEnabled = Reminders.isEnabled(context)
+            if (Reminders.consumeFirstLaunchPermissionRequest(context)) {
+                if (Build.VERSION.SDK_INT >= 33 &&
+                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    runCatching {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(pendingStartNowType, state.connected) {
+        val type = pendingStartNowType
+        if (!type.isNullOrBlank() && state.connected) {
+            MainActivity.clearPendingStartNowType()
+            dialogState = ConfirmDialogState.StartNow(type = type)
         }
     }
 
@@ -347,6 +408,27 @@ fun WearApp() {
                                         balance = section.balance,
                                     )
                                 }
+                            }
+                        }
+
+                        // Reminders 15 min before toggle at the bottom of the main list
+                        item(key = "reminders_toggle") {
+                            SwitchButton(
+                                checked = remindersEnabled,
+                                onCheckedChange = { enabled ->
+                                    remindersEnabled = enabled
+                                    Reminders.setEnabled(context, enabled)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp),
+                            ) {
+                                Text(
+                                    text = L10n.t(context, "watch.reminders.toggle"),
+                                    fontSize = 13.sp,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                             }
                         }
                     }

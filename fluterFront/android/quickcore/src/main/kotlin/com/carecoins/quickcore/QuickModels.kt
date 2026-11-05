@@ -485,6 +485,22 @@ sealed interface WearSection {
     data class Coins(val balance: Int) : WearSection
 }
 
+sealed interface WearNextState {
+    data object NotConnected : WearNextState
+    data class Running(val running: QuickSnapshot.Running) : WearNextState
+    data class Started(val started: QuickSnapshot.Upcoming, val endsAt: Instant) : WearNextState
+    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : WearNextState
+    data class NextUpcoming(val upcoming: QuickSnapshot.Upcoming) : WearNextState
+    data object NoTasks : WearNextState
+}
+
+data class ScheduledReminder(
+    val id: String,
+    val at: Instant,
+    val title: String = "",
+    val startsAt: Instant = at.plusSeconds(15 * 60L),
+)
+
 data class PendingAction(
     val kind: Kind,
     val taskId: String? = null,
@@ -639,12 +655,89 @@ object PendingActionQueue {
 }
 
 object QuickSurfaceState {
+    const val MAX_REMINDERS = 20
+    const val REMINDER_LEAD_SECONDS = 15 * 60L
+    private val EXCLUDED_REMINDER_STATUSES = setOf(
+        "completed",
+        "rejected",
+        "cancelled",
+        "canceled",
+    )
+
     fun pickBanner(snapshot: QuickSnapshot?, now: Instant = Instant.now()): QuickBannerState {
         if (snapshot == null) return QuickBannerState.None
         snapshot.running?.let { return QuickBannerState.Running(it) }
         snapshot.startedTask(now)?.let { return QuickBannerState.Started(it) }
         snapshot.awaitingConfirmation(now)?.let { return QuickBannerState.Confirm(it) }
         return QuickBannerState.None
+    }
+
+    fun pickNext(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+        connected: Boolean = snapshot != null,
+    ): WearNextState {
+        if (!connected || snapshot == null) return WearNextState.NotConnected
+        snapshot.running?.let { return WearNextState.Running(it) }
+        snapshot.startedTask(now)?.let { started ->
+            val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
+            return WearNextState.Started(started, endsAt)
+        }
+        snapshot.awaitingConfirmation(now)?.let { return WearNextState.Confirm(it) }
+        snapshot.nextUpcoming(now)?.let { return WearNextState.NextUpcoming(it) }
+        return WearNextState.NoTasks
+    }
+
+    fun selectReminders(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+        enabled: Boolean = true,
+        connected: Boolean = true,
+    ): List<ScheduledReminder> {
+        if (!enabled || !connected || snapshot == null) return emptyList()
+        return snapshot.upcoming
+            .asSequence()
+            .filter { it.status.lowercase() !in EXCLUDED_REMINDER_STATUSES }
+            .mapNotNull { item ->
+                val reminderAt = item.startsAt.minusSeconds(REMINDER_LEAD_SECONDS)
+                if (reminderAt.isAfter(now)) {
+                    ScheduledReminder(
+                        id = item.id,
+                        at = reminderAt,
+                        title = item.title,
+                        startsAt = item.startsAt,
+                    )
+                } else {
+                    null
+                }
+            }
+            .take(MAX_REMINDERS)
+            .toList()
+    }
+
+    fun nextTimelineInstants(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+    ): List<Instant> {
+        if (snapshot == null) return emptyList()
+        val instants = java.util.TreeSet<Instant>()
+        snapshot.startedTask(now)?.endsAt?.takeIf { it.isAfter(now) }?.let { instants.add(it) }
+        val futureUpcoming = snapshot.upcoming
+            .filter { item ->
+                item.startsAt.isAfter(now) || (item.endsAt != null && item.endsAt.isAfter(now))
+            }
+            .sortedBy { it.startsAt }
+            .take(3)
+        for (item in futureUpcoming) {
+            if (item.startsAt.isAfter(now)) {
+                instants.add(item.startsAt)
+            }
+            val endsAt = item.endsAt
+            if (endsAt != null && endsAt.isAfter(now)) {
+                instants.add(endsAt)
+            }
+        }
+        return instants.toList()
     }
 
     fun wearSections(
