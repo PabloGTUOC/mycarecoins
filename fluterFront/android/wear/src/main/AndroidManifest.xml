@@ -3,10 +3,12 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Reminders are rescheduled after a reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
         android:label="CareCoins"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:icon="@drawable/ic_stat_carecoins"
         android:theme="@android:style/Theme.DeviceDefault">
         <!-- Standalone: works on its own network once the phone has handed over the key. -->
         <meta-data
@@ -21,5 +23,75 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- The phone's hand-off: device key, API base, snapshot, language. -->
+        <service
+            android:name=".WearContextListener"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED"/>
+                <data
+                    android:scheme="wear"
+                    android:host="*"
+                    android:pathPrefix="/carecoins/context"/>
+            </intent-filter>
+        </service>
+
+        <!-- Tile: what needs you now (running / started / confirm / next) and Care now. -->
+        <service
+            android:name=".tile.QuickTileService"
+            android:exported="true"
+            android:label="@string/watch_complication_next_name"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER"/>
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/ic_stat_carecoins"/>
+        </service>
+
+        <!-- Complications. UPDATE_PERIOD 0: the app requests updates after each refresh. -->
+        <service
+            android:name=".complication.BalanceComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_carecoins"
+            android:label="@string/watch_complication_balance_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
+        </service>
+        <service
+            android:name=".complication.NextComplicationService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_carecoins"
+            android:label="@string/watch_complication_next_name"
+            android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
+            <intent-filter>
+                <action android:name="android.support.wearable.complications.ACTION_COMPLICATION_UPDATE_REQUEST"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.support.wearable.complications.SUPPORTED_TYPES"
+                android:value="SHORT_TEXT,LONG_TEXT"/>
+            <meta-data
+                android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
+                android:value="0"/>
+        </service>
+
+        <!-- Reminders 15 min before: the alarm, Snooze, and rescheduling after boot. -->
+        <receiver
+            android:name=".reminders.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
