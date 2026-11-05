@@ -7,6 +7,9 @@
          prompt from FirebaseMessaging.requestPermission) or FCM
          notifications are silently dropped. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Android 16 Live Update for the ongoing quick-task notification
+         (docs/android-widget-wear-plan.md). Ignored on older versions. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <!-- Cleartext HTTP is only allowed in debug builds (see
          src/debug/AndroidManifest.xml); release talks HTTPS only. -->
     <application
@@ -35,6 +38,35 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Home-screen widget, ongoing notification and Quick Settings tile
+             (docs/android-widget-wear-plan.md). -->
+        <receiver
+            android:name=".quick.QuickWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_tasks_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_widget_info"/>
+        </receiver>
+        <receiver
+            android:name=".quick.QuickActionReceiver"
+            android:exported="false"/>
+        <service
+            android:name=".quick.CareNowTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_carecoins"
+            android:label="@string/widget_careNow"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="false"/>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
