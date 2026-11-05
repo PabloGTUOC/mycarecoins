@@ -1,12 +1,16 @@
 package com.carecoins.quickcore
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 import java.io.File
 import java.nio.file.Files
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 
 object SnapshotStore {
     const val SNAPSHOT_FILE = QuickCore.SNAPSHOT_FILE
@@ -14,11 +18,23 @@ object SnapshotStore {
     const val UNDO_WINDOW_SECONDS = 30L
     private const val UNDO_WINDOW_MILLIS = 30_000L
 
+    private val versionCounter = AtomicLong(0L)
+    private val _version = MutableStateFlow(0L)
+    val version: StateFlow<Long> = _version.asStateFlow()
+
+    fun bumpVersion(): Long {
+        val next = versionCounter.incrementAndGet()
+        _version.value = next
+        return next
+    }
+
     val listeners = CopyOnWriteArrayList<(Context) -> Unit>()
+    val actionListeners = CopyOnWriteArrayList<(Context, LastAction) -> Unit>()
     private var onChangedCallback: ((Context) -> Unit)? = null
 
     var onChanged: (Context) -> Unit
         get() = { context ->
+            bumpVersion()
             runCatching { onChangedCallback?.invoke(context) }
             for (listener in listeners) {
                 runCatching { listener(context) }
@@ -34,6 +50,14 @@ object SnapshotStore {
 
     fun removeOnChangedListener(listener: (Context) -> Unit) {
         listeners.remove(listener)
+    }
+
+    fun addOnActionRecordedListener(listener: (Context, LastAction) -> Unit) {
+        actionListeners.add(listener)
+    }
+
+    fun removeOnActionRecordedListener(listener: (Context, LastAction) -> Unit) {
+        actionListeners.remove(listener)
     }
 
     internal var fallbackFilesDir: File by lazyFallbackDir()
@@ -90,11 +114,17 @@ object SnapshotStore {
             filesDir.mkdirs()
             val file = File(filesDir, SNAPSHOT_FILE)
             file.writeText(rawJson, Charsets.UTF_8)
+            bumpVersion()
             true
         }.getOrDefault(false)
     }
 
-    fun recordAction(context: Context, action: LastAction) = recordAction(resolveFilesDir(context), action)
+    fun recordAction(context: Context, action: LastAction) {
+        recordAction(resolveFilesDir(context), action)
+        for (listener in actionListeners) {
+            runCatching { listener(context, action) }
+        }
+    }
 
     fun recordAction(action: LastAction) = recordAction(fallbackFilesDir, action)
 
@@ -104,6 +134,7 @@ object SnapshotStore {
             val file = File(filesDir, LAST_ACTION_FILE)
             file.writeText(action.toJson().toString(), Charsets.UTF_8)
         }
+        bumpVersion()
     }
 
     fun lastAction(context: Context, now: Instant = Instant.now()): LastAction? =
@@ -130,6 +161,7 @@ object SnapshotStore {
         runCatching {
             File(filesDir, LAST_ACTION_FILE).delete()
         }
+        bumpVersion()
     }
 
     fun clear(context: Context) = clear(resolveFilesDir(context))
@@ -139,6 +171,7 @@ object SnapshotStore {
             File(filesDir, SNAPSHOT_FILE).delete()
             File(filesDir, LAST_ACTION_FILE).delete()
         }
+        bumpVersion()
     }
 
     fun canUndo(context: Context, now: Instant = Instant.now()): Boolean =

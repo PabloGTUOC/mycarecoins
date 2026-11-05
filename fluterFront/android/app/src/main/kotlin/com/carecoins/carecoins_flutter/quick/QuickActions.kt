@@ -18,10 +18,13 @@ import com.carecoins.quickcore.LastAction
 import com.carecoins.quickcore.QuickApi
 import com.carecoins.quickcore.QuickApiException
 import com.carecoins.quickcore.QuickSnapshot
+import com.carecoins.quickcore.QuickSurfaceState
 import com.carecoins.quickcore.SnapshotStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
@@ -60,6 +63,7 @@ object QuickActions {
 
     suspend fun start(context: Context, templateId: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -93,6 +97,7 @@ object QuickActions {
 
     suspend fun done(context: Context, templateId: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -138,6 +143,7 @@ object QuickActions {
 
     suspend fun finish(context: Context, activityId: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -168,6 +174,7 @@ object QuickActions {
 
     suspend fun cancel(context: Context, activityId: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -198,6 +205,7 @@ object QuickActions {
 
     suspend fun startNow(context: Context, type: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -232,6 +240,7 @@ object QuickActions {
 
     suspend fun stop(context: Context, activityId: String) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -262,6 +271,7 @@ object QuickActions {
 
     suspend fun undo(context: Context, clientRef: String? = null) = withContext(Dispatchers.IO) {
         val appCtx = context.applicationContext ?: context
+        QuickRefresh.ensureWired()
         val api = QuickApi.fromStore(appCtx)
         if (api == null) {
             SnapshotStore.recordAction(
@@ -299,8 +309,10 @@ object QuickActions {
 object QuickRefresh {
     const val PERIODIC_WORK_NAME = "quick-refresh-periodic"
     const val AT_END_WORK_NAME = "quick-at-end"
+    const val CHIP_EXPIRY_WORK_NAME = "quick-chip-expiry"
     private val wired = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var chipExpiryJob: Job? = null
 
     fun ensureWired() {
         if (wired.compareAndSet(false, true)) {
@@ -314,6 +326,37 @@ object QuickRefresh {
                     }
                 }
             }
+            SnapshotStore.addOnActionRecordedListener { ctx, action ->
+                scheduleChipExpiry(ctx, action)
+            }
+        }
+    }
+
+    fun scheduleChipExpiry(
+        context: Context,
+        action: LastAction,
+        now: Instant = Instant.now(),
+    ) {
+        ensureWired()
+        val appCtx = context.applicationContext ?: context
+        val delayMillis = QuickSurfaceState.chipExpiryDelayMillis(action.at, now)
+        chipExpiryJob?.cancel()
+        chipExpiryJob = scope.launch {
+            delay(delayMillis)
+            SnapshotStore.bumpVersion()
+            runCatching {
+                QuickWidget().updateAll(appCtx)
+            }
+        }
+        runCatching {
+            val request = OneTimeWorkRequestBuilder<QuickChipExpiryWorker>()
+                .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                .build()
+            WorkManager.getInstance(appCtx).enqueueUniqueWork(
+                CHIP_EXPIRY_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
         }
     }
 
@@ -363,6 +406,7 @@ object QuickRefresh {
         now: Instant = Instant.now(),
     ) {
         val appCtx = context.applicationContext ?: context
+        SnapshotStore.bumpVersion()
         runCatching {
             QuickWidget().updateAll(appCtx)
         }
@@ -409,14 +453,18 @@ object QuickRefresh {
 
     fun cancelAll(context: Context) {
         val appCtx = context.applicationContext ?: context
+        chipExpiryJob?.cancel()
+        chipExpiryJob = null
         runCatching {
             val wm = WorkManager.getInstance(appCtx)
             wm.cancelUniqueWork(PERIODIC_WORK_NAME)
             wm.cancelUniqueWork(AT_END_WORK_NAME)
+            wm.cancelUniqueWork(CHIP_EXPIRY_WORK_NAME)
         }
         runCatching {
             QuickNotification.cancel(appCtx)
         }
+        SnapshotStore.bumpVersion()
         scope.launch {
             runCatching { QuickWidget().updateAll(appCtx) }
             runCatching {
@@ -440,6 +488,20 @@ class QuickRefreshWorker(
             return Result.success()
         }
         QuickRefresh.refreshNow(applicationContext)
+        return Result.success()
+    }
+}
+
+class QuickChipExpiryWorker(
+    appContext: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(appContext, params) {
+    override suspend fun doWork(): Result {
+        QuickRefresh.ensureWired()
+        SnapshotStore.bumpVersion()
+        runCatching {
+            QuickWidget().updateAll(applicationContext)
+        }
         return Result.success()
     }
 }

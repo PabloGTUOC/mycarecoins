@@ -236,7 +236,7 @@ object QuickNotification {
                     )
 
                 if (Build.VERSION.SDK_INT >= 36) {
-                    applyStartedLiveUpdate(builder, totalSeconds, elapsedSeconds)
+                    applyStartedLiveUpdate(context, builder, totalSeconds, elapsedSeconds)
                 }
             }
 
@@ -293,6 +293,7 @@ object QuickNotification {
     }
 
     private fun applyStartedLiveUpdate(
+        context: Context,
         builder: Notification.Builder,
         totalSeconds: Int,
         elapsedSeconds: Int,
@@ -300,12 +301,26 @@ object QuickNotification {
         if (Build.VERSION.SDK_INT >= 36) {
             setRequestPromotedOngoing(builder, true)
             runCatching {
+                val safeTotal = totalSeconds.coerceAtLeast(1)
+                val safeElapsed = elapsedSeconds.coerceIn(0, safeTotal)
+                val remainingSeconds = (safeTotal - safeElapsed).coerceAtLeast(0)
                 val style = Notification.ProgressStyle()
-                    .addProgressSegment(
-                        Notification.ProgressStyle.Segment(totalSeconds)
+                    .setStyledByProgress(true)
+                    .setProgressTrackerIcon(
+                        Icon.createWithResource(context, R.drawable.ic_stat_carecoins),
+                    )
+                if (safeElapsed > 0) {
+                    style.addProgressSegment(
+                        Notification.ProgressStyle.Segment(safeElapsed)
                             .setColor(Palette.success.toInt()),
                     )
-                    .setProgress(elapsedSeconds)
+                }
+                if (remainingSeconds > 0) {
+                    style.addProgressSegment(
+                        Notification.ProgressStyle.Segment(remainingSeconds),
+                    )
+                }
+                style.setProgress(safeElapsed)
                 builder.setStyle(style)
             }
         }

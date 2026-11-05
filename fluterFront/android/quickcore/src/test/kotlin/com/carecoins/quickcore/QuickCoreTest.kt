@@ -348,7 +348,7 @@ class QuickCoreTest {
             val extraKeys = enMap.keys - expectedKeys
             assertTrue(
                 "Unexpected extra keys in strings.xml: $extraKeys",
-                extraKeys.all { it.startsWith("android_") },
+                extraKeys.all { it.startsWith("android_") || it == "widget_preview_task" },
             )
         }
     }
@@ -649,5 +649,69 @@ class QuickCoreTest {
             ),
             instants,
         )
+    }
+
+    @Test
+    fun `chipExpiryInstant and chipExpiryDelayMillis schedule expiry at actionAt plus 30s plus 1s`() {
+        val t0 = Instant.parse("2026-11-05T16:00:00Z")
+        val action = LastAction(
+            kind = LastAction.Kind.logged,
+            taskId = "11",
+            clientRef = "ref-11",
+            at = t0,
+        )
+
+        val expectedExpiry = Instant.parse("2026-11-05T16:00:31Z")
+        assertEquals(expectedExpiry, QuickSurfaceState.chipExpiryInstant(t0))
+        assertEquals(expectedExpiry, QuickSurfaceState.chipExpiryInstant(action))
+
+        assertEquals(31_000L, QuickSurfaceState.chipExpiryDelayMillis(t0, now = t0))
+        assertEquals(16_000L, QuickSurfaceState.chipExpiryDelayMillis(t0, now = t0.plusSeconds(15)))
+        assertEquals(0L, QuickSurfaceState.chipExpiryDelayMillis(t0, now = t0.plusSeconds(40)))
+
+        // At exact expiry (t0 + 31s), SnapshotStore.lastAction is null
+        SnapshotStore.recordAction(testFilesDir, action)
+        assertNotNull(SnapshotStore.lastAction(testFilesDir, t0.plusSeconds(30)))
+        assertNull(SnapshotStore.lastAction(testFilesDir, QuickSurfaceState.chipExpiryInstant(action)))
+    }
+
+    @Test
+    fun `smallLayoutRowCount returns 1 below 180dp and 3 at or above 180dp`() {
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(110))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(179))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(179.9f))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(180))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(180.0f))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(220))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(220.0f))
+    }
+
+    @Test
+    fun `SnapshotStore version increments on save, recordAction, clearLastAction and clear`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val v0 = SnapshotStore.version.value
+
+        assertTrue(SnapshotStore.save(testFilesDir, raw))
+        val v1 = SnapshotStore.version.value
+        assertTrue(v1 > v0)
+
+        // Invalid save does not bump version
+        assertFalse(SnapshotStore.save(testFilesDir, "{invalid}"))
+        assertEquals(v1, SnapshotStore.version.value)
+
+        SnapshotStore.recordAction(
+            testFilesDir,
+            LastAction(kind = LastAction.Kind.started, taskId = "11"),
+        )
+        val v2 = SnapshotStore.version.value
+        assertTrue(v2 > v1)
+
+        SnapshotStore.clearLastAction(testFilesDir)
+        val v3 = SnapshotStore.version.value
+        assertTrue(v3 > v2)
+
+        SnapshotStore.clear(testFilesDir)
+        val v4 = SnapshotStore.version.value
+        assertTrue(v4 > v3)
     }
 }

@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
+import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -657,12 +658,53 @@ object PendingActionQueue {
 object QuickSurfaceState {
     const val MAX_REMINDERS = 20
     const val REMINDER_LEAD_SECONDS = 15 * 60L
+    const val CHIP_EXPIRY_BUFFER_SECONDS = 1L
+    const val SMALL_TALL_MIN_HEIGHT_DP = 180
+    const val SMALL_DEFAULT_ROW_COUNT = 1
+    const val SMALL_TALL_ROW_COUNT = 3
     private val EXCLUDED_REMINDER_STATUSES = setOf(
         "completed",
         "rejected",
         "cancelled",
         "canceled",
     )
+
+    fun chipExpiryInstant(
+        actionAt: Instant,
+        undoWindowSeconds: Long = SnapshotStore.UNDO_WINDOW_SECONDS,
+    ): Instant {
+        return actionAt.plusSeconds(undoWindowSeconds + CHIP_EXPIRY_BUFFER_SECONDS)
+    }
+
+    fun chipExpiryInstant(
+        action: LastAction,
+        undoWindowSeconds: Long = SnapshotStore.UNDO_WINDOW_SECONDS,
+    ): Instant = chipExpiryInstant(action.at, undoWindowSeconds)
+
+    fun chipExpiryDelayMillis(
+        actionAt: Instant,
+        now: Instant = Instant.now(),
+        undoWindowSeconds: Long = SnapshotStore.UNDO_WINDOW_SECONDS,
+    ): Long {
+        val expiry = chipExpiryInstant(actionAt, undoWindowSeconds)
+        return Duration.between(now, expiry).toMillis().coerceAtLeast(0L)
+    }
+
+    fun smallLayoutRowCount(heightDp: Int): Int {
+        return if (heightDp >= SMALL_TALL_MIN_HEIGHT_DP) {
+            SMALL_TALL_ROW_COUNT
+        } else {
+            SMALL_DEFAULT_ROW_COUNT
+        }
+    }
+
+    fun smallLayoutRowCount(heightDp: Float): Int {
+        return if (heightDp >= SMALL_TALL_MIN_HEIGHT_DP) {
+            SMALL_TALL_ROW_COUNT
+        } else {
+            SMALL_DEFAULT_ROW_COUNT
+        }
+    }
 
     fun pickBanner(snapshot: QuickSnapshot?, now: Instant = Instant.now()): QuickBannerState {
         if (snapshot == null) return QuickBannerState.None

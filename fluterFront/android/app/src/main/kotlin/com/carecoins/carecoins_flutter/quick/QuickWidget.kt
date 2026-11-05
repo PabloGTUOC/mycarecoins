@@ -4,6 +4,9 @@ import android.content.Context
 import android.os.SystemClock
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -140,6 +143,7 @@ class UndoActionCallback : ActionCallback {
 class QuickWidget : GlanceAppWidget() {
     companion object {
         val SMALL_SIZE = DpSize(110.dp, 110.dp)
+        val SMALL_TALL_SIZE = DpSize(180.dp, 220.dp)
         val MEDIUM_SIZE = DpSize(250.dp, 110.dp)
         val LARGE_SIZE = DpSize(250.dp, 250.dp)
 
@@ -150,18 +154,27 @@ class QuickWidget : GlanceAppWidget() {
     }
 
     override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(SMALL_SIZE, MEDIUM_SIZE, LARGE_SIZE),
+        setOf(SMALL_SIZE, SMALL_TALL_SIZE, MEDIUM_SIZE, LARGE_SIZE),
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appCtx = context.applicationContext ?: context
-        val connected = DeviceKeyStore.isConnected(appCtx)
-        val snapshot = if (connected) SnapshotStore.load(appCtx) else null
-        val now = Instant.now()
-        val lastAction = if (connected) SnapshotStore.lastAction(appCtx, now) else null
-        val canUndo = if (connected) SnapshotStore.canUndo(appCtx, now) else false
+        QuickRefresh.ensureWired()
 
         provideContent {
+            val version by SnapshotStore.version.collectAsState()
+            val connected = remember(version) { DeviceKeyStore.isConnected(appCtx) }
+            val snapshot = remember(version, connected) {
+                if (connected) SnapshotStore.load(appCtx) else null
+            }
+            val now = remember(version) { Instant.now() }
+            val lastAction = remember(version, connected, now) {
+                if (connected) SnapshotStore.lastAction(appCtx, now) else null
+            }
+            val canUndo = remember(version, connected, now) {
+                if (connected) SnapshotStore.canUndo(appCtx, now) else false
+            }
+
             WidgetContent(
                 context = appCtx,
                 connected = connected,
@@ -736,6 +749,7 @@ private fun CapsuleButton(
     bgColor: ColorProvider,
     a11y: String,
     fillWidth: Boolean = false,
+    compact: Boolean = false,
     onClick: androidx.glance.action.Action,
 ) {
     val baseModifier = if (fillWidth) {
@@ -748,7 +762,10 @@ private fun CapsuleButton(
             .cornerRadius(999.dp)
             .background(bgColor)
             .clickable(onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(
+                horizontal = if (compact) 8.dp else 10.dp,
+                vertical = if (compact) 3.dp else 4.dp,
+            )
             .semantics { contentDescription = a11y },
         contentAlignment = Alignment.Center,
     ) {
@@ -756,12 +773,63 @@ private fun CapsuleButton(
             text = text,
             style = TextStyle(
                 color = textColor,
-                fontSize = 11.sp,
+                fontSize = if (compact) 10.sp else 11.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),
             maxLines = 1,
         )
+    }
+}
+
+private val SMALL_ROW_DONE_MIN_WIDTH = 160.dp
+
+@Composable
+private fun SmallTaskRowView(
+    context: Context,
+    task: QuickSnapshot.Task,
+    showDone: Boolean,
+) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = task.title,
+            modifier = GlanceModifier.defaultWeight(),
+            style = TextStyle(
+                color = WidgetColors.textPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            maxLines = 1,
+        )
+        Spacer(modifier = GlanceModifier.width(4.dp))
+        CapsuleButton(
+            text = L10n.t(context, "widget.start"),
+            textColor = WidgetColors.white,
+            bgColor = WidgetColors.primary,
+            a11y = L10n.t(context, "widget.a11y.start", task.title, task.durationMinutes),
+            compact = true,
+            onClick = actionRunCallback<StartTaskActionCallback>(
+                actionParametersOf(QuickTaskIdParam to task.id),
+            ),
+        )
+        if (showDone) {
+            Spacer(modifier = GlanceModifier.width(4.dp))
+            CapsuleButton(
+                text = L10n.t(context, "widget.done"),
+                textColor = WidgetColors.primaryInk,
+                bgColor = WidgetColors.primarySoft,
+                a11y = L10n.t(context, "widget.a11y.done", task.title),
+                compact = true,
+                onClick = actionRunCallback<DoneTaskActionCallback>(
+                    actionParametersOf(QuickTaskIdParam to task.id),
+                ),
+            )
+        }
     }
 }
 
@@ -837,7 +905,11 @@ private fun SmallWidgetContent(
     lastAction: LastAction?,
     canUndo: Boolean,
 ) {
+    val size = LocalSize.current
+    val rowCount = QuickSurfaceState.smallLayoutRowCount(size.height.value)
     val banner = QuickSurfaceState.pickBanner(snapshot, now)
+    val isFailureChip = lastAction?.kind == LastAction.Kind.failed
+
     Column(modifier = GlanceModifier.fillMaxSize()) {
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
@@ -848,7 +920,36 @@ private fun SmallWidgetContent(
         }
         Spacer(modifier = GlanceModifier.height(6.dp))
 
-        if (banner != QuickBannerState.None) {
+        if (rowCount > 1) {
+            val hasBanner = banner != QuickBannerState.None
+            if (hasBanner) {
+                BannerSlot(context, banner, now, isSmall = true)
+                Spacer(modifier = GlanceModifier.height(4.dp))
+            }
+            if (lastAction != null && !isFailureChip) {
+                FeedbackChipView(context, lastAction, canUndo)
+                Spacer(modifier = GlanceModifier.height(4.dp))
+            }
+            if (lastAction != null && isFailureChip) {
+                FeedbackChipView(context, lastAction, canUndo)
+            } else {
+                val visibleTasks = snapshot.tasks.take(rowCount)
+                if (visibleTasks.isEmpty() && !hasBanner) {
+                    Text(
+                        text = L10n.t(context, "widget.noTasks"),
+                        style = TextStyle(
+                            color = WidgetColors.textSecondary,
+                            fontSize = 11.sp,
+                        ),
+                    )
+                } else {
+                    val showDone = size.width >= SMALL_ROW_DONE_MIN_WIDTH
+                    for (task in visibleTasks) {
+                        SmallTaskRowView(context, task, showDone = showDone)
+                    }
+                }
+            }
+        } else if (banner != QuickBannerState.None) {
             BannerSlot(context, banner, now, isSmall = true)
             if (lastAction != null) {
                 Spacer(modifier = GlanceModifier.height(4.dp))
@@ -857,6 +958,10 @@ private fun SmallWidgetContent(
         } else {
             val topTask = snapshot.tasks.firstOrNull()
             if (topTask != null) {
+                if (lastAction != null && !isFailureChip) {
+                    FeedbackChipView(context, lastAction, canUndo)
+                    Spacer(modifier = GlanceModifier.height(4.dp))
+                }
                 Text(
                     text = topTask.title,
                     style = TextStyle(
@@ -864,10 +969,10 @@ private fun SmallWidgetContent(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     ),
-                    maxLines = 2,
+                    maxLines = if (lastAction != null && !isFailureChip) 1 else 2,
                 )
-                Spacer(modifier = GlanceModifier.height(6.dp))
-                if (lastAction != null) {
+                Spacer(modifier = GlanceModifier.height(if (lastAction != null && !isFailureChip) 4.dp else 6.dp))
+                if (lastAction != null && isFailureChip) {
                     FeedbackChipView(context, lastAction, canUndo)
                 } else {
                     Row(
@@ -901,6 +1006,8 @@ private fun SmallWidgetContent(
                         }
                     }
                 }
+            } else if (lastAction != null) {
+                FeedbackChipView(context, lastAction, canUndo)
             } else {
                 Text(
                     text = L10n.t(context, "widget.noTasks"),
