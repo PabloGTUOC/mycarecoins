@@ -595,7 +595,7 @@ class QuickCoreTest {
         assertEquals(Palette.surface, Palette.widgetTile(false))
         assertEquals(Palette.surfaceDark, Palette.widgetTile(true))
 
-        // Pixel 2x2 (179x210): narrow, 2 rows, no footer (it would leave only 1 row)
+        // Pixel 2x2 (179x210): narrow, no footer (it would leave only 1 row)
         val narrow2x2 = QuickSurfaceState.computeWidgetLayout(
             widthDp = 179f,
             heightDp = 210f,
@@ -603,20 +603,20 @@ class QuickCoreTest {
         )
         assertFalse(narrow2x2.isWide)
         assertEquals(64, narrow2x2.rowHeightDp)
-        assertEquals(2, narrow2x2.maxTaskRows)
         assertFalse(narrow2x2.showFooter)
         assertFalse(narrow2x2.showNext)
 
-        // Taller narrow widget: 2 rows still fit above the Care now footer
+        // Taller narrow widget: 2 rows fit above the Care now footer
         val tallNarrow = QuickSurfaceState.computeWidgetLayout(
             widthDp = 179f,
             heightDp = 280f,
             taskCount = 4,
         )
-        assertEquals(2, tallNarrow.maxTaskRows)
+        assertFalse(tallNarrow.isWide)
+        assertEquals(64, tallNarrow.rowHeightDp)
         assertTrue(tallNarrow.showFooter)
 
-        // 2x2 with chip: footer dropped, rows = what fits after header + chip
+        // 2x2 with chip: footer dropped
         val narrowChip = QuickSurfaceState.computeWidgetLayout(
             widthDp = 179f,
             heightDp = 210f,
@@ -624,9 +624,8 @@ class QuickCoreTest {
             hasLastAction = true,
         )
         assertFalse(narrowChip.showFooter)
-        assertEquals(1, narrowChip.maxTaskRows)
 
-        // Pixel 4x2 (365x210): wide, 2 rows + footer
+        // Pixel 4x2 (365x210): wide, footer shown
         val wide4x2 = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 210f,
@@ -634,10 +633,9 @@ class QuickCoreTest {
         )
         assertTrue(wide4x2.isWide)
         assertEquals(52, wide4x2.rowHeightDp)
-        assertEquals(2, wide4x2.maxTaskRows)
         assertTrue(wide4x2.showFooter)
 
-        // 4x2 running: no footer, banner + rows that fit
+        // 4x2 running: no footer
         val wide4x2Running = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 210f,
@@ -645,9 +643,8 @@ class QuickCoreTest {
             hasRunning = true,
         )
         assertFalse(wide4x2Running.showFooter)
-        assertEquals(1, wide4x2Running.maxTaskRows)
 
-        // 4x4 idle, 3 tasks: footer, all rows, Next line and See all
+        // 4x4 idle, 3 tasks: footer, Next line and See all
         val wide4x4 = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 430f,
@@ -655,7 +652,6 @@ class QuickCoreTest {
             hasNextUpcoming = true,
         )
         assertTrue(wide4x4.showFooter)
-        assertEquals(5, wide4x4.maxTaskRows)
         assertTrue(wide4x4.showNext)
         assertTrue(wide4x4.showSeeAll)
 
@@ -670,7 +666,7 @@ class QuickCoreTest {
         assertFalse(wide4x4Full.showNext)
         assertFalse(wide4x4Full.showSeeAll)
 
-        // 4x4 with chip: footer stays, one row less is not lost
+        // 4x4 with chip: footer stays
         val wide4x4Chip = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 430f,
@@ -678,9 +674,8 @@ class QuickCoreTest {
             hasLastAction = true,
         )
         assertTrue(wide4x4Chip.showFooter)
-        assertEquals(5, wide4x4Chip.maxTaskRows)
 
-        // 4x4 running + chip: no footer, all 3 tasks fit
+        // 4x4 running + chip: no footer
         val wide4x4RunningChip = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 430f,
@@ -689,16 +684,15 @@ class QuickCoreTest {
             hasLastAction = true,
         )
         assertFalse(wide4x4RunningChip.showFooter)
-        assertTrue(wide4x4RunningChip.maxTaskRows >= 3)
 
-        // 4x4 running, 3 tasks: all 3 show
+        // 4x4 running, 3 tasks: no footer
         val wide4x4Running = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 430f,
             taskCount = 3,
             hasRunning = true,
         )
-        assertTrue(wide4x4Running.maxTaskRows >= 3)
+        assertFalse(wide4x4Running.showFooter)
 
         // Empty tasks when idle: footer is still shown
         val emptyLayout = QuickSurfaceState.computeWidgetLayout(
@@ -707,7 +701,6 @@ class QuickCoreTest {
             taskCount = 0,
             hasRunning = false,
         )
-        assertEquals(0, emptyLayout.maxTaskRows)
         assertTrue(emptyLayout.showFooter)
     }
 
@@ -733,7 +726,8 @@ class QuickCoreTest {
                 }
             }
         }
-        // Root has 4 children (header, body, weight spacer, footer group).
+        // Root has at most 5 children (HeaderBar, running banner, chip, LazyColumn, footer).
+        // LazyColumn items do not count toward Glance's 10-child container limit.
         assertTrue(worst <= 10)
     }
 }

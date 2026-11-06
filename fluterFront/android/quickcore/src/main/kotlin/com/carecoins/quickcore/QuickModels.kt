@@ -606,11 +606,10 @@ object PendingActionQueue {
 data class QuickWidgetLayout(
     val isWide: Boolean,
     val rowHeightDp: Int,
-    val maxTaskRows: Int,
     val showFooter: Boolean,
     val showNext: Boolean,
-    val verticalPaddingDp: Int,
-    val gapDp: Int,
+    val verticalPaddingDp: Int = QuickSurfaceState.DEFAULT_PADDING_DP,
+    val gapDp: Int = QuickSurfaceState.DEFAULT_GAP_DP,
     val showSeeAll: Boolean = false,
 )
 
@@ -653,44 +652,22 @@ object QuickSurfaceState {
     fun computeWidgetLayout(
         widthDp: Float,
         heightDp: Float,
-        taskCount: Int,
+        taskCount: Int = 0,
         hasRunning: Boolean = false,
         hasLastAction: Boolean = false,
         hasNextUpcoming: Boolean = false,
     ): QuickWidgetLayout {
-        val standard = layoutFor(
-            widthDp, heightDp, taskCount, hasRunning, hasLastAction, hasNextUpcoming,
-            pad = DEFAULT_PADDING_DP, gap = DEFAULT_GAP_DP,
-        )
-        val tight = layoutFor(
-            widthDp, heightDp, taskCount, hasRunning, hasLastAction, hasNextUpcoming,
-            pad = TIGHT_PADDING_DP, gap = TIGHT_GAP_DP,
-        )
-        // Tighter spacing is only used when it fits one more visible row.
-        return if (minOf(taskCount, tight.maxTaskRows) > minOf(taskCount, standard.maxTaskRows)) tight else standard
-    }
-
-    private fun layoutFor(
-        widthDp: Float,
-        heightDp: Float,
-        taskCount: Int,
-        hasRunning: Boolean,
-        hasLastAction: Boolean,
-        hasNextUpcoming: Boolean,
-        pad: Int,
-        gap: Int,
-    ): QuickWidgetLayout {
         val isWide = widthDp >= WIDE_WIDTH_DP
         val rowHeight = if (isWide) WIDE_ROW_HEIGHT_DP else NARROW_ROW_HEIGHT_DP
-        val rowStep = rowHeight + gap
+        val rowStep = rowHeight + DEFAULT_GAP_DP
         val safeHeight = if (heightDp > 0f) heightDp.toInt() else 180
 
         // Header, banner and chip are always counted; the footer never depends on the chip.
         var used = HEADER_HEIGHT_DP
-        if (hasRunning) used += gap + RUNNING_BANNER_HEIGHT_DP
-        if (hasLastAction) used += gap + CHIP_HEIGHT_DP
-        val available = (safeHeight - 2 * pad - used).coerceAtLeast(0)
-        val footerCost = gap + FOOTER_HEIGHT_DP
+        if (hasRunning) used += DEFAULT_GAP_DP + RUNNING_BANNER_HEIGHT_DP
+        if (hasLastAction) used += DEFAULT_GAP_DP + CHIP_HEIGHT_DP
+        val available = (safeHeight - 2 * DEFAULT_PADDING_DP - used).coerceAtLeast(0)
+        val footerCost = DEFAULT_GAP_DP + FOOTER_HEIGHT_DP
 
         fun slotsFor(space: Int): Int = space.coerceAtLeast(0) / rowStep
 
@@ -721,11 +698,11 @@ object QuickSurfaceState {
         var showSeeAll = false
         if (isWide && !hasRunning && !empty && taskCount < slots) {
             var spare = (available - if (showFooter) footerCost else 0) - taskCount * rowStep
-            if (hasNextUpcoming && spare >= gap + NEXT_LINE_HEIGHT_DP) {
+            if (hasNextUpcoming && spare >= DEFAULT_GAP_DP + NEXT_LINE_HEIGHT_DP) {
                 showNext = true
-                spare -= gap + NEXT_LINE_HEIGHT_DP
+                spare -= DEFAULT_GAP_DP + NEXT_LINE_HEIGHT_DP
             }
-            if (spare >= gap + SEE_ALL_HEIGHT_DP) {
+            if (spare >= DEFAULT_GAP_DP + SEE_ALL_HEIGHT_DP) {
                 showSeeAll = true
             }
         }
@@ -733,31 +710,36 @@ object QuickSurfaceState {
         return QuickWidgetLayout(
             isWide = isWide,
             rowHeightDp = rowHeight,
-            maxTaskRows = slots.coerceAtMost(MAX_TASK_ROWS),
             showFooter = showFooter,
             showNext = showNext,
-            verticalPaddingDp = pad,
-            gapDp = gap,
+            verticalPaddingDp = DEFAULT_PADDING_DP,
+            gapDp = DEFAULT_GAP_DP,
             showSeeAll = showSeeAll,
         )
     }
 
-    /** Children of the widget's body Column for the given state (mirrors QuickWidget.kt). */
-    fun bodyChildCount(
+    /** Children of the widget's root Column for the given state (mirrors QuickWidget.kt).
+     * Items inside LazyColumn do not count toward Glance's 10-child limit. */
+    fun rootChildCount(
         layout: QuickWidgetLayout,
-        taskCount: Int,
-        hasRunning: Boolean,
-        hasLastAction: Boolean,
-        hasNextUpcoming: Boolean,
+        hasRunning: Boolean = false,
+        hasLastAction: Boolean = false,
     ): Int {
-        var n = 0
+        var n = 2 // HeaderBar + LazyColumn
         if (hasRunning) n++
         if (hasLastAction) n++
-        n += if (taskCount <= 0 && !hasRunning) 1 else minOf(taskCount, layout.maxTaskRows)
-        if (layout.showNext && hasNextUpcoming) n++
-        if (layout.showSeeAll) n++
+        if (layout.showFooter) n++
         return n
     }
+
+    /** Children of the widget's body container for the given state (mirrors QuickWidget.kt). */
+    fun bodyChildCount(
+        layout: QuickWidgetLayout,
+        taskCount: Int = 0,
+        hasRunning: Boolean = false,
+        hasLastAction: Boolean = false,
+        hasNextUpcoming: Boolean = false,
+    ): Int = rootChildCount(layout, hasRunning, hasLastAction)
 
     fun chipExpiryInstant(
         actionAt: Instant,

@@ -30,6 +30,8 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
@@ -387,10 +389,10 @@ private fun ConnectedWidgetContent(
     val tasks = snapshot?.tasks.orEmpty()
     val hasRunning = banner is QuickBannerState.Running
 
-    // Glance allows at most 10 children per Column / Row, so the content is grouped:
-    // the root has 4 children (header, body, weight spacer, footer group). The body has at most
-    // QuickSurfaceState.MAX_BODY_CHILDREN (see QuickSurfaceState.bodyChildCount, unit-tested):
-    // banner + chip + MAX_TASK_ROWS tiles + next + see-all = 10. Gaps are padding(top = gap).
+    // Glance allows at most 10 children per Column / Row. The root Column has at most 5 children:
+    // header, running banner (if any), feedback chip (if any), LazyColumn, and footer (if any).
+    // The task list scrolls in a LazyColumn filling the body space with all snapshot tasks.
+    // LazyColumn items (tasks, next-line, see-all) do not count toward the 10-child limit.
     Column(modifier = GlanceModifier.fillMaxSize()) {
         HeaderBar(
             context = context,
@@ -399,26 +401,31 @@ private fun ConnectedWidgetContent(
             isWide = layout.isWide,
         )
 
-        Column(modifier = GlanceModifier.fillMaxWidth()) {
-            if (banner is QuickBannerState.Running) {
-                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
-                    RunningBannerView(context = context, running = banner.running, now = now)
-                }
+        if (banner is QuickBannerState.Running) {
+            Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                RunningBannerView(context = context, running = banner.running, now = now)
             }
+        }
 
-            if (lastAction != null) {
-                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
-                    FeedbackChipView(context = context, action = lastAction, canUndo = canUndo)
-                }
+        if (lastAction != null) {
+            Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                FeedbackChipView(context = context, action = lastAction, canUndo = canUndo)
             }
+        }
 
+        LazyColumn(
+            modifier = GlanceModifier
+                .defaultWeight()
+                .fillMaxWidth(),
+        ) {
             if (tasks.isEmpty() && !hasRunning) {
-                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
-                    NoTasksTile(context = context)
+                item {
+                    Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                        NoTasksTile(context = context)
+                    }
                 }
             } else {
-                val visibleTasks = tasks.take(layout.maxTaskRows)
-                for (task in visibleTasks) {
+                items(tasks, itemId = { it.id.hashCode().toLong() }) { task ->
                     Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
                         TaskRowTile(
                             context = context,
@@ -431,20 +438,23 @@ private fun ConnectedWidgetContent(
             }
 
             if (layout.showNext && nextUpcoming != null) {
-                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
-                    NextUpcomingLine(context = context, next = nextUpcoming)
+                item {
+                    Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                        NextUpcomingLine(context = context, next = nextUpcoming)
+                    }
                 }
             }
 
             if (layout.showSeeAll) {
-                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
-                    SeeAllTasksRow(context = context)
+                item {
+                    Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                        SeeAllTasksRow(context = context)
+                    }
                 }
             }
         }
 
         if (layout.showFooter) {
-            Spacer(modifier = GlanceModifier.defaultWeight())
             Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
                 FooterQuickStartRow(context = context, isWide = layout.isWide)
             }
