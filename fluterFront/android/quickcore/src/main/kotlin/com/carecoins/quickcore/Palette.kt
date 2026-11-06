@@ -27,6 +27,17 @@ object Palette {
     const val coinSoft: Long = 0xFFFEE9CA
     const val coinInk: Long = 0xFF7C4226
 
+    const val primarySoftDark: Long = 0xFF12324D
+    const val primaryInkDark: Long = 0xFF9CCBF0
+    const val coinSoftDark: Long = 0xFF3A2A12
+    const val coinInkDark: Long = 0xFFFBC97A
+    const val successSoftDark: Long = 0xFF123524
+    const val successInkDark: Long = 0xFF6EE7A0
+    const val warningSoftDark: Long = 0xFF3A2510
+    const val warningInkDark: Long = 0xFFFBBF6A
+    const val dangerSoftDark: Long = 0xFF3B1414
+    const val dangerInkDark: Long = 0xFFFCA5A5
+
     fun widgetBackground(isDark: Boolean): Long = if (isDark) ink else bg
     fun widgetTile(isDark: Boolean): Long = if (isDark) surfaceDark else surface
     fun widgetText(isDark: Boolean): Long = if (isDark) 0xFFFFFFFF else textPrimary

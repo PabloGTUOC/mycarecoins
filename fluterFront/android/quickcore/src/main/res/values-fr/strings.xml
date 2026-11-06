@@ -27,6 +27,7 @@
     <string name="widget_next">Ensuite · %1$s · %2$s</string>
     <string name="widget_noTasks">Pas encore de tâches habituelles. Ajoutez-en une dans l\'app.</string>
     <string name="widget_notConnected">Connectez-vous dans CareCoins ▸ Moi ▸ Widget et montre.</string>
+    <string name="widget_allTasks">Voir toutes les tâches</string>
     <string name="widget_openApp">Ouvrir CareCoins</string>
     <string name="widget_preview_task">Préparer le déjeuner</string>
     <string name="widget_row_meta">%1$d min · %2$d cc</string>

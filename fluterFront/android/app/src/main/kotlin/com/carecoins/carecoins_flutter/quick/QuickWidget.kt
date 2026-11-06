@@ -191,11 +191,11 @@ private object WidgetColors {
     )
     val primarySoft: UnitColorProvider = ColorProvider(
         day = Color(Palette.primarySoft),
-        night = Color(Palette.primarySoft),
+        night = Color(Palette.primarySoftDark),
     )
     val primaryInk: UnitColorProvider = ColorProvider(
         day = Color(Palette.primaryInk),
-        night = Color(Palette.primaryInk),
+        night = Color(Palette.primaryInkDark),
     )
     val success: UnitColorProvider = ColorProvider(
         day = Color(Palette.success),
@@ -203,19 +203,19 @@ private object WidgetColors {
     )
     val successSoft: UnitColorProvider = ColorProvider(
         day = Color(Palette.successSoft),
-        night = Color(Palette.successSoft),
+        night = Color(Palette.successSoftDark),
     )
     val successInk: UnitColorProvider = ColorProvider(
         day = Color(Palette.successInk),
-        night = Color(Palette.successInk),
+        night = Color(Palette.successInkDark),
     )
     val warningSoft: UnitColorProvider = ColorProvider(
         day = Color(Palette.warningSoft),
-        night = Color(Palette.warningSoft),
+        night = Color(Palette.warningSoftDark),
     )
     val warningInk: UnitColorProvider = ColorProvider(
         day = Color(Palette.warningInk),
-        night = Color(Palette.warningInk),
+        night = Color(Palette.warningInkDark),
     )
     val danger: UnitColorProvider = ColorProvider(
         day = Color(Palette.danger),
@@ -223,11 +223,11 @@ private object WidgetColors {
     )
     val dangerSoft: UnitColorProvider = ColorProvider(
         day = Color(Palette.dangerSoft),
-        night = Color(Palette.dangerSoft),
+        night = Color(Palette.dangerSoftDark),
     )
     val dangerInk: UnitColorProvider = ColorProvider(
         day = Color(Palette.dangerInk),
-        night = Color(Palette.dangerInk),
+        night = Color(Palette.dangerInkDark),
     )
     val coin: UnitColorProvider = ColorProvider(
         day = Color(Palette.coin),
@@ -235,11 +235,11 @@ private object WidgetColors {
     )
     val coinSoft: UnitColorProvider = ColorProvider(
         day = Color(Palette.coinSoft),
-        night = Color(Palette.coinSoft),
+        night = Color(Palette.coinSoftDark),
     )
     val coinInk: UnitColorProvider = ColorProvider(
         day = Color(Palette.coinInk),
-        night = Color(Palette.coinInk),
+        night = Color(Palette.coinInkDark),
     )
     val white: UnitColorProvider = ColorProvider(
         day = Color.White,
@@ -387,6 +387,10 @@ private fun ConnectedWidgetContent(
     val tasks = snapshot?.tasks.orEmpty()
     val hasRunning = banner is QuickBannerState.Running
 
+    // Glance allows at most 10 children per Column / Row, so the content is grouped:
+    // the root has 4 children (header, body, weight spacer, footer group). The body has at most
+    // QuickSurfaceState.MAX_BODY_CHILDREN (see QuickSurfaceState.bodyChildCount, unit-tested):
+    // banner + chip + MAX_TASK_ROWS tiles + next + see-all = 10. Gaps are padding(top = gap).
     Column(modifier = GlanceModifier.fillMaxSize()) {
         HeaderBar(
             context = context,
@@ -395,44 +399,55 @@ private fun ConnectedWidgetContent(
             isWide = layout.isWide,
         )
 
-        if (banner is QuickBannerState.Running) {
-            Spacer(modifier = GlanceModifier.height(gap))
-            RunningBannerView(context = context, running = banner.running, now = now)
-        }
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            if (banner is QuickBannerState.Running) {
+                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                    RunningBannerView(context = context, running = banner.running, now = now)
+                }
+            }
 
-        if (lastAction != null) {
-            Spacer(modifier = GlanceModifier.height(gap))
-            FeedbackChipView(context = context, action = lastAction, canUndo = canUndo)
-        }
+            if (lastAction != null) {
+                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                    FeedbackChipView(context = context, action = lastAction, canUndo = canUndo)
+                }
+            }
 
-        if (tasks.isEmpty() && !hasRunning) {
-            Spacer(modifier = GlanceModifier.height(gap))
-            NoTasksTile(context = context)
-        } else {
-            val visibleTasks = tasks.take(layout.maxTaskRows)
-            for (task in visibleTasks) {
-                Spacer(modifier = GlanceModifier.height(gap))
-                TaskRowTile(
-                    context = context,
-                    task = task,
-                    isWide = layout.isWide,
-                    rowHeightDp = layout.rowHeightDp,
-                )
+            if (tasks.isEmpty() && !hasRunning) {
+                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                    NoTasksTile(context = context)
+                }
+            } else {
+                val visibleTasks = tasks.take(layout.maxTaskRows)
+                for (task in visibleTasks) {
+                    Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                        TaskRowTile(
+                            context = context,
+                            task = task,
+                            isWide = layout.isWide,
+                            rowHeightDp = layout.rowHeightDp,
+                        )
+                    }
+                }
+            }
+
+            if (layout.showNext && nextUpcoming != null) {
+                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                    NextUpcomingLine(context = context, next = nextUpcoming)
+                }
+            }
+
+            if (layout.showSeeAll) {
+                Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                    SeeAllTasksRow(context = context)
+                }
             }
         }
 
-        if (layout.showNext || layout.showFooter) {
-            Spacer(modifier = GlanceModifier.defaultWeight())
-        }
-
-        if (layout.showNext && nextUpcoming != null) {
-            Spacer(modifier = GlanceModifier.height(gap))
-            NextUpcomingLine(context = context, next = nextUpcoming)
-        }
-
         if (layout.showFooter) {
-            Spacer(modifier = GlanceModifier.height(gap))
-            FooterQuickStartRow(context = context, isWide = layout.isWide)
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                FooterQuickStartRow(context = context, isWide = layout.isWide)
+            }
         }
     }
 }
@@ -549,11 +564,83 @@ private fun TaskRowTile(
     rowHeightDp: Int,
 ) {
     val isHousehold = task.type.equals("household", ignoreCase = true)
-    val btnSize = if (isWide) 36.dp else 32.dp
-    val btnRadius = if (isWide) 18.dp else 16.dp
+    val btnSize = if (isWide) 36.dp else 30.dp
+    val btnRadius = btnSize / 2
     val glyphSize = if (isWide) 18.dp else 16.dp
     val startA11y = L10n.t(context, "widget.a11y.start", task.title, task.durationMinutes)
     val doneA11y = L10n.t(context, "widget.a11y.done", task.title)
+    val metaText = L10n.t(context, "widget.row.meta", task.durationMinutes, task.coinValue)
+
+    val startButton: @Composable () -> Unit = {
+        CircleIconButton(
+            size = btnSize,
+            radius = btnRadius,
+            glyphSize = glyphSize,
+            iconRes = R.drawable.ic_widget_play,
+            bgColor = WidgetColors.primary,
+            tintColor = WidgetColors.white,
+            a11y = startA11y,
+            onClick = actionRunCallback<StartTaskActionCallback>(
+                actionParametersOf(QuickTaskIdParam to task.id),
+            ),
+        )
+    }
+    val doneButton: @Composable () -> Unit = {
+        CircleIconButton(
+            size = btnSize,
+            radius = btnRadius,
+            glyphSize = glyphSize,
+            iconRes = R.drawable.ic_widget_check,
+            bgColor = WidgetColors.successSoft,
+            tintColor = WidgetColors.successInk,
+            a11y = doneA11y,
+            onClick = actionRunCallback<DoneTaskActionCallback>(
+                actionParametersOf(QuickTaskIdParam to task.id),
+            ),
+        )
+    }
+
+    if (!isWide) {
+        // Narrow tiles: title on its own line, meta + buttons on the second line.
+        Column(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(rowHeightDp.dp)
+                .widgetInnerCornerRadius()
+                .background(WidgetColors.tile)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = task.title,
+                modifier = GlanceModifier.fillMaxWidth(),
+                style = TextStyle(
+                    color = WidgetColors.textPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+                maxLines = 1,
+            )
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = metaText,
+                    modifier = GlanceModifier.defaultWeight(),
+                    style = TextStyle(
+                        color = WidgetColors.textSecondary,
+                        fontSize = 12.sp,
+                    ),
+                    maxLines = 1,
+                )
+                startButton()
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                doneButton()
+            }
+        }
+        return
+    }
 
     Row(
         modifier = GlanceModifier
@@ -564,26 +651,24 @@ private fun TaskRowTile(
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (isWide) {
-            val circleFill = if (isHousehold) WidgetColors.warningSoft else WidgetColors.primarySoft
-            val glyphTint = if (isHousehold) WidgetColors.warningInk else WidgetColors.primaryInk
-            val iconRes = if (isHousehold) R.drawable.ic_widget_household else R.drawable.ic_widget_care
-            Box(
-                modifier = GlanceModifier
-                    .size(32.dp)
-                    .cornerRadius(16.dp)
-                    .background(circleFill),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    provider = ImageProvider(iconRes),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(18.dp),
-                    colorFilter = ColorFilter.tint(glyphTint),
-                )
-            }
-            Spacer(modifier = GlanceModifier.width(10.dp))
+        val circleFill = if (isHousehold) WidgetColors.warningSoft else WidgetColors.primarySoft
+        val glyphTint = if (isHousehold) WidgetColors.warningInk else WidgetColors.primaryInk
+        val iconRes = if (isHousehold) R.drawable.ic_widget_household else R.drawable.ic_widget_care
+        Box(
+            modifier = GlanceModifier
+                .size(32.dp)
+                .cornerRadius(16.dp)
+                .background(circleFill),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                provider = ImageProvider(iconRes),
+                contentDescription = null,
+                modifier = GlanceModifier.size(18.dp),
+                colorFilter = ColorFilter.tint(glyphTint),
+            )
         }
+        Spacer(modifier = GlanceModifier.width(10.dp))
 
         Column(
             modifier = GlanceModifier.defaultWeight(),
@@ -599,7 +684,7 @@ private fun TaskRowTile(
                 maxLines = 1,
             )
             Text(
-                text = L10n.t(context, "widget.row.meta", task.durationMinutes, task.coinValue),
+                text = metaText,
                 style = TextStyle(
                     color = WidgetColors.textSecondary,
                     fontSize = 12.sp,
@@ -609,34 +694,9 @@ private fun TaskRowTile(
         }
 
         Spacer(modifier = GlanceModifier.width(6.dp))
-
-        CircleIconButton(
-            size = btnSize,
-            radius = btnRadius,
-            glyphSize = glyphSize,
-            iconRes = R.drawable.ic_widget_play,
-            bgColor = WidgetColors.primary,
-            tintColor = WidgetColors.white,
-            a11y = startA11y,
-            onClick = actionRunCallback<StartTaskActionCallback>(
-                actionParametersOf(QuickTaskIdParam to task.id),
-            ),
-        )
-
+        startButton()
         Spacer(modifier = GlanceModifier.width(6.dp))
-
-        CircleIconButton(
-            size = btnSize,
-            radius = btnRadius,
-            glyphSize = glyphSize,
-            iconRes = R.drawable.ic_widget_check,
-            bgColor = WidgetColors.successSoft,
-            tintColor = WidgetColors.successInk,
-            a11y = doneA11y,
-            onClick = actionRunCallback<DoneTaskActionCallback>(
-                actionParametersOf(QuickTaskIdParam to task.id),
-            ),
-        )
+        doneButton()
     }
 }
 
@@ -859,6 +919,36 @@ private fun NextUpcomingLine(
         ),
         maxLines = 1,
     )
+}
+
+@Composable
+private fun SeeAllTasksRow(context: Context) {
+    val label = L10n.t(context, "widget.allTasks")
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(24.dp)
+            .clickable(actionStartActivity<MainActivity>())
+            .semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                color = WidgetColors.primaryInk,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            maxLines = 1,
+        )
+        Spacer(modifier = GlanceModifier.width(2.dp))
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_chevron),
+            contentDescription = null,
+            modifier = GlanceModifier.size(16.dp),
+            colorFilter = ColorFilter.tint(WidgetColors.primaryInk),
+        )
+    }
 }
 
 @Composable

@@ -611,6 +611,7 @@ data class QuickWidgetLayout(
     val showNext: Boolean,
     val verticalPaddingDp: Int,
     val gapDp: Int,
+    val showSeeAll: Boolean = false,
 )
 
 object QuickSurfaceState {
@@ -627,14 +628,21 @@ object QuickSurfaceState {
     const val NEXT_LINE_MIN_HEIGHT_DP = 300
     const val HEADER_HEIGHT_DP = 28
     const val WIDE_ROW_HEIGHT_DP = 52
-    const val NARROW_ROW_HEIGHT_DP = 48
+    const val NARROW_ROW_HEIGHT_DP = 64
     const val RUNNING_BANNER_HEIGHT_DP = 64
     const val CHIP_HEIGHT_DP = 30
     const val FOOTER_HEIGHT_DP = 40
     const val NEXT_LINE_HEIGHT_DP = 18
+    const val SEE_ALL_HEIGHT_DP = 24
     const val DEFAULT_PADDING_DP = 12
     const val DEFAULT_GAP_DP = 6
+    const val TIGHT_PADDING_DP = 10
+    const val TIGHT_GAP_DP = 4
     const val MAX_EMPTY_SPACE_DP = 40
+    /** Glance drops children beyond this count in a single Column / Row. */
+    const val GLANCE_MAX_CHILDREN = 10
+    /** Worst case body: banner + chip + 6 rows + next + see-all = 10 children. */
+    const val MAX_TASK_ROWS = 6
     private val EXCLUDED_REMINDER_STATUSES = setOf(
         "completed",
         "rejected",
@@ -650,133 +658,105 @@ object QuickSurfaceState {
         hasLastAction: Boolean = false,
         hasNextUpcoming: Boolean = false,
     ): QuickWidgetLayout {
+        val standard = layoutFor(
+            widthDp, heightDp, taskCount, hasRunning, hasLastAction, hasNextUpcoming,
+            pad = DEFAULT_PADDING_DP, gap = DEFAULT_GAP_DP,
+        )
+        val tight = layoutFor(
+            widthDp, heightDp, taskCount, hasRunning, hasLastAction, hasNextUpcoming,
+            pad = TIGHT_PADDING_DP, gap = TIGHT_GAP_DP,
+        )
+        // Tighter spacing is only used when it fits one more visible row.
+        return if (minOf(taskCount, tight.maxTaskRows) > minOf(taskCount, standard.maxTaskRows)) tight else standard
+    }
+
+    private fun layoutFor(
+        widthDp: Float,
+        heightDp: Float,
+        taskCount: Int,
+        hasRunning: Boolean,
+        hasLastAction: Boolean,
+        hasNextUpcoming: Boolean,
+        pad: Int,
+        gap: Int,
+    ): QuickWidgetLayout {
         val isWide = widthDp >= WIDE_WIDTH_DP
         val rowHeight = if (isWide) WIDE_ROW_HEIGHT_DP else NARROW_ROW_HEIGHT_DP
+        val rowStep = rowHeight + gap
         val safeHeight = if (heightDp > 0f) heightDp.toInt() else 180
 
-        var topElementsHeight = HEADER_HEIGHT_DP
-        var topGaps = 0
-        if (hasRunning) {
-            topElementsHeight += RUNNING_BANNER_HEIGHT_DP
-            topGaps += 1
-        }
-        if (hasLastAction) {
-            topElementsHeight += CHIP_HEIGHT_DP
-            topGaps += 1
-        }
+        // Header, banner and chip are always counted; the footer never depends on the chip.
+        var used = HEADER_HEIGHT_DP
+        if (hasRunning) used += gap + RUNNING_BANNER_HEIGHT_DP
+        if (hasLastAction) used += gap + CHIP_HEIGHT_DP
+        val available = (safeHeight - 2 * pad - used).coerceAtLeast(0)
+        val footerCost = gap + FOOTER_HEIGHT_DP
 
-        if (taskCount <= 0 && !hasRunning) {
-            val showFooter = true
-            val showNext = isWide && safeHeight >= NEXT_LINE_MIN_HEIGHT_DP && hasNextUpcoming
-            return QuickWidgetLayout(
-                isWide = isWide,
-                rowHeightDp = rowHeight,
-                maxTaskRows = 0,
-                showFooter = showFooter,
-                showNext = showNext,
-                verticalPaddingDp = DEFAULT_PADDING_DP,
-                gapDp = DEFAULT_GAP_DP,
-            )
-        }
+        fun slotsFor(space: Int): Int = space.coerceAtLeast(0) / rowStep
 
-        val remStd = (safeHeight - 2 * DEFAULT_PADDING_DP - topElementsHeight - topGaps * DEFAULT_GAP_DP)
-            .coerceAtLeast(0)
-        val remTight = (safeHeight - 2 * 10 - topElementsHeight - topGaps * 4)
-            .coerceAtLeast(0)
-
-        var showFooter = when {
-            hasRunning -> false
-            isWide -> safeHeight >= WIDE_FOOTER_MIN_HEIGHT_DP
-            else -> remTight >= 2 * (rowHeight + 4) + (FOOTER_HEIGHT_DP + 4)
-        }
-
-        var showNext = isWide && safeHeight >= NEXT_LINE_MIN_HEIGHT_DP && hasNextUpcoming
-
-        fun calcRemForRows(footer: Boolean, next: Boolean): Int {
-            var r = remStd
-            if (footer) r -= (DEFAULT_GAP_DP + FOOTER_HEIGHT_DP)
-            if (next) r -= (DEFAULT_GAP_DP + NEXT_LINE_HEIGHT_DP)
-            return r
-        }
-
-        val rowStep = rowHeight + DEFAULT_GAP_DP
-        var remForRows = calcRemForRows(showFooter, showNext)
-        if (showNext && remForRows < rowStep) {
-            showNext = false
-            remForRows = calcRemForRows(showFooter, showNext)
-        }
-
-        var slots = if (remForRows >= rowHeight) {
-            (remForRows + DEFAULT_GAP_DP) / rowStep
-        } else {
-            0
-        }
-        // Notice: n rows after header require n gaps of DEFAULT_GAP_DP, so n * rowStep.
-        slots = if (remForRows >= rowStep) remForRows / rowStep else if (remForRows >= rowHeight) 1 else 0
-        var leftover = remForRows - slots * rowStep
-
-        if (leftover > MAX_EMPTY_SPACE_DP) {
-            val tightAvailForRows = remTight -
-                (if (showFooter) 4 + FOOTER_HEIGHT_DP else 0) -
-                (if (showNext) 4 + NEXT_LINE_HEIGHT_DP else 0)
-            if (tightAvailForRows >= (slots + 1) * (rowHeight + 4)) {
-                slots += 1
-                leftover = (remForRows - slots * rowStep).coerceAtLeast(0)
-            } else if (!showFooter && !hasRunning && isWide && leftover >= FOOTER_HEIGHT_DP) {
+        val empty = taskCount <= 0 && !hasRunning
+        val showFooter: Boolean
+        val slots: Int
+        when {
+            hasRunning -> {
+                showFooter = false
+                slots = slotsFor(available)
+            }
+            empty -> {
                 showFooter = true
-                remForRows = calcRemForRows(showFooter, showNext)
-                leftover = (remForRows - slots * rowStep).coerceAtLeast(0)
+                slots = 0
+            }
+            isWide -> {
+                showFooter = safeHeight >= WIDE_FOOTER_MIN_HEIGHT_DP
+                slots = slotsFor(available - if (showFooter) footerCost else 0)
+            }
+            else -> {
+                val withFooter = slotsFor(available - footerCost)
+                showFooter = withFooter >= 2
+                slots = if (showFooter) withFooter else slotsFor(available)
             }
         }
 
-        val actualRows = minOf(taskCount, slots)
-        if (!showFooter && !hasRunning && isWide) {
-            val emptyWithActual = remForRows - actualRows * rowStep
-            if (emptyWithActual > MAX_EMPTY_SPACE_DP && emptyWithActual >= FOOTER_HEIGHT_DP) {
-                showFooter = true
+        var showNext = false
+        var showSeeAll = false
+        if (isWide && !hasRunning && !empty && taskCount < slots) {
+            var spare = (available - if (showFooter) footerCost else 0) - taskCount * rowStep
+            if (hasNextUpcoming && spare >= gap + NEXT_LINE_HEIGHT_DP) {
+                showNext = true
+                spare -= gap + NEXT_LINE_HEIGHT_DP
             }
-        }
-
-        val renderedRows = minOf(taskCount, slots)
-        val totalBlocks = 1 +
-            (if (hasRunning) 1 else 0) +
-            (if (hasLastAction) 1 else 0) +
-            renderedRows +
-            (if (showNext) 1 else 0) +
-            (if (showFooter) 1 else 0)
-        val numGaps = (totalBlocks - 1).coerceAtLeast(0)
-        val fixedContentHeight = topElementsHeight +
-            renderedRows * rowHeight +
-            (if (showNext) NEXT_LINE_HEIGHT_DP else 0) +
-            (if (showFooter) FOOTER_HEIGHT_DP else 0)
-
-        var chosenPad = DEFAULT_PADDING_DP
-        var chosenGap = DEFAULT_GAP_DP
-        if (fixedContentHeight + 2 * chosenPad + numGaps * chosenGap > safeHeight) {
-            outer@ for (gap in DEFAULT_GAP_DP downTo 3) {
-                for (pad in DEFAULT_PADDING_DP downTo 8) {
-                    if (fixedContentHeight + 2 * pad + numGaps * gap <= safeHeight) {
-                        chosenPad = pad
-                        chosenGap = gap
-                        break@outer
-                    }
-                }
-            }
-            if (fixedContentHeight + 2 * chosenPad + numGaps * chosenGap > safeHeight) {
-                chosenPad = 8
-                chosenGap = 3
+            if (spare >= gap + SEE_ALL_HEIGHT_DP) {
+                showSeeAll = true
             }
         }
 
         return QuickWidgetLayout(
             isWide = isWide,
             rowHeightDp = rowHeight,
-            maxTaskRows = slots,
+            maxTaskRows = slots.coerceAtMost(MAX_TASK_ROWS),
             showFooter = showFooter,
             showNext = showNext,
-            verticalPaddingDp = chosenPad,
-            gapDp = chosenGap,
+            verticalPaddingDp = pad,
+            gapDp = gap,
+            showSeeAll = showSeeAll,
         )
+    }
+
+    /** Children of the widget's body Column for the given state (mirrors QuickWidget.kt). */
+    fun bodyChildCount(
+        layout: QuickWidgetLayout,
+        taskCount: Int,
+        hasRunning: Boolean,
+        hasLastAction: Boolean,
+        hasNextUpcoming: Boolean,
+    ): Int {
+        var n = 0
+        if (hasRunning) n++
+        if (hasLastAction) n++
+        n += if (taskCount <= 0 && !hasRunning) 1 else minOf(taskCount, layout.maxTaskRows)
+        if (layout.showNext && hasNextUpcoming) n++
+        if (layout.showSeeAll) n++
+        return n
     }
 
     fun chipExpiryInstant(

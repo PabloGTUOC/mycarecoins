@@ -298,6 +298,7 @@ class QuickCoreTest {
                 "widget_error_cancelRunning",
                 "widget_preview_task",
                 "widget_openApp",
+                "widget_allTasks",
                 "widget_row_meta",
                 "widget_running_label",
             )
@@ -594,30 +595,36 @@ class QuickCoreTest {
         assertEquals(Palette.surface, Palette.widgetTile(false))
         assertEquals(Palette.surfaceDark, Palette.widgetTile(true))
 
-        // Pixel 2x2 (179x210): narrow, 2 rows + Care now footer
+        // Pixel 2x2 (179x210): narrow, 2 rows, no footer (it would leave only 1 row)
         val narrow2x2 = QuickSurfaceState.computeWidgetLayout(
             widthDp = 179f,
             heightDp = 210f,
             taskCount = 4,
-            hasRunning = false,
-            hasLastAction = false,
-            hasNextUpcoming = false,
         )
         assertFalse(narrow2x2.isWide)
-        assertEquals(48, narrow2x2.rowHeightDp)
+        assertEquals(64, narrow2x2.rowHeightDp)
         assertEquals(2, narrow2x2.maxTaskRows)
-        assertTrue(narrow2x2.showFooter)
+        assertFalse(narrow2x2.showFooter)
         assertFalse(narrow2x2.showNext)
 
-        // Shorter 2x2 (160x180): narrow, 2 rows, no footer because <2 rows would fit above footer
-        val shortNarrow = QuickSurfaceState.computeWidgetLayout(
-            widthDp = 160f,
-            heightDp = 180f,
+        // Taller narrow widget: 2 rows still fit above the Care now footer
+        val tallNarrow = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 179f,
+            heightDp = 280f,
             taskCount = 4,
         )
-        assertFalse(shortNarrow.isWide)
-        assertEquals(2, shortNarrow.maxTaskRows)
-        assertFalse(shortNarrow.showFooter)
+        assertEquals(2, tallNarrow.maxTaskRows)
+        assertTrue(tallNarrow.showFooter)
+
+        // 2x2 with chip: footer dropped, rows = what fits after header + chip
+        val narrowChip = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 179f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasLastAction = true,
+        )
+        assertFalse(narrowChip.showFooter)
+        assertEquals(1, narrowChip.maxTaskRows)
 
         // Pixel 4x2 (365x210): wide, 2 rows + footer
         val wide4x2 = QuickSurfaceState.computeWidgetLayout(
@@ -629,28 +636,69 @@ class QuickCoreTest {
         assertEquals(52, wide4x2.rowHeightDp)
         assertEquals(2, wide4x2.maxTaskRows)
         assertTrue(wide4x2.showFooter)
-        assertFalse(wide4x2.showNext)
 
-        // Pixel 4x4 (365x430) with upcoming: wide, >=5 rows + Next line + footer
-        val wide4x4 = QuickSurfaceState.computeWidgetLayout(
-            widthDp = 365f,
-            heightDp = 430f,
-            taskCount = 6,
-            hasNextUpcoming = true,
-        )
-        assertTrue(wide4x4.isWide)
-        assertTrue(wide4x4.maxTaskRows >= 5)
-        assertTrue(wide4x4.showFooter)
-        assertTrue(wide4x4.showNext)
-
-        // While running: footer is hidden
-        val runningLayout = QuickSurfaceState.computeWidgetLayout(
+        // 4x2 running: no footer, banner + rows that fit
+        val wide4x2Running = QuickSurfaceState.computeWidgetLayout(
             widthDp = 365f,
             heightDp = 210f,
             taskCount = 4,
             hasRunning = true,
         )
-        assertFalse(runningLayout.showFooter)
+        assertFalse(wide4x2Running.showFooter)
+        assertEquals(1, wide4x2Running.maxTaskRows)
+
+        // 4x4 idle, 3 tasks: footer, all rows, Next line and See all
+        val wide4x4 = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 3,
+            hasNextUpcoming = true,
+        )
+        assertTrue(wide4x4.showFooter)
+        assertEquals(5, wide4x4.maxTaskRows)
+        assertTrue(wide4x4.showNext)
+        assertTrue(wide4x4.showSeeAll)
+
+        // 4x4 idle, full list: no Next / See all
+        val wide4x4Full = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 8,
+            hasNextUpcoming = true,
+        )
+        assertTrue(wide4x4Full.showFooter)
+        assertFalse(wide4x4Full.showNext)
+        assertFalse(wide4x4Full.showSeeAll)
+
+        // 4x4 with chip: footer stays, one row less is not lost
+        val wide4x4Chip = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 3,
+            hasLastAction = true,
+        )
+        assertTrue(wide4x4Chip.showFooter)
+        assertEquals(5, wide4x4Chip.maxTaskRows)
+
+        // 4x4 running + chip: no footer, all 3 tasks fit
+        val wide4x4RunningChip = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 3,
+            hasRunning = true,
+            hasLastAction = true,
+        )
+        assertFalse(wide4x4RunningChip.showFooter)
+        assertTrue(wide4x4RunningChip.maxTaskRows >= 3)
+
+        // 4x4 running, 3 tasks: all 3 show
+        val wide4x4Running = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 3,
+            hasRunning = true,
+        )
+        assertTrue(wide4x4Running.maxTaskRows >= 3)
 
         // Empty tasks when idle: footer is still shown
         val emptyLayout = QuickSurfaceState.computeWidgetLayout(
@@ -661,5 +709,31 @@ class QuickCoreTest {
         )
         assertEquals(0, emptyLayout.maxTaskRows)
         assertTrue(emptyLayout.showFooter)
+    }
+
+    @Test
+    fun `widget body never exceeds Glance's 10 children per container`() {
+        var worst = 0
+        for (w in listOf(179f, 365f, 700f)) {
+            for (h in listOf(100f, 180f, 210f, 280f, 430f, 600f, 900f, 1400f)) {
+                for (tasks in 0..12) {
+                    for (running in listOf(false, true)) {
+                        for (chip in listOf(false, true)) {
+                            for (next in listOf(false, true)) {
+                                val l = QuickSurfaceState.computeWidgetLayout(w, h, tasks, running, chip, next)
+                                val n = QuickSurfaceState.bodyChildCount(l, tasks, running, chip, next)
+                                worst = maxOf(worst, n)
+                                assertTrue(
+                                    "body has $n children at ${w}x$h tasks=$tasks running=$running chip=$chip",
+                                    n <= QuickSurfaceState.GLANCE_MAX_CHILDREN,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Root has 4 children (header, body, weight spacer, footer group).
+        assertTrue(worst <= 10)
     }
 }
