@@ -291,35 +291,6 @@
         }
       }
     },
-    "widget.didYouFinish" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hast du %@ erledigt?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Did you finish %@?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Terminaste %@?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Avez-vous terminé %@ ?"
-          }
-        }
-      }
-    },
     "widget.done" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -374,35 +345,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arrêtez d'abord %@"
-          }
-        }
-      }
-    },
-    "widget.error.cancelRunning" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beende stattdessen die laufende Aufgabe."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop the running task instead."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Detén la tarea en marcha en su lugar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arrêtez plutôt la tâche en cours."
           }
         }
       }
@@ -664,64 +606,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas encore de tâches habituelles. Ajoutez-en une dans l'app."
-          }
-        }
-      }
-    },
-    "widget.notDone" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht erledigt"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not done"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No hecho"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pas fait"
-          }
-        }
-      }
-    },
-    "widget.notDone.done" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aus deinem Kalender entfernt"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Removed from your calendar"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quitado de tu calendario"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retiré de votre calendrier"
           }
         }
       }
@@ -1074,35 +958,6 @@
         }
       }
     },
-    "widget.until" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bis %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Until %@"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hasta las %@"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jusqu'à %@"
-          }
-        }
-      }
-    },
     "watch.addsToCalendar" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1215,64 +1070,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvrez CareCoins sur votre iPhone"
-          }
-        }
-      }
-    },
-    "watch.logWhole" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ganz %@ erfassen (%d Min.)?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Log all of %@ (%d min)?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Registrar %@ completo (%d min)?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistrer tout %@ (%d min) ?"
-          }
-        }
-      }
-    },
-    "watch.notDone.confirm" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ aus deinem Kalender entfernen?"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove %@ from your calendar?"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "¿Quitar %@ de tu calendario?"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retirer %@ de votre calendrier ?"
           }
         }
       }

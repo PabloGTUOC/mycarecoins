@@ -6,10 +6,8 @@ public struct PendingAction: Codable, Identifiable, Equatable {
   public enum Kind: String, Codable {
     case start
     case done
-    case finish
     case startNow
     case stop
-    case cancel
   }
 
   public let id: String
@@ -153,26 +151,6 @@ public final class WatchStore {
     }
   }
 
-  public func finish(upcomingId: String) async {
-    guard let api = QuickAPI.fromStore() else {
-      recordAction(LastAction(kind: .failed, message: L10n.t("widget.error.revoked")))
-      WKInterfaceDevice.current().play(.failure)
-      return
-    }
-    do {
-      _ = try await api.finish(activityId: upcomingId)
-      recordAction(LastAction(kind: .logged, activityId: upcomingId))
-      WKInterfaceDevice.current().play(.success)
-      await refresh()
-    } catch QuickAPIError.network {
-      enqueuePending(PendingAction(kind: .finish, activityId: upcomingId))
-      WKInterfaceDevice.current().play(.notification)
-    } catch {
-      recordAction(LastAction(kind: .failed, message: watchMessage(for: error)))
-      WKInterfaceDevice.current().play(.failure)
-    }
-  }
-
   public func startNow(type: String, title: String) async {
     guard let api = QuickAPI.fromStore() else {
       recordAction(LastAction(kind: .failed, message: L10n.t("widget.error.revoked")))
@@ -208,26 +186,6 @@ public final class WatchStore {
       await refresh()
     } catch QuickAPIError.network {
       enqueuePending(PendingAction(kind: .stop, activityId: runningId))
-      WKInterfaceDevice.current().play(.notification)
-    } catch {
-      recordAction(LastAction(kind: .failed, message: watchMessage(for: error)))
-      WKInterfaceDevice.current().play(.failure)
-    }
-  }
-
-  public func cancel(activityId: String) async {
-    guard let api = QuickAPI.fromStore() else {
-      recordAction(LastAction(kind: .failed, message: L10n.t("widget.error.revoked")))
-      WKInterfaceDevice.current().play(.failure)
-      return
-    }
-    do {
-      _ = try await api.cancel(activityId: activityId)
-      recordAction(LastAction(kind: .cancelled, activityId: activityId))
-      WKInterfaceDevice.current().play(.success)
-      await refresh()
-    } catch QuickAPIError.network {
-      enqueuePending(PendingAction(kind: .cancel, activityId: activityId))
       WKInterfaceDevice.current().play(.notification)
     } catch {
       recordAction(LastAction(kind: .failed, message: watchMessage(for: error)))
@@ -282,14 +240,6 @@ public final class WatchStore {
           let ref = item.clientRef ?? QuickAPI.newClientRef()
           _ = try await api.done(templateId: taskId, clientRef: ref)
           recordAction(LastAction(kind: .logged, taskId: taskId, clientRef: ref))
-        case .finish:
-          guard let activityId = item.activityId else {
-            pending.removeFirst()
-            savePendingQueue(pending)
-            continue
-          }
-          _ = try await api.finish(activityId: activityId)
-          recordAction(LastAction(kind: .logged, activityId: activityId))
         case .startNow:
           let type = item.type ?? "care"
           let title = item.title ?? L10n.t("widget.title.\(type)")
@@ -304,14 +254,6 @@ public final class WatchStore {
           }
           _ = try await api.stop(activityId: activityId)
           recordAction(LastAction(kind: .stopped, activityId: activityId))
-        case .cancel:
-          guard let activityId = item.activityId else {
-            pending.removeFirst()
-            savePendingQueue(pending)
-            continue
-          }
-          _ = try await api.cancel(activityId: activityId)
-          recordAction(LastAction(kind: .cancelled, activityId: activityId))
         }
         pending.removeFirst()
         savePendingQueue(pending)
@@ -347,8 +289,6 @@ public final class WatchStore {
           return L10n.t("widget.error.alreadyRunning", title)
         } else if code == "quickUndoExpired" {
           return L10n.t("widget.error.undoExpired")
-        } else if code == "quickCancelRunning" {
-          return L10n.t("widget.error.cancelRunning")
         } else if status == 401 {
           return L10n.t("widget.error.revoked")
         } else {

@@ -72,7 +72,6 @@ struct HeaderRow: View {
 
 struct TaskRow: View {
   let task: QuickSnapshot.Task
-  var startedTask: QuickSnapshot.Upcoming? = nil
   @Environment(\.colorScheme) var colorScheme
   @Environment(\.widgetRenderingMode) var renderingMode
 
@@ -190,222 +189,6 @@ struct RunningBanner: View {
   }
 }
 
-struct StartedBanner: View {
-  let started: QuickSnapshot.Upcoming
-  @Environment(\.colorScheme) var colorScheme
-  @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.widgetFamily) var family
-
-  var endsAt: Date {
-    started.endsAt ?? started.startsAt.addingTimeInterval(15 * 60)
-  }
-
-  var timerRange: ClosedRange<Date> {
-    if endsAt <= started.startsAt {
-      return started.startsAt...started.startsAt.addingTimeInterval(1)
-    }
-    return started.startsAt...endsAt
-  }
-
-  var body: some View {
-    if family == .systemSmall {
-      VStack(alignment: .leading, spacing: 4) {
-        HStack {
-          Text(started.title)
-            .font(.caption.weight(.semibold))
-            .foregroundColor(Palette.widgetText(colorScheme))
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
-          Spacer()
-          Text(L10n.t("widget.until", formatShortTime(endsAt)))
-            .font(.caption2)
-            .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-        }
-        ProgressView(timerInterval: timerRange, countsDown: true)
-          .labelsHidden()
-          .tint(renderingMode == .accented ? .primary : Palette.success)
-        Button(intent: FinishTaskIntent(activityId: started.id)) {
-          Text(L10n.t("widget.done"))
-            .font(.caption.weight(.semibold))
-            .foregroundColor(renderingMode == .accented ? .primary : .white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 28)
-            .background(
-              Capsule()
-                .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
-            )
-        }
-        .buttonStyle(.plain)
-        .contentShape(Rectangle())
-        .accessibilityLabel(L10n.t("widget.a11y.done", started.title))
-        .widgetAccentable(renderingMode == .accented)
-      }
-      .padding(8)
-      .background(
-        RoundedRectangle(cornerRadius: 10)
-          .fill(renderingMode == .accented ? Color.clear : Palette.successSoft.opacity(0.5))
-      )
-    } else {
-      HStack(spacing: 8) {
-        VStack(alignment: .leading, spacing: 2) {
-          HStack(spacing: 4) {
-            Text(started.title)
-              .font(.caption2.weight(.medium))
-              .foregroundColor(Palette.widgetText(colorScheme))
-              .lineLimit(1)
-              .minimumScaleFactor(0.75)
-              .truncationMode(.tail)
-            Text(L10n.t("widget.until", formatShortTime(endsAt)))
-              .font(.caption2)
-              .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-              .lineLimit(1)
-              .minimumScaleFactor(0.75)
-          }
-          ProgressView(timerInterval: timerRange, countsDown: true)
-            .labelsHidden()
-            .tint(renderingMode == .accented ? .primary : Palette.success)
-        }
-        Spacer(minLength: 4)
-        Button(intent: FinishTaskIntent(activityId: started.id)) {
-          Text(L10n.t("widget.done"))
-            .font(.caption.weight(.semibold))
-            .foregroundColor(renderingMode == .accented ? .primary : .white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 2)
-            .frame(height: 26)
-            .background(
-              Capsule()
-                .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 2)
-        .frame(height: 26)
-        .contentShape(Rectangle())
-        .accessibilityLabel(L10n.t("widget.a11y.done", started.title))
-        .widgetAccentable(renderingMode == .accented)
-      }
-      .padding(.horizontal, 8)
-      .frame(height: 30)
-      .background(
-        RoundedRectangle(cornerRadius: 10)
-          .fill(renderingMode == .accented ? Color.clear : Palette.successSoft.opacity(0.5))
-      )
-    }
-  }
-}
-
-struct ConfirmBanner: View {
-  let awaiting: QuickSnapshot.Upcoming
-  @Environment(\.colorScheme) var colorScheme
-  @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.widgetFamily) var family
-
-  var body: some View {
-    if family == .systemSmall {
-      VStack(alignment: .leading, spacing: 6) {
-        Text(L10n.t("widget.didYouFinish", awaiting.title))
-          .font(.caption.weight(.semibold))
-          .foregroundColor(Palette.widgetText(colorScheme))
-          .lineLimit(2)
-          .minimumScaleFactor(0.8)
-          .frame(maxWidth: .infinity, alignment: .leading)
-        HStack(spacing: 8) {
-          Button(intent: FinishTaskIntent(activityId: awaiting.id)) {
-            Text(L10n.t("widget.done"))
-              .font(.caption.weight(.semibold))
-              .foregroundColor(renderingMode == .accented ? .primary : .white)
-              .frame(maxWidth: .infinity)
-              .frame(height: 28)
-              .background(
-                Capsule()
-                  .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
-              )
-          }
-          .buttonStyle(.plain)
-          .contentShape(Rectangle())
-          .accessibilityLabel(L10n.t("widget.a11y.done", awaiting.title))
-          .widgetAccentable(renderingMode == .accented)
-
-          Button(intent: CancelTaskIntent(activityId: awaiting.id)) {
-            Text(L10n.t("widget.notDone"))
-              .font(.caption.weight(.semibold))
-              .foregroundColor(renderingMode == .accented ? .primary : Palette.danger)
-              .frame(maxWidth: .infinity)
-              .frame(height: 28)
-              .overlay(
-                Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.danger, lineWidth: 1)
-              )
-          }
-          .buttonStyle(.plain)
-          .contentShape(Rectangle())
-          .accessibilityLabel(L10n.t("widget.notDone"))
-          .widgetAccentable(renderingMode == .accented)
-        }
-      }
-      .padding(8)
-      .background(
-        RoundedRectangle(cornerRadius: 10)
-          .fill(renderingMode == .accented ? Color.clear : Palette.warningSoft.opacity(0.5))
-      )
-    } else {
-      HStack(spacing: 8) {
-        Text(L10n.t("widget.didYouFinish", awaiting.title))
-          .font(.caption2.weight(.medium))
-          .foregroundColor(Palette.widgetText(colorScheme))
-          .lineLimit(1)
-          .minimumScaleFactor(0.75)
-          .truncationMode(.tail)
-
-        Spacer(minLength: 4)
-
-        Button(intent: FinishTaskIntent(activityId: awaiting.id)) {
-          Text(L10n.t("widget.done"))
-            .font(.caption.weight(.semibold))
-            .foregroundColor(renderingMode == .accented ? .primary : .white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 2)
-            .frame(height: 26)
-            .background(
-              Capsule()
-                .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.success)
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 2)
-        .frame(height: 26)
-        .contentShape(Rectangle())
-        .accessibilityLabel(L10n.t("widget.a11y.done", awaiting.title))
-        .widgetAccentable(renderingMode == .accented)
-
-        Button(intent: CancelTaskIntent(activityId: awaiting.id)) {
-          Text(L10n.t("widget.notDone"))
-            .font(.caption.weight(.semibold))
-            .foregroundColor(renderingMode == .accented ? .primary : Palette.danger)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 2)
-            .frame(height: 26)
-            .overlay(
-              Capsule().stroke(renderingMode == .accented ? Color.primary : Palette.danger, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 2)
-        .frame(height: 26)
-        .contentShape(Rectangle())
-        .accessibilityLabel(L10n.t("widget.notDone"))
-        .widgetAccentable(renderingMode == .accented)
-      }
-      .padding(.horizontal, 8)
-      .frame(height: 30)
-      .background(
-        RoundedRectangle(cornerRadius: 10)
-          .fill(renderingMode == .accented ? Color.clear : Palette.warningSoft.opacity(0.5))
-      )
-    }
-  }
-}
-
 struct NowButtonsRow: View {
   @Environment(\.widgetRenderingMode) var renderingMode
 
@@ -470,7 +253,6 @@ struct FeedbackChip: View {
     case .logged: return L10n.t("widget.logged")
     case .stopped: return L10n.t("widget.stopped")
     case .undone: return L10n.t("widget.undone")
-    case .cancelled: return L10n.t("widget.notDone.done")
     case .failed: return action.message ?? L10n.t("widget.error.generic")
     }
   }
@@ -529,10 +311,6 @@ struct SmallWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
-      } else if let started = snapshot.startedTask(now: entry.date) {
-        StartedBanner(started: started)
-      } else if let awaiting = snapshot.awaitingConfirmation(now: entry.date) {
-        ConfirmBanner(awaiting: awaiting)
       } else if let task = snapshot.tasks.first {
         Text(task.title)
           .font(.subheadline.weight(.semibold))
@@ -608,12 +386,8 @@ struct MediumWidgetView: View {
   let snapshot: QuickSnapshot
   @Environment(\.colorScheme) var colorScheme
 
-  var hasBanner: Bool {
-    snapshot.running != nil || snapshot.startedTask(now: entry.date) != nil || snapshot.awaitingConfirmation(now: entry.date) != nil
-  }
-
   var maxTasks: Int {
-    hasBanner ? 1 : 2
+    snapshot.running != nil ? 1 : 2
   }
 
   var body: some View {
@@ -647,14 +421,10 @@ struct MediumWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
-      } else if let started = snapshot.startedTask(now: entry.date) {
-        StartedBanner(started: started)
-      } else if let awaiting = snapshot.awaitingConfirmation(now: entry.date) {
-        ConfirmBanner(awaiting: awaiting)
       }
 
       let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
-      if snapshot.tasks.isEmpty && !hasBanner {
+      if snapshot.tasks.isEmpty && snapshot.running == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
@@ -682,12 +452,8 @@ struct LargeWidgetView: View {
   let snapshot: QuickSnapshot
   @Environment(\.colorScheme) var colorScheme
 
-  var hasBanner: Bool {
-    snapshot.running != nil || snapshot.startedTask(now: entry.date) != nil || snapshot.awaitingConfirmation(now: entry.date) != nil
-  }
-
   var maxTasks: Int {
-    hasBanner ? 4 : 5
+    snapshot.running != nil ? 4 : 5
   }
 
   var body: some View {
@@ -709,14 +475,10 @@ struct LargeWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
-      } else if let started = snapshot.startedTask(now: entry.date) {
-        StartedBanner(started: started)
-      } else if let awaiting = snapshot.awaitingConfirmation(now: entry.date) {
-        ConfirmBanner(awaiting: awaiting)
       }
 
       let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
-      if snapshot.tasks.isEmpty && !hasBanner {
+      if snapshot.tasks.isEmpty && snapshot.running == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))

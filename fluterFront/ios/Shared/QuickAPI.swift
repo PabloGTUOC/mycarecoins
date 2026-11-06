@@ -145,18 +145,6 @@ public struct QuickAPI {
     return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
   }
 
-  public func finish(activityId: String) async throws -> QuickActionResult {
-    guard let idNum = Int(activityId) else {
-      throw QuickAPIError.network
-    }
-    let body: [String: Any] = [
-      "activityId": idNum
-    ]
-    let request = try makeRequest(endpoint: "/api/quick/done", method: "POST", body: body)
-    let (data, _) = try await send(request: request)
-    return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
-  }
-
   public func stop(activityId: String) async throws -> QuickActionResult {
     guard let idNum = Int(activityId) else {
       throw QuickAPIError.network
@@ -174,18 +162,6 @@ public struct QuickAPI {
       "clientRef": clientRef
     ]
     let request = try makeRequest(endpoint: "/api/quick/undo", method: "POST", body: body)
-    let (data, _) = try await send(request: request)
-    return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
-  }
-
-  public func cancel(activityId: String) async throws -> QuickActionResult {
-    guard let idNum = Int(activityId) else {
-      throw QuickAPIError.network
-    }
-    let body: [String: Any] = [
-      "activityId": idNum
-    ]
-    let request = try makeRequest(endpoint: "/api/quick/cancel", method: "POST", body: body)
     let (data, _) = try await send(request: request)
     return try JSONDecoder.quick.decode(QuickActionResult.self, from: data)
   }

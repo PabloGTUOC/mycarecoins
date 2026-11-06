@@ -64,186 +64,117 @@ private struct WatchContentView: View {
   @State private var selectedTask: QuickSnapshot.Task?
   @State private var activeNowType: NowType?
   @State private var showStopConfirm = false
-  @State private var showFinishConfirm = false
-  @State private var showCancelConfirm = false
-
-  private func finishConfirmTitle(for started: QuickSnapshot.Upcoming?) -> String {
-    guard let started = started else { return "" }
-    let endsAt = started.endsAt ?? started.startsAt.addingTimeInterval(15 * 60)
-    let durationMin = max(1, Int(round(endsAt.timeIntervalSince(started.startsAt) / 60.0)))
-    return L10n.t("watch.logWhole", started.title, CInt(durationMin))
-  }
 
   var body: some View {
-    TimelineView(.everyMinute) { timeline in
-      List {
-        // 6. Feedback chip at the top
-        TimelineView(.periodic(from: .now, by: 1.0)) { feedbackTimeline in
-          if let action = store.lastAction,
-             feedbackTimeline.date.timeIntervalSince(action.at) <= SnapshotStore.undoWindow {
-            WatchFeedbackRow(action: action, canUndo: store.canUndo) {
-              Task { await store.undo() }
-            }
+    List {
+      // 6. Feedback chip at the top
+      TimelineView(.periodic(from: .now, by: 1.0)) { timeline in
+        if let action = store.lastAction,
+           timeline.date.timeIntervalSince(action.at) <= SnapshotStore.undoWindow {
+          WatchFeedbackRow(action: action, canUndo: store.canUndo) {
+            Task { await store.undo() }
           }
         }
+      }
 
-        // 2. Running task
-        if let running = store.snapshot?.running {
-          Section {
-            VStack(alignment: .leading, spacing: 6) {
-              Text(running.title)
-                .font(.headline)
-                .foregroundColor(.white)
-                .lineLimit(2)
-              HStack {
-                Text(running.startedAt, style: .timer)
-                  .font(.system(.body, design: .rounded).monospacedDigit())
-                  .foregroundColor(Palette.dangerOnDark)
-                Spacer()
-                Button(L10n.t("widget.stop")) {
-                  showStopConfirm = true
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.danger)
-                .accessibilityLabel(L10n.t("widget.stop"))
-              }
-            }
-          }
-        }
-
-        // 3. Started template (when nothing is running)
-        if store.snapshot?.running == nil, let started = store.snapshot?.startedTask(now: timeline.date) {
-          let endsAt = started.endsAt ?? started.startsAt.addingTimeInterval(15 * 60)
-          let timerRange = started.startsAt...max(endsAt, started.startsAt.addingTimeInterval(1))
-
-          Section {
-            VStack(alignment: .leading, spacing: 6) {
-              Text(started.title)
-                .font(.headline)
-                .foregroundColor(.white)
-                .lineLimit(2)
-              ProgressView(timerInterval: timerRange, countsDown: true)
-                .labelsHidden()
-                .tint(Palette.success)
-              HStack {
-                Text(L10n.t("widget.until", formatShortTime(endsAt)))
-                  .font(.footnote)
-                  .foregroundColor(Palette.inkMuted)
-                Spacer()
-                Button(L10n.t("widget.done")) {
-                  showFinishConfirm = true
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.success)
-                .accessibilityLabel(L10n.t("widget.a11y.done", started.title))
-              }
-            }
-          }
-        }
-
-        // 3b. Confirm section (when awaiting confirmation and nothing running or started)
-        if store.snapshot?.running == nil && store.snapshot?.startedTask(now: timeline.date) == nil,
-           let awaiting = store.snapshot?.awaitingConfirmation(now: timeline.date) {
-          Section {
-            VStack(alignment: .leading, spacing: 8) {
-              Text(L10n.t("widget.didYouFinish", awaiting.title))
-                .font(.headline)
-                .foregroundColor(.white)
-                .lineLimit(2)
-              HStack(spacing: 8) {
-                Button(L10n.t("widget.done")) {
-                  Task { await store.finish(upcomingId: awaiting.id) }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.success)
-                .frame(maxWidth: .infinity)
-
-                Button(L10n.t("widget.notDone")) {
-                  showCancelConfirm = true
-                }
-                .buttonStyle(.bordered)
-                .tint(Palette.danger)
-                .frame(maxWidth: .infinity)
-              }
-            }
-          }
-        }
-
-        // 4. "Now" row
-        Section(L10n.t("watch.now")) {
-          HStack(spacing: 8) {
-            Button {
-              activeNowType = .care
-            } label: {
-              Text(L10n.t("widget.careNow"))
-                .font(.footnote.weight(.medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .tint(Palette.primary)
-
-            Button {
-              activeNowType = .household
-            } label: {
-              Text(L10n.t("widget.householdNow"))
-                .font(.footnote.weight(.medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .tint(Palette.primary)
-          }
-          .listRowBackground(Color.clear)
-          .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-        }
-
-        // 5. Your tasks
-        if let tasks = store.snapshot?.tasks, !tasks.isEmpty {
-          Section(L10n.t("watch.tasks")) {
-            ForEach(tasks) { task in
-              let isPending = store.pending.contains { $0.taskId == task.id }
-              Button {
-                selectedTask = task
-              } label: {
-                HStack {
-                  VStack(alignment: .leading, spacing: 2) {
-                    Text(task.title)
-                      .font(.body.weight(.medium))
-                      .foregroundColor(.white)
-                      .lineLimit(2)
-                    if isPending {
-                      HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                        Text(L10n.t("watch.pending"))
-                      }
-                      .font(.caption2)
-                      .foregroundColor(Palette.warning)
-                    } else {
-                      Text("\(task.durationMinutes) min")
-                        .font(.caption2)
-                        .foregroundColor(Palette.inkMuted)
-                    }
-                  }
-                  Spacer()
-                }
-                .contentShape(Rectangle())
-              }
-              .buttonStyle(.plain)
-            }
-          }
-        }
-
+      // 2. Running task
+      if let running = store.snapshot?.running {
         Section {
-          Toggle(isOn: Binding(
-            get: { store.remindersEnabled },
-            set: { store.remindersEnabled = $0 }
-          )) {
-            Text(L10n.t("watch.reminders.toggle"))
-              .font(.footnote)
+          VStack(alignment: .leading, spacing: 6) {
+            Text(running.title)
+              .font(.headline)
+              .foregroundColor(.white)
+              .lineLimit(2)
+            HStack {
+              Text(running.startedAt, style: .timer)
+                .font(.system(.body, design: .rounded).monospacedDigit())
+                .foregroundColor(Palette.dangerOnDark)
+              Spacer()
+              Button(L10n.t("widget.stop")) {
+                showStopConfirm = true
+              }
+              .buttonStyle(.borderedProminent)
+              .tint(Palette.danger)
+              .accessibilityLabel(L10n.t("widget.stop"))
+            }
           }
+        }
+      }
+
+      // 4. "Now" row
+      Section(L10n.t("watch.now")) {
+        HStack(spacing: 8) {
+          Button {
+            activeNowType = .care
+          } label: {
+            Text(L10n.t("widget.careNow"))
+              .font(.footnote.weight(.medium))
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.bordered)
+          .tint(Palette.primary)
+
+          Button {
+            activeNowType = .household
+          } label: {
+            Text(L10n.t("widget.householdNow"))
+              .font(.footnote.weight(.medium))
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.bordered)
+          .tint(Palette.primary)
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+      }
+
+      // 5. Your tasks
+      if let tasks = store.snapshot?.tasks, !tasks.isEmpty {
+        Section(L10n.t("watch.tasks")) {
+          ForEach(tasks) { task in
+            let isPending = store.pending.contains { $0.taskId == task.id }
+            Button {
+              selectedTask = task
+            } label: {
+              HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                  Text(task.title)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                  if isPending {
+                    HStack(spacing: 4) {
+                      Image(systemName: "clock")
+                      Text(L10n.t("watch.pending"))
+                    }
+                    .font(.caption2)
+                    .foregroundColor(Palette.warning)
+                  } else {
+                    Text("\(task.durationMinutes) min")
+                      .font(.caption2)
+                      .foregroundColor(Palette.inkMuted)
+                  }
+                }
+                Spacer()
+              }
+              .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+          }
+        }
+      }
+
+      Section {
+        Toggle(isOn: Binding(
+          get: { store.remindersEnabled },
+          set: { store.remindersEnabled = $0 }
+        )) {
+          Text(L10n.t("watch.reminders.toggle"))
+            .font(.footnote)
         }
       }
     }
@@ -265,28 +196,6 @@ private struct WatchContentView: View {
       if let running = store.snapshot?.running {
         Button(L10n.t("widget.stop"), role: .destructive) {
           Task { await store.stop(runningId: running.id) }
-        }
-      }
-    }
-    .confirmationDialog(
-      finishConfirmTitle(for: store.snapshot?.startedTask()),
-      isPresented: $showFinishConfirm,
-      titleVisibility: .visible
-    ) {
-      if let started = store.snapshot?.startedTask() {
-        Button(L10n.t("widget.done")) {
-          Task { await store.finish(upcomingId: started.id) }
-        }
-      }
-    }
-    .confirmationDialog(
-      L10n.t("watch.notDone.confirm", store.snapshot?.awaitingConfirmation()?.title ?? ""),
-      isPresented: $showCancelConfirm,
-      titleVisibility: .visible
-    ) {
-      if let awaiting = store.snapshot?.awaitingConfirmation() {
-        Button(L10n.t("widget.notDone"), role: .destructive) {
-          Task { await store.cancel(activityId: awaiting.id) }
         }
       }
     }
@@ -324,7 +233,6 @@ private struct WatchFeedbackRow: View {
     case .logged: return L10n.t("widget.logged")
     case .stopped: return L10n.t("widget.stopped")
     case .undone: return L10n.t("widget.undone")
-    case .cancelled: return L10n.t("widget.notDone.done")
     case .failed: return action.message ?? L10n.t("widget.error.generic")
     }
   }

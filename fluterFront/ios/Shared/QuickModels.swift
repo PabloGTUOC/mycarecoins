@@ -281,24 +281,6 @@ public struct QuickSnapshot: Codable, Equatable {
     serverTime = try container.decode(Date.self, forKey: .serverTime)
   }
 
-  public func startedTask(now: Date = Date()) -> Upcoming? {
-    upcoming.first { item in
-      guard item.status == "approved" else { return false }
-      guard item.startsAt <= now else { return false }
-      guard let endsAt = item.endsAt else { return false }
-      return now < endsAt
-    }
-  }
-
-  public func awaitingConfirmation(now: Date = Date()) -> Upcoming? {
-    let twoHoursAgo = now.addingTimeInterval(-2 * 3600)
-    return upcoming.first { item in
-      guard item.status == "approved" else { return false }
-      guard let endsAt = item.endsAt else { return false }
-      return endsAt <= now && item.startsAt >= twoHoursAgo
-    }
-  }
-
   public func nextUpcoming(now: Date = Date()) -> Upcoming? {
     upcoming.first { item in
       item.startsAt > now
@@ -377,7 +359,6 @@ public struct QuickActionResult: Codable, Equatable {
   public let undone: Bool
   public let completed: Bool?
   public let coinsAwarded: Int?
-  public let cancelled: Bool
 
   public init(
     activity: QuickActivity? = nil,
@@ -385,8 +366,7 @@ public struct QuickActionResult: Codable, Equatable {
     warning: String? = nil,
     undone: Bool = false,
     completed: Bool? = nil,
-    coinsAwarded: Int? = nil,
-    cancelled: Bool = false
+    coinsAwarded: Int? = nil
   ) {
     self.activity = activity
     self.replayed = replayed
@@ -394,7 +374,6 @@ public struct QuickActionResult: Codable, Equatable {
     self.undone = undone
     self.completed = completed
     self.coinsAwarded = coinsAwarded
-    self.cancelled = cancelled
   }
 
   enum CodingKeys: String, CodingKey {
@@ -404,7 +383,6 @@ public struct QuickActionResult: Codable, Equatable {
     case undone
     case completed
     case coinsAwarded
-    case cancelled
   }
 
   public init(from decoder: Decoder) throws {
@@ -414,7 +392,6 @@ public struct QuickActionResult: Codable, Equatable {
     self.undone = (try? container.decode(Bool.self, forKey: .undone)) ?? false
     self.completed = try? container.decodeIfPresent(Bool.self, forKey: .completed)
     self.coinsAwarded = try? container.decodeFlexibleIntIfPresent(forKey: .coinsAwarded)
-    self.cancelled = (try? container.decode(Bool.self, forKey: .cancelled)) ?? false
 
     if container.contains(.activity) {
       self.activity = try? container.decodeIfPresent(QuickActivity.self, forKey: .activity)

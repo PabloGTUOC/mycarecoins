@@ -7,24 +7,20 @@ import ActivityKit
 public struct QuickActivityAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
     public var startedAt: Date
-    public var plannedEnd: Date?      // nil for an unplanned running task; set for a started template
-    public var stopped: Bool          // true once stopped or finished, just before ending
+    public var stopped: Bool
 
-    public init(startedAt: Date, plannedEnd: Date? = nil, stopped: Bool = false) {
+    public init(startedAt: Date, stopped: Bool = false) {
       self.startedAt = startedAt
-      self.plannedEnd = plannedEnd
       self.stopped = stopped
     }
   }
 
-  public var activityId: String       // the server instance id
+  public var activityId: String
   public var title: String
-  public var kind: String             // "running" (unplanned, Stop) or "started" (template, Done)
 
-  public init(activityId: String, title: String, kind: String) {
+  public init(activityId: String, title: String) {
     self.activityId = activityId
     self.title = title
-    self.kind = kind
   }
 }
 
@@ -33,20 +29,9 @@ public enum QuickLiveActivities {
   public static func sync(with snapshot: QuickSnapshot, now: Date = Date()) {
     guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
     do {
-      let wanted: (activityId: String, title: String, kind: String, startedAt: Date, plannedEnd: Date?)?
-      if let running = snapshot.running {
-        wanted = (activityId: running.id, title: running.title, kind: "running", startedAt: running.startedAt, plannedEnd: nil)
-      } else if let started = snapshot.startedTask(now: now) {
-        wanted = (activityId: started.id, title: started.title, kind: "started", startedAt: started.startsAt, plannedEnd: started.endsAt)
-      } else if let awaiting = snapshot.awaitingConfirmation(now: now) {
-        wanted = (activityId: awaiting.id, title: awaiting.title, kind: "started", startedAt: awaiting.startsAt, plannedEnd: awaiting.endsAt)
-      } else {
-        wanted = nil
-      }
-
       let currentActivities = Activity<QuickActivityAttributes>.activities
       for activity in currentActivities {
-        if let wanted = wanted, activity.attributes.activityId == wanted.activityId {
+        if let running = snapshot.running, activity.attributes.activityId == running.id {
           continue
         }
         Task {
@@ -54,16 +39,15 @@ public enum QuickLiveActivities {
         }
       }
 
-      if let wanted = wanted {
-        let isAlreadyRunning = currentActivities.contains { $0.attributes.activityId == wanted.activityId }
+      if let running = snapshot.running {
+        let isAlreadyRunning = currentActivities.contains { $0.attributes.activityId == running.id }
         if !isAlreadyRunning {
-          let attributes = QuickActivityAttributes(activityId: wanted.activityId, title: wanted.title, kind: wanted.kind)
+          let attributes = QuickActivityAttributes(activityId: running.id, title: running.title)
           let contentState = QuickActivityAttributes.ContentState(
-            startedAt: wanted.startedAt,
-            plannedEnd: wanted.plannedEnd,
+            startedAt: running.startedAt,
             stopped: false
           )
-          let staleDate = wanted.plannedEnd ?? wanted.startedAt.addingTimeInterval(4 * 3600)
+          let staleDate = running.startedAt.addingTimeInterval(4 * 3600)
           let content = ActivityContent(state: contentState, staleDate: staleDate)
           _ = try Activity.request(attributes: attributes, content: content, pushType: nil)
         }

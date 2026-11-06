@@ -110,12 +110,6 @@ public struct QuickProvider: TimelineProvider {
         }
       }
 
-      if let snap = snapshot, let started = snap.startedTask(now: now), let endsAt = started.endsAt, endsAt > now {
-        let entryAtEnd = QuickEntry(date: endsAt, state: state, lastAction: nil, canUndo: false)
-        entries.append(entryAtEnd)
-      }
-      entries.sort { $0.date < $1.date }
-
       let policy = TimelineReloadPolicy.after(now.addingTimeInterval(30 * 60))
       let timeline = Timeline(entries: entries, policy: policy)
       completion(timeline)
