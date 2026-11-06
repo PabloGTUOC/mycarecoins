@@ -23,12 +23,15 @@
     <string name="widget_error_undoExpired">Ya no se puede deshacer</string>
     <string name="widget_householdNow">Hogar ahora</string>
     <string name="widget_logged">Registrada</string>
-    <string name="widget_needsYou">Te necesitan: %1$d</string>
-    <string name="widget_next">Siguiente: %1$s a las %2$s</string>
+    <string name="widget_needsYou">Te necesitan · %1$d</string>
+    <string name="widget_next">Siguiente · %1$s · %2$s</string>
     <string name="widget_noTasks">Aún no hay tareas habituales. Añade una en la app.</string>
     <string name="widget_notConnected">Conecta en CareCoins ▸ Yo ▸ Widget y reloj.</string>
+    <string name="widget_openApp">Abrir CareCoins</string>
     <string name="widget_preview_task">Preparar la comida</string>
+    <string name="widget_row_meta">%1$d min · %2$d cc</string>
     <string name="widget_running">En marcha · %1$s</string>
+    <string name="widget_running_label">%1$s · en marcha</string>
     <string name="widget_start">Iniciar</string>
     <string name="widget_started">Iniciada</string>
     <string name="widget_stop">Detener</string>

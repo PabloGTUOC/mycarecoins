@@ -23,12 +23,15 @@
     <string name="widget_error_undoExpired">Trop tard pour annuler</string>
     <string name="widget_householdNow">Maison maintenant</string>
     <string name="widget_logged">Enregistrée</string>
-    <string name="widget_needsYou">À traiter : %1$d</string>
-    <string name="widget_next">Ensuite : %1$s à %2$s</string>
+    <string name="widget_needsYou">À traiter · %1$d</string>
+    <string name="widget_next">Ensuite · %1$s · %2$s</string>
     <string name="widget_noTasks">Pas encore de tâches habituelles. Ajoutez-en une dans l\'app.</string>
     <string name="widget_notConnected">Connectez-vous dans CareCoins ▸ Moi ▸ Widget et montre.</string>
+    <string name="widget_openApp">Ouvrir CareCoins</string>
     <string name="widget_preview_task">Préparer le déjeuner</string>
+    <string name="widget_row_meta">%1$d min · %2$d cc</string>
     <string name="widget_running">En cours · %1$s</string>
+    <string name="widget_running_label">%1$s · en cours</string>
     <string name="widget_start">Démarrer</string>
     <string name="widget_started">Démarrée</string>
     <string name="widget_stop">Arrêter</string>

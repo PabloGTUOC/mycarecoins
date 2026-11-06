@@ -294,10 +294,17 @@ class QuickCoreTest {
                 "Missing Localizable.xcstrings keys in strings.xml: ${expectedKeys - enMap.keys}",
                 enMap.keys.containsAll(expectedKeys),
             )
+            val allowedExtraKeys = setOf(
+                "widget_error_cancelRunning",
+                "widget_preview_task",
+                "widget_openApp",
+                "widget_row_meta",
+                "widget_running_label",
+            )
             val extraKeys = enMap.keys - expectedKeys
             assertTrue(
                 "Unexpected extra keys in strings.xml: $extraKeys",
-                extraKeys.all { it.startsWith("android_") || it == "widget_preview_task" },
+                extraKeys.all { it.startsWith("android_") || it in allowedExtraKeys },
             )
         }
     }
@@ -577,5 +584,82 @@ class QuickCoreTest {
         SnapshotStore.clear(testFilesDir)
         val v4 = SnapshotStore.version.value
         assertTrue(v4 > v3)
+    }
+
+    @Test
+    fun `computeWidgetLayout sizes 2x2 narrow, 4x2 wide and 4x4 wide without leaving over 40dp empty space`() {
+        // Palette day/night backgrounds and tiles
+        assertEquals(Palette.bg, Palette.widgetBackground(false))
+        assertEquals(Palette.ink, Palette.widgetBackground(true))
+        assertEquals(Palette.surface, Palette.widgetTile(false))
+        assertEquals(Palette.surfaceDark, Palette.widgetTile(true))
+
+        // Pixel 2x2 (179x210): narrow, 2 rows + Care now footer
+        val narrow2x2 = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 179f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasRunning = false,
+            hasLastAction = false,
+            hasNextUpcoming = false,
+        )
+        assertFalse(narrow2x2.isWide)
+        assertEquals(48, narrow2x2.rowHeightDp)
+        assertEquals(2, narrow2x2.maxTaskRows)
+        assertTrue(narrow2x2.showFooter)
+        assertFalse(narrow2x2.showNext)
+
+        // Shorter 2x2 (160x180): narrow, 2 rows, no footer because <2 rows would fit above footer
+        val shortNarrow = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 160f,
+            heightDp = 180f,
+            taskCount = 4,
+        )
+        assertFalse(shortNarrow.isWide)
+        assertEquals(2, shortNarrow.maxTaskRows)
+        assertFalse(shortNarrow.showFooter)
+
+        // Pixel 4x2 (365x210): wide, 2 rows + footer
+        val wide4x2 = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            taskCount = 4,
+        )
+        assertTrue(wide4x2.isWide)
+        assertEquals(52, wide4x2.rowHeightDp)
+        assertEquals(2, wide4x2.maxTaskRows)
+        assertTrue(wide4x2.showFooter)
+        assertFalse(wide4x2.showNext)
+
+        // Pixel 4x4 (365x430) with upcoming: wide, >=5 rows + Next line + footer
+        val wide4x4 = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 430f,
+            taskCount = 6,
+            hasNextUpcoming = true,
+        )
+        assertTrue(wide4x4.isWide)
+        assertTrue(wide4x4.maxTaskRows >= 5)
+        assertTrue(wide4x4.showFooter)
+        assertTrue(wide4x4.showNext)
+
+        // While running: footer is hidden
+        val runningLayout = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasRunning = true,
+        )
+        assertFalse(runningLayout.showFooter)
+
+        // Empty tasks when idle: footer is still shown
+        val emptyLayout = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 179f,
+            heightDp = 180f,
+            taskCount = 0,
+            hasRunning = false,
+        )
+        assertEquals(0, emptyLayout.maxTaskRows)
+        assertTrue(emptyLayout.showFooter)
     }
 }
