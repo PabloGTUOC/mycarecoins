@@ -61,74 +61,20 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `startedTask returns approved task where startsAt le now and now lt endsAt`() {
+    fun `nextUpcoming skips items with startsAt le now and returns first task with startsAt gt now`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
 
-        val now = Instant.parse("2026-11-05T16:00:00Z")
-        val started = snap.startedTask(now)
-        assertNotNull(started)
-        assertEquals("503", started?.id)
-        assertEquals("School pickup", started?.title)
-
-        // At exact endsAt, it is no longer started
-        val atEnd = Instant.parse("2026-11-05T16:15:00.123Z")
-        assertNull(snap.startedTask(atEnd))
-    }
-
-    @Test
-    fun `awaitingConfirmation respects status approved, endsAt le now and 2h window, ignoring completed`() {
-        val raw = loadFixture("quick_snapshot.json")
-        val snap = QuickSnapshot.fromJson(JSONObject(raw))
-
-        // At 16:00:00Z:
-        // - 501 (14:30..15:00) has status="completed" -> must NOT show
-        // - 502 (14:30..15:30) has status="approved", endsAt <= 16:00 and startsAt >= 14:00 -> matches
-        val now = Instant.parse("2026-11-05T16:00:00Z")
-        val awaiting = snap.awaitingConfirmation(now)
-        assertNotNull(awaiting)
-        assertEquals("502", awaiting?.id)
-        assertEquals("Finished nap time", awaiting?.title)
-
-        // If only a completed or pending_validation task ended in the last 2 hours, returns null
-        val completedOnly = snap.copy(
-            upcoming = listOf(
-                Upcoming(
-                    id = "501",
-                    title = "Completed morning walk",
-                    type = "care",
-                    startsAt = Instant.parse("2026-11-05T14:30:00Z"),
-                    endsAt = Instant.parse("2026-11-05T15:00:00Z"),
-                    status = "completed",
-                ),
-                Upcoming(
-                    id = "505",
-                    title = "Pending validation task",
-                    type = "care",
-                    startsAt = Instant.parse("2026-11-05T14:45:00Z"),
-                    endsAt = Instant.parse("2026-11-05T15:15:00Z"),
-                    status = "pending_validation",
-                ),
-            )
-        )
-        assertNull(completedOnly.awaitingConfirmation(now))
-
-        // More than 2 hours after startsAt (14:30 + 2h01m = 16:31), 502 expires from awaitingConfirmation
-        val afterTwoHours = Instant.parse("2026-11-05T16:31:00Z")
-        val only502 = snap.copy(upcoming = listOf(snap.upcoming[1]))
-        assertNull(only502.awaitingConfirmation(afterTwoHours))
-    }
-
-    @Test
-    fun `nextUpcoming returns first task with startsAt gt now`() {
-        val raw = loadFixture("quick_snapshot.json")
-        val snap = QuickSnapshot.fromJson(JSONObject(raw))
-
+        // At 16:00:00Z, items 501 (14:30), 502 (14:30) and 503 (15:45..16:15, already under way) have startsAt <= now
         val now = Instant.parse("2026-11-05T16:00:00Z")
         val next = snap.nextUpcoming(now)
         assertNotNull(next)
         assertEquals("504", next?.id)
         assertEquals("Dinner prep", next?.title)
+
+        // Exact startsAt == now is also skipped (not strictly future)
+        val exact504Start = Instant.parse("2026-11-05T18:00:00Z")
+        assertNull(snap.nextUpcoming(exact504Start))
 
         val lateNight = Instant.parse("2026-11-05T22:00:00Z")
         assertNull(snap.nextUpcoming(lateNight))
@@ -162,7 +108,7 @@ class QuickCoreTest {
         assertNull(SnapshotStore.lastAction(testFilesDir, t0.plusSeconds(31)))
         assertFalse(SnapshotStore.canUndo(testFilesDir, t0.plusSeconds(31)))
 
-        // Stopped or cancelled actions cannot be undone even within 30s
+        // Stopped actions cannot be undone even within 30s
         val stoppedAction = LastAction(
             kind = LastAction.Kind.stopped,
             activityId = "900",
@@ -173,22 +119,12 @@ class QuickCoreTest {
         assertNotNull(SnapshotStore.lastAction(testFilesDir, t0.plusSeconds(5)))
         assertFalse(SnapshotStore.canUndo(testFilesDir, t0.plusSeconds(5)))
 
-        val cancelledAction = LastAction(
-            kind = LastAction.Kind.cancelled,
-            activityId = "900",
-            clientRef = "ref-abc-12345678",
-            at = t0,
-        )
-        SnapshotStore.recordAction(testFilesDir, cancelledAction)
-        assertEquals(LastAction.Kind.cancelled, SnapshotStore.lastAction(testFilesDir, t0.plusSeconds(5))?.kind)
-        assertFalse(SnapshotStore.canUndo(testFilesDir, t0.plusSeconds(5)))
-
         SnapshotStore.clearLastAction(testFilesDir)
         assertNull(SnapshotStore.lastAction(testFilesDir, t0.plusSeconds(5)))
     }
 
     @Test
-    fun `QuickActionResult parses wrapped activity, flat completion, undo and cancel responses`() {
+    fun `QuickActionResult parses wrapped activity, flat completion and undo responses`() {
         val startJson = JSONObject(
             """
             {
@@ -227,9 +163,6 @@ class QuickCoreTest {
         assertEquals("889", stopRes.activity?.id)
         assertEquals(true, stopRes.completed)
         assertEquals(15, stopRes.coinsAwarded)
-
-        val cancelRes = QuickActionResult.fromJson(JSONObject("""{"cancelled": true}"""))
-        assertTrue(cancelRes.cancelled)
 
         val undoRes = QuickActionResult.fromJson(JSONObject("""{"undone": true}"""))
         assertTrue(undoRes.undone)
@@ -326,6 +259,19 @@ class QuickCoreTest {
             }
         }
 
+        val removedKeys = setOf(
+            "widget_didYouFinish",
+            "widget_notDone",
+            "widget_notDone_done",
+            "watch_notDone_confirm",
+            "watch_logWhole",
+            "widget_until",
+        )
+        assertTrue(
+            "Removed keys must not be present in strings.xml: ${enMap.keys.intersect(removedKeys)}",
+            enMap.keys.intersect(removedKeys).isEmpty(),
+        )
+
         // Also check parity with ios/Shared/Localizable.xcstrings if present
         val xcstringsCandidates = listOf(
             File(moduleDir, "../../ios/Shared/Localizable.xcstrings"),
@@ -339,7 +285,10 @@ class QuickCoreTest {
             val expectedKeys = mutableSetOf<String>()
             val iter = xcStrings.keys()
             while (iter.hasNext()) {
-                expectedKeys.add(L10n.resourceName(iter.next()))
+                val resName = L10n.resourceName(iter.next())
+                if (resName !in removedKeys) {
+                    expectedKeys.add(resName)
+                }
             }
             assertTrue(
                 "Missing Localizable.xcstrings keys in strings.xml: ${expectedKeys - enMap.keys}",
@@ -354,94 +303,39 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `pickBanner prioritizes running, then started, then confirm, then none`() {
+    fun `pickBanner returns Running only when unplanned task is running, otherwise None`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
         val now = Instant.parse("2026-11-05T16:00:00Z")
 
-        // Fixture has running ("701"), started ("503"), and awaitingConfirmation ("502")
         val banner1 = QuickSurfaceState.pickBanner(snap, now)
         assertTrue(banner1 is QuickBannerState.Running)
         assertEquals("701", (banner1 as QuickBannerState.Running).running.id)
 
-        // Without running -> Started ("503")
+        // Without running -> None (even when predefined tasks are in progress or recently ended)
         val noRunning = snap.copy(running = null)
-        val banner2 = QuickSurfaceState.pickBanner(noRunning, now)
-        assertTrue(banner2 is QuickBannerState.Started)
-        assertEquals("503", (banner2 as QuickBannerState.Started).started.id)
-
-        // At 16:20:00Z (after 503's endsAt 16:15:00.123Z), nothing started -> Confirm ("502")
-        val afterStarted = Instant.parse("2026-11-05T16:20:00Z")
-        val banner3 = QuickSurfaceState.pickBanner(noRunning, afterStarted)
-        assertTrue(banner3 is QuickBannerState.Confirm)
-        assertEquals("502", (banner3 as QuickBannerState.Confirm).awaiting.id)
-
-        // Without running, started or awaiting -> None
-        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
-        val banner4 = QuickSurfaceState.pickBanner(noRunning, lateNight)
-        assertEquals(QuickBannerState.None, banner4)
+        assertEquals(QuickBannerState.None, QuickSurfaceState.pickBanner(noRunning, now))
         assertEquals(QuickBannerState.None, QuickSurfaceState.pickBanner(null, now))
     }
 
     @Test
-    fun `pickNotification state machine selects state and actions and only confirms matching shownStartedActivityId`() {
+    fun `pickNotification posts only for running task with STOP action and cancels otherwise`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
         val now = Instant.parse("2026-11-05T16:00:00Z")
 
         // 1. Running task -> Running notification with STOP action
-        val runningState = QuickSurfaceState.pickNotification(snap, now, shownStartedActivityId = null)
+        val runningState = QuickSurfaceState.pickNotification(snap, now)
         assertTrue(runningState is QuickNotificationState.Running)
         val r = runningState as QuickNotificationState.Running
         assertEquals("701", r.activityId)
         assertTrue(r.ongoing)
         assertEquals(listOf(QuickNotificationAction(QuickNotificationActionKind.STOP, "701")), r.actions)
 
-        // 2. Started task -> Started notification with FINISH action
+        // 2. Without running -> None
         val noRunning = snap.copy(running = null)
-        val startedState = QuickSurfaceState.pickNotification(noRunning, now, shownStartedActivityId = null)
-        assertTrue(startedState is QuickNotificationState.Started)
-        val s = startedState as QuickNotificationState.Started
-        assertEquals("503", s.activityId)
-        assertTrue(s.ongoing)
-        assertEquals(listOf(QuickNotificationAction(QuickNotificationActionKind.FINISH, "503")), s.actions)
-
-        // 3. Awaiting confirmation when shownStartedActivityId matches -> Confirm with FINISH and CANCEL, not ongoing
-        val after503Ends = Instant.parse("2026-11-05T16:20:00Z")
-        val only503 = noRunning.copy(upcoming = listOf(snap.upcoming[2])) // 503 is index 2
-        val confirmMatch = QuickSurfaceState.pickNotification(
-            only503,
-            after503Ends,
-            shownStartedActivityId = "503",
-        )
-        assertTrue(confirmMatch is QuickNotificationState.Confirm)
-        val c = confirmMatch as QuickNotificationState.Confirm
-        assertEquals("503", c.activityId)
-        assertFalse(c.ongoing)
-        assertEquals(
-            listOf(
-                QuickNotificationAction(QuickNotificationActionKind.FINISH, "503"),
-                QuickNotificationAction(QuickNotificationActionKind.CANCEL, "503"),
-            ),
-            c.actions,
-        )
-
-        // 4. Awaiting confirmation when shownStartedActivityId does NOT match or is null -> None
-        assertEquals(
-            QuickNotificationState.None,
-            QuickSurfaceState.pickNotification(only503, after503Ends, shownStartedActivityId = null),
-        )
-        assertEquals(
-            QuickNotificationState.None,
-            QuickSurfaceState.pickNotification(only503, after503Ends, shownStartedActivityId = "other-id"),
-        )
-
-        // 5. Nothing active -> None
-        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
-        assertEquals(
-            QuickNotificationState.None,
-            QuickSurfaceState.pickNotification(noRunning, lateNight, shownStartedActivityId = "503"),
-        )
+        assertEquals(QuickNotificationState.None, QuickSurfaceState.pickNotification(noRunning, now))
+        assertEquals(QuickNotificationState.None, QuickSurfaceState.pickNotification(null, now))
     }
 
     @Test
@@ -479,31 +373,31 @@ class QuickCoreTest {
                 createdAt = now,
             ),
             PendingAction(
-                kind = PendingAction.Kind.cancel,
-                activityId = "502",
-                clientRef = "ref-cancel",
+                kind = PendingAction.Kind.stop,
+                activityId = "701",
+                clientRef = "ref-stop",
                 createdAt = now,
             ),
         )
 
         val pruned = PendingActionQueue.pruneAndDedupe(items, now)
         assertEquals(3, pruned.size)
-        assertEquals(listOf("ref-boundary", "ref-dup", "ref-cancel"), pruned.map { it.clientRef })
+        assertEquals(listOf("ref-boundary", "ref-dup", "ref-stop"), pruned.map { it.clientRef })
         assertEquals("Care", pruned[1].title)
 
         // Disk persistence and enqueue dedupe
         PendingActionQueue.save(testFilesDir, items)
         val loaded = PendingActionQueue.load(testFilesDir, now)
         assertEquals(3, loaded.size)
-        assertEquals(listOf("ref-boundary", "ref-dup", "ref-cancel"), loaded.map { it.clientRef })
+        assertEquals(listOf("ref-boundary", "ref-dup", "ref-stop"), loaded.map { it.clientRef })
 
         // Enqueueing a duplicate clientRef does not add a second copy
         val afterDup = PendingActionQueue.enqueue(
             testFilesDir,
             PendingAction(
-                kind = PendingAction.Kind.cancel,
-                activityId = "502",
-                clientRef = "ref-cancel",
+                kind = PendingAction.Kind.stop,
+                activityId = "701",
+                clientRef = "ref-stop",
                 createdAt = now,
             ),
             now,
@@ -515,7 +409,7 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `wearSections orders Running, Started, Confirm, hides Now while running, and flips Started to Confirm at endsAt`() {
+    fun `wearSections orders Running, Now, Tasks, Coins and hides Now while running`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
         val now = Instant.parse("2026-11-05T16:00:00Z")
@@ -528,33 +422,12 @@ class QuickCoreTest {
         assertTrue(runningSections[1] is WearSection.Tasks)
         assertEquals(WearSection.Coins(240), runningSections[2])
 
-        // 2. Without running at 16:00 ("503" is started): [Started, Now, Tasks, Coins]
+        // 2. Without running: [Now, Tasks, Coins]
         val noRunning = snap.copy(running = null)
-        val startedSections = QuickSurfaceState.wearSections(noRunning, now)
-        assertEquals(4, startedSections.size)
-        assertTrue(startedSections[0] is WearSection.Started)
-        assertEquals("503", (startedSections[0] as WearSection.Started).started.id)
-        assertEquals(WearSection.Now, startedSections[1])
-        assertTrue(startedSections[2] is WearSection.Tasks)
-        assertEquals(WearSection.Coins(240), startedSections[3])
-
-        // 3. Re-evaluating after 503's endsAt (16:15:00.123Z) flips Started to Confirm
-        val after503 = Instant.parse("2026-11-05T16:16:00Z")
-        val only503 = noRunning.copy(upcoming = listOf(snap.upcoming[2]))
-        val confirmSections = QuickSurfaceState.wearSections(only503, after503)
-        assertEquals(4, confirmSections.size)
-        assertTrue(confirmSections[0] is WearSection.Confirm)
-        assertEquals("503", (confirmSections[0] as WearSection.Confirm).awaiting.id)
-        assertEquals(WearSection.Now, confirmSections[1])
-        assertTrue(confirmSections[2] is WearSection.Tasks)
-        assertEquals(WearSection.Coins(240), confirmSections[3])
-
-        // 4. Late night (nothing running, started or awaiting): [Now, Tasks, Coins]
-        val lateNight = Instant.parse("2026-11-05T22:00:00Z")
-        val idleSections = QuickSurfaceState.wearSections(noRunning, lateNight)
+        val idleSections = QuickSurfaceState.wearSections(noRunning, now)
         assertEquals(listOf(WearSection.Now, WearSection.Tasks(snap.tasks), WearSection.Coins(240)), idleSections)
 
-        // 5. Null snapshot -> empty
+        // 3. Null snapshot -> empty
         assertTrue(QuickSurfaceState.wearSections(null, now).isEmpty())
     }
 
@@ -601,7 +474,7 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `pickNext orders Running, Started, Confirm, NextUpcoming, NoTasks, and NotConnected`() {
+    fun `pickNext orders Running, NextUpcoming, NoTasks, and NotConnected`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
         val now = Instant.parse("2026-11-05T16:00:00Z")
@@ -615,37 +488,21 @@ class QuickCoreTest {
         assertTrue(s1 is WearNextState.Running)
         assertEquals("701", (s1 as WearNextState.Running).running.id)
 
-        // 2. Without running -> Started ("503", endsAt 16:15:00.123Z)
+        // 2. Without running -> NextUpcoming ("504" at 18:00Z; skips 503 whose startsAt 15:45 <= 16:00)
         val noRunning = snap.copy(running = null)
         val s2 = QuickSurfaceState.pickNext(noRunning, now)
-        assertTrue(s2 is WearNextState.Started)
-        assertEquals("503", (s2 as WearNextState.Started).started.id)
-        assertEquals(Instant.parse("2026-11-05T16:15:00.123Z"), s2.endsAt)
+        assertTrue(s2 is WearNextState.NextUpcoming)
+        assertEquals("504", (s2 as WearNextState.NextUpcoming).upcoming.id)
 
-        // 3. After 503's endsAt (16:20:00Z), nothing started -> Confirm ("502")
-        val after503 = Instant.parse("2026-11-05T16:20:00Z")
-        val s3 = QuickSurfaceState.pickNext(noRunning, after503)
-        assertTrue(s3 is WearNextState.Confirm)
-        assertEquals("502", (s3 as WearNextState.Confirm).awaiting.id)
-
-        // 4. At 17:45:00Z (more than 2h after 502 and 503's startsAt, before 504 at 18:00Z) -> NextUpcoming ("504")
-        val before504 = Instant.parse("2026-11-05T17:50:00Z")
-        val only504 = noRunning.copy(upcoming = listOf(snap.upcoming[3]))
-        val s4 = QuickSurfaceState.pickNext(only504, before504)
-        assertTrue(s4 is WearNextState.NextUpcoming)
-        assertEquals("504", (s4 as WearNextState.NextUpcoming).upcoming.id)
-
-        // 5. Late night (nothing running, started, awaiting or upcoming) -> NoTasks
+        // 3. Late night (nothing running or future upcoming) -> NoTasks
         val lateNight = Instant.parse("2026-11-05T22:00:00Z")
         assertEquals(WearNextState.NoTasks, QuickSurfaceState.pickNext(noRunning, lateNight))
 
-        // Timeline instants include started endsAt and next upcoming startsAt/endsAt
+        // Timeline instants only include future startsAt values
         val instants = QuickSurfaceState.nextTimelineInstants(noRunning, now)
         assertEquals(
             listOf(
-                Instant.parse("2026-11-05T16:15:00.123Z"),
                 Instant.parse("2026-11-05T18:00:00Z"),
-                Instant.parse("2026-11-05T18:45:00Z"),
             ),
             instants,
         )
@@ -676,14 +533,21 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `smallLayoutRowCount returns 1 below 180dp and 3 at or above 180dp`() {
-        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(110))
-        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(179))
-        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(179.9f))
-        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(180))
-        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(180.0f))
-        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(220))
-        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(220.0f))
+    fun `smallLayoutRowCount uses the 160x180 tall bucket and returns 3 when idle or 1 when running`() {
+        // Small bucket (110x110)
+        assertFalse(QuickSurfaceState.isSmallTallBucket(110, 110))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(110, 110, hasRunning = false))
+        assertEquals(0, QuickSurfaceState.smallLayoutRowCount(110, 110, hasRunning = true))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(isTallBucket = false, hasRunning = false))
+        assertEquals(0, QuickSurfaceState.smallLayoutRowCount(isTallBucket = false, hasRunning = true))
+
+        // Tall bucket (160x180) and Pixel 2x2 size (179x210)
+        assertTrue(QuickSurfaceState.isSmallTallBucket(160, 180))
+        assertTrue(QuickSurfaceState.isSmallTallBucket(179, 210))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(160, 180, hasRunning = false))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(160, 180, hasRunning = true))
+        assertEquals(3, QuickSurfaceState.smallLayoutRowCount(isTallBucket = true, hasRunning = false))
+        assertEquals(1, QuickSurfaceState.smallLayoutRowCount(isTallBucket = true, hasRunning = true))
     }
 
     @Test

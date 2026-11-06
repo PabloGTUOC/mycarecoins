@@ -7,7 +7,6 @@ import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationText
 import androidx.wear.watchface.complications.data.ComplicationType
-import androidx.wear.watchface.complications.data.CountDownTimeReference
 import androidx.wear.watchface.complications.data.CountUpTimeReference
 import androidx.wear.watchface.complications.data.LongTextComplicationData
 import androidx.wear.watchface.complications.data.MonochromaticImage
@@ -33,16 +32,15 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
     override fun getPreviewData(type: ComplicationType): ComplicationData? {
         val ctx = applicationContext ?: this
         val now = Instant.now()
-        val previewState = WearNextState.Started(
-            started = QuickSnapshot.Upcoming(
+        val previewState = WearNextState.NextUpcoming(
+            upcoming = QuickSnapshot.Upcoming(
                 id = "preview",
                 title = L10n.t(ctx, "widget.title.care"),
                 type = "care",
-                startsAt = now.minusSeconds(5 * 60L),
-                endsAt = now.plusSeconds(15 * 60L),
+                startsAt = now.plusSeconds(15 * 60L),
+                endsAt = now.plusSeconds(30 * 60L),
                 status = "approved",
             ),
-            endsAt = now.plusSeconds(15 * 60L),
         )
         return buildNextData(
             context = ctx,
@@ -140,23 +138,6 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
                     contentDescription = PlainComplicationText.Builder(
                         L10n.t(context, "widget.running", state.running.title),
                     ).build()
-                }
-                is WearNextState.Started -> {
-                    title = PlainComplicationText.Builder(state.started.title).build()
-                    text = TimeDifferenceComplicationText.Builder(
-                        TimeDifferenceStyle.SHORT_DUAL_UNIT,
-                        CountDownTimeReference(state.endsAt),
-                    ).build()
-                    val untilStr = L10n.t(context, "widget.until", L10n.shortTime(context, state.endsAt))
-                    contentDescription = PlainComplicationText.Builder(
-                        "${state.started.title} · $untilStr",
-                    ).build()
-                }
-                is WearNextState.Confirm -> {
-                    val prompt = L10n.t(context, "widget.didYouFinish", state.awaiting.title)
-                    title = null
-                    text = PlainComplicationText.Builder(prompt).build()
-                    contentDescription = text
                 }
                 is WearNextState.NextUpcoming -> {
                     val shortStart = L10n.shortTime(context, state.upcoming.startsAt)

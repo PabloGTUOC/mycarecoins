@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -54,7 +55,6 @@ import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CardDefaults
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.FilledTonalButton
-import androidx.wear.compose.material3.LinearProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
@@ -76,8 +76,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -138,8 +136,6 @@ private val WearColorScheme = ColorScheme(
 )
 
 private sealed interface ConfirmDialogState {
-    data class LogWhole(val started: QuickSnapshot.Upcoming) : ConfirmDialogState
-    data class NotDone(val awaiting: QuickSnapshot.Upcoming) : ConfirmDialogState
     data class StartNow(val type: String, val customTitle: String = "") : ConfirmDialogState
     data class StartTask(val task: QuickSnapshot.Task) : ConfirmDialogState
 }
@@ -178,7 +174,6 @@ private fun lastActionLabel(context: Context, action: LastAction): String {
         LastAction.Kind.logged -> L10n.t(context, "widget.logged")
         LastAction.Kind.stopped -> L10n.t(context, "widget.stopped")
         LastAction.Kind.undone -> L10n.t(context, "widget.undone")
-        LastAction.Kind.cancelled -> L10n.t(context, "widget.notDone.done")
         LastAction.Kind.failed -> action.message ?: L10n.t(context, "widget.error.generic")
     }
 }
@@ -343,36 +338,6 @@ fun WearApp() {
                                         },
                                     )
                                 }
-                                is WearSection.Started -> {
-                                    val isPending = state.pending.any { it.activityId == section.started.id }
-                                    StartedSectionCard(
-                                        context = context,
-                                        started = section.started,
-                                        now = now,
-                                        isPending = isPending,
-                                        busy = state.busy,
-                                        onDoneClick = {
-                                            dialogState = ConfirmDialogState.LogWhole(section.started)
-                                        },
-                                    )
-                                }
-                                is WearSection.Confirm -> {
-                                    val isPending = state.pending.any { it.activityId == section.awaiting.id }
-                                    ConfirmSectionCard(
-                                        context = context,
-                                        awaiting = section.awaiting,
-                                        isPending = isPending,
-                                        busy = state.busy,
-                                        onDone = {
-                                            scope.launch {
-                                                WearStore.finish(context, section.awaiting.id)
-                                            }
-                                        },
-                                        onNotDoneClick = {
-                                            dialogState = ConfirmDialogState.NotDone(section.awaiting)
-                                        },
-                                    )
-                                }
                                 is WearSection.Now -> {
                                     val isPendingNow = state.pending.any {
                                         it.kind == com.carecoins.quickcore.PendingAction.Kind.startNow
@@ -437,85 +402,6 @@ fun WearApp() {
 
             // Confirmation dialogs
             when (val dlg = dialogState) {
-                is ConfirmDialogState.LogWhole -> {
-                    val endsAt = dlg.started.endsAt ?: dlg.started.startsAt.plusSeconds(15 * 60L)
-                    val minutes = max(
-                        1,
-                        (Duration.between(dlg.started.startsAt, endsAt).seconds / 60.0).roundToInt(),
-                    )
-                    AlertDialog(
-                        visible = true,
-                        onDismissRequest = { dialogState = null },
-                        title = {
-                            Text(
-                                text = L10n.t(context, "watch.logWhole", dlg.started.title, minutes),
-                                textAlign = TextAlign.Center,
-                                color = Color.White,
-                            )
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    val id = dlg.started.id
-                                    dialogState = null
-                                    scope.launch { WearStore.finish(context, id) }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(Palette.success),
-                                    contentColor = Color.White,
-                                ),
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text(L10n.t(context, "widget.done"))
-                            }
-                        },
-                        dismissButton = {
-                            OutlinedButton(
-                                onClick = { dialogState = null },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text("×")
-                            }
-                        },
-                    )
-                }
-                is ConfirmDialogState.NotDone -> {
-                    AlertDialog(
-                        visible = true,
-                        onDismissRequest = { dialogState = null },
-                        title = {
-                            Text(
-                                text = L10n.t(context, "watch.notDone.confirm", dlg.awaiting.title),
-                                textAlign = TextAlign.Center,
-                                color = Color.White,
-                            )
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    val id = dlg.awaiting.id
-                                    dialogState = null
-                                    scope.launch { WearStore.cancel(context, id) }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(Palette.danger),
-                                    contentColor = Color.White,
-                                ),
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text(L10n.t(context, "widget.notDone"))
-                            }
-                        },
-                        dismissButton = {
-                            OutlinedButton(
-                                onClick = { dialogState = null },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                            ) {
-                                Text("×")
-                            }
-                        },
-                    )
-                }
                 is ConfirmDialogState.StartNow -> {
                     val defaultTitleKey = if (dlg.type == "household") {
                         "widget.title.household"
@@ -646,33 +532,50 @@ private fun NotConnectedList(
     columnState: androidx.wear.compose.foundation.lazy.TransformingLazyColumnState,
     contentPadding: PaddingValues,
 ) {
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val roundHorizontalInset = if (configuration.isScreenRound) {
+        (screenWidthDp * 0.1464f).coerceAtLeast(24.dp)
+    } else {
+        16.dp
+    }
+    val roundVerticalInset = if (configuration.isScreenRound) {
+        (screenHeightDp * 0.1464f).coerceAtLeast(24.dp)
+    } else {
+        16.dp
+    }
+    val safePadding = PaddingValues(
+        start = roundHorizontalInset,
+        top = maxOf(contentPadding.calculateTopPadding(), roundVerticalInset),
+        end = roundHorizontalInset,
+        bottom = maxOf(contentPadding.calculateBottomPadding(), roundVerticalInset),
+    )
+
     TransformingLazyColumn(
         state = columnState,
-        contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = safePadding,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         modifier = Modifier.fillMaxSize(),
     ) {
         item(key = "connect_title") {
             Text(
-                text = L10n.t(context, "watch.connect.title"),
+                text = L10n.t(context, "android.watch.connect.title"),
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
         item(key = "connect_body") {
             Text(
-                text = L10n.t(context, "watch.connect.body"),
+                text = L10n.t(context, "android.watch.connect.body"),
                 color = Color(Palette.inkMuted),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -792,167 +695,6 @@ private fun RunningSectionCard(
                     text = L10n.t(context, "widget.stop"),
                     fontWeight = FontWeight.SemiBold,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StartedSectionCard(
-    context: Context,
-    started: QuickSnapshot.Upcoming,
-    now: Instant,
-    isPending: Boolean,
-    busy: Boolean,
-    onDoneClick: () -> Unit,
-) {
-    val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
-    val remaining = Duration.between(now, endsAt).coerceAtLeast(Duration.ZERO)
-    val totalMillis = Duration.between(started.startsAt, endsAt).toMillis().coerceAtLeast(1L)
-    val elapsedMillis = Duration.between(started.startsAt, now).toMillis().coerceIn(0L, totalMillis)
-    val progress = (elapsedMillis.toFloat() / totalMillis.toFloat()).coerceIn(0f, 1f)
-
-    Card(
-        onClick = {},
-        enabled = false,
-        colors = CardDefaults.cardColors(
-            containerColor = Color(Palette.successInk).copy(alpha = 0.35f),
-            contentColor = Color.White,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = started.title,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = formatDurationClock(remaining),
-                color = Color(Palette.successOnDark),
-                fontSize = 18.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-            )
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
-            )
-            Text(
-                text = L10n.t(context, "widget.until", L10n.shortTime(context, endsAt)),
-                color = Color(Palette.inkMuted),
-                fontSize = 12.sp,
-            )
-            if (isPending) {
-                Text(
-                    text = L10n.t(context, "watch.pending"),
-                    color = Color(Palette.warning),
-                    fontSize = 12.sp,
-                )
-            }
-            Button(
-                onClick = onDoneClick,
-                enabled = !busy,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(Palette.success),
-                    contentColor = Color.White,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .semantics {
-                        contentDescription = L10n.t(context, "widget.a11y.done", started.title)
-                    },
-            ) {
-                Text(
-                    text = L10n.t(context, "widget.done"),
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConfirmSectionCard(
-    context: Context,
-    awaiting: QuickSnapshot.Upcoming,
-    isPending: Boolean,
-    busy: Boolean,
-    onDone: () -> Unit,
-    onNotDoneClick: () -> Unit,
-) {
-    Card(
-        onClick = {},
-        enabled = false,
-        colors = CardDefaults.cardColors(
-            containerColor = Color(Palette.primaryInk).copy(alpha = 0.4f),
-            contentColor = Color.White,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = L10n.t(context, "widget.didYouFinish", awaiting.title),
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (isPending) {
-                Text(
-                    text = L10n.t(context, "watch.pending"),
-                    color = Color(Palette.warning),
-                    fontSize = 12.sp,
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Button(
-                    onClick = onDone,
-                    enabled = !busy,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(Palette.success),
-                        contentColor = Color.White,
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(
-                        text = L10n.t(context, "widget.done"),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                OutlinedButton(
-                    onClick = onNotDoneClick,
-                    enabled = !busy,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 48.dp),
-                ) {
-                    Text(
-                        text = L10n.t(context, "widget.notDone"),
-                        color = Color(Palette.dangerOnDark),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
     }

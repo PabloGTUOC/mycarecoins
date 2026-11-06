@@ -225,25 +225,6 @@ data class QuickSnapshot(
         }
     }
 
-    fun startedTask(now: Instant = Instant.now()): Upcoming? {
-        return upcoming.firstOrNull { item ->
-            item.status == "approved" &&
-                !item.startsAt.isAfter(now) &&
-                item.endsAt != null &&
-                now.isBefore(item.endsAt)
-        }
-    }
-
-    fun awaitingConfirmation(now: Instant = Instant.now()): Upcoming? {
-        val twoHoursAgo = now.minusSeconds(2 * 3600L)
-        return upcoming.firstOrNull { item ->
-            item.status == "approved" &&
-                item.endsAt != null &&
-                !item.endsAt.isAfter(now) &&
-                !item.startsAt.isBefore(twoHoursAgo)
-        }
-    }
-
     fun nextUpcoming(now: Instant = Instant.now()): Upcoming? {
         return upcoming.firstOrNull { item ->
             item.startsAt.isAfter(now)
@@ -382,8 +363,7 @@ data class LastAction(
         logged,
         stopped,
         undone,
-        failed,
-        cancelled;
+        failed;
 
         companion object {
             val STARTED get() = started
@@ -391,7 +371,6 @@ data class LastAction(
             val STOPPED get() = stopped
             val UNDONE get() = undone
             val FAILED get() = failed
-            val CANCELLED get() = cancelled
 
             fun fromString(value: String): Kind {
                 return entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
@@ -428,14 +407,10 @@ data class LastAction(
 sealed interface QuickBannerState {
     data object None : QuickBannerState
     data class Running(val running: QuickSnapshot.Running) : QuickBannerState
-    data class Started(val started: QuickSnapshot.Upcoming) : QuickBannerState
-    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : QuickBannerState
 }
 
 enum class QuickNotificationActionKind {
     STOP,
-    FINISH,
-    CANCEL,
 }
 
 data class QuickNotificationAction(
@@ -454,33 +429,10 @@ sealed interface QuickNotificationState {
             QuickNotificationAction(QuickNotificationActionKind.STOP, activityId),
         ),
     ) : QuickNotificationState
-
-    data class Started(
-        val activityId: String,
-        val title: String,
-        val startsAt: Instant,
-        val endsAt: Instant,
-        val ongoing: Boolean = true,
-        val actions: List<QuickNotificationAction> = listOf(
-            QuickNotificationAction(QuickNotificationActionKind.FINISH, activityId),
-        ),
-    ) : QuickNotificationState
-
-    data class Confirm(
-        val activityId: String,
-        val title: String,
-        val ongoing: Boolean = false,
-        val actions: List<QuickNotificationAction> = listOf(
-            QuickNotificationAction(QuickNotificationActionKind.FINISH, activityId),
-            QuickNotificationAction(QuickNotificationActionKind.CANCEL, activityId),
-        ),
-    ) : QuickNotificationState
 }
 
 sealed interface WearSection {
     data class Running(val running: QuickSnapshot.Running) : WearSection
-    data class Started(val started: QuickSnapshot.Upcoming) : WearSection
-    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : WearSection
     data object Now : WearSection
     data class Tasks(val tasks: List<QuickSnapshot.Task>) : WearSection
     data class Coins(val balance: Int) : WearSection
@@ -489,8 +441,6 @@ sealed interface WearSection {
 sealed interface WearNextState {
     data object NotConnected : WearNextState
     data class Running(val running: QuickSnapshot.Running) : WearNextState
-    data class Started(val started: QuickSnapshot.Upcoming, val endsAt: Instant) : WearNextState
-    data class Confirm(val awaiting: QuickSnapshot.Upcoming) : WearNextState
     data class NextUpcoming(val upcoming: QuickSnapshot.Upcoming) : WearNextState
     data object NoTasks : WearNextState
 }
@@ -515,8 +465,6 @@ data class PendingAction(
     enum class Kind {
         start,
         done,
-        finish,
-        cancel,
         startNow,
         stop;
 
@@ -659,9 +607,11 @@ object QuickSurfaceState {
     const val MAX_REMINDERS = 20
     const val REMINDER_LEAD_SECONDS = 15 * 60L
     const val CHIP_EXPIRY_BUFFER_SECONDS = 1L
+    const val SMALL_TALL_MIN_WIDTH_DP = 160
     const val SMALL_TALL_MIN_HEIGHT_DP = 180
     const val SMALL_DEFAULT_ROW_COUNT = 1
     const val SMALL_TALL_ROW_COUNT = 3
+    const val SMALL_TALL_RUNNING_ROW_COUNT = 1
     private val EXCLUDED_REMINDER_STATUSES = setOf(
         "completed",
         "rejected",
@@ -690,27 +640,60 @@ object QuickSurfaceState {
         return Duration.between(now, expiry).toMillis().coerceAtLeast(0L)
     }
 
-    fun smallLayoutRowCount(heightDp: Int): Int {
-        return if (heightDp >= SMALL_TALL_MIN_HEIGHT_DP) {
-            SMALL_TALL_ROW_COUNT
+    fun isSmallTallBucket(widthDp: Int, heightDp: Int): Boolean {
+        return widthDp >= SMALL_TALL_MIN_WIDTH_DP && heightDp >= SMALL_TALL_MIN_HEIGHT_DP
+    }
+
+    fun isSmallTallBucket(widthDp: Float, heightDp: Float): Boolean {
+        return widthDp >= SMALL_TALL_MIN_WIDTH_DP && heightDp >= SMALL_TALL_MIN_HEIGHT_DP
+    }
+
+    fun smallLayoutRowCount(
+        isTallBucket: Boolean,
+        hasRunning: Boolean = false,
+    ): Int {
+        return if (isTallBucket) {
+            if (hasRunning) SMALL_TALL_RUNNING_ROW_COUNT else SMALL_TALL_ROW_COUNT
         } else {
-            SMALL_DEFAULT_ROW_COUNT
+            if (hasRunning) 0 else SMALL_DEFAULT_ROW_COUNT
         }
     }
 
-    fun smallLayoutRowCount(heightDp: Float): Int {
-        return if (heightDp >= SMALL_TALL_MIN_HEIGHT_DP) {
-            SMALL_TALL_ROW_COUNT
-        } else {
-            SMALL_DEFAULT_ROW_COUNT
-        }
+    fun smallLayoutRowCount(
+        widthDp: Int,
+        heightDp: Int,
+        hasRunning: Boolean = false,
+    ): Int = smallLayoutRowCount(
+        isTallBucket = isSmallTallBucket(widthDp, heightDp),
+        hasRunning = hasRunning,
+    )
+
+    fun smallLayoutRowCount(
+        widthDp: Float,
+        heightDp: Float,
+        hasRunning: Boolean = false,
+    ): Int = smallLayoutRowCount(
+        isTallBucket = isSmallTallBucket(widthDp, heightDp),
+        hasRunning = hasRunning,
+    )
+
+    fun smallLayoutRowCount(heightDp: Int, hasRunning: Boolean = false): Int {
+        return smallLayoutRowCount(
+            isTallBucket = heightDp >= SMALL_TALL_MIN_HEIGHT_DP,
+            hasRunning = hasRunning,
+        )
+    }
+
+    fun smallLayoutRowCount(heightDp: Float, hasRunning: Boolean = false): Int {
+        return smallLayoutRowCount(
+            isTallBucket = heightDp >= SMALL_TALL_MIN_HEIGHT_DP,
+            hasRunning = hasRunning,
+        )
     }
 
     fun pickBanner(snapshot: QuickSnapshot?, now: Instant = Instant.now()): QuickBannerState {
         if (snapshot == null) return QuickBannerState.None
         snapshot.running?.let { return QuickBannerState.Running(it) }
-        snapshot.startedTask(now)?.let { return QuickBannerState.Started(it) }
-        snapshot.awaitingConfirmation(now)?.let { return QuickBannerState.Confirm(it) }
         return QuickBannerState.None
     }
 
@@ -721,11 +704,6 @@ object QuickSurfaceState {
     ): WearNextState {
         if (!connected || snapshot == null) return WearNextState.NotConnected
         snapshot.running?.let { return WearNextState.Running(it) }
-        snapshot.startedTask(now)?.let { started ->
-            val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
-            return WearNextState.Started(started, endsAt)
-        }
-        snapshot.awaitingConfirmation(now)?.let { return WearNextState.Confirm(it) }
         snapshot.nextUpcoming(now)?.let { return WearNextState.NextUpcoming(it) }
         return WearNextState.NoTasks
     }
@@ -762,24 +740,14 @@ object QuickSurfaceState {
         now: Instant = Instant.now(),
     ): List<Instant> {
         if (snapshot == null) return emptyList()
-        val instants = java.util.TreeSet<Instant>()
-        snapshot.startedTask(now)?.endsAt?.takeIf { it.isAfter(now) }?.let { instants.add(it) }
-        val futureUpcoming = snapshot.upcoming
-            .filter { item ->
-                item.startsAt.isAfter(now) || (item.endsAt != null && item.endsAt.isAfter(now))
-            }
-            .sortedBy { it.startsAt }
+        return snapshot.upcoming
+            .asSequence()
+            .map { it.startsAt }
+            .filter { it.isAfter(now) }
+            .distinct()
+            .sorted()
             .take(3)
-        for (item in futureUpcoming) {
-            if (item.startsAt.isAfter(now)) {
-                instants.add(item.startsAt)
-            }
-            val endsAt = item.endsAt
-            if (endsAt != null && endsAt.isAfter(now)) {
-                instants.add(endsAt)
-            }
-        }
-        return instants.toList()
+            .toList()
     }
 
     fun wearSections(
@@ -790,8 +758,6 @@ object QuickSurfaceState {
         return buildList {
             when (val banner = pickBanner(snapshot, now)) {
                 is QuickBannerState.Running -> add(WearSection.Running(banner.running))
-                is QuickBannerState.Started -> add(WearSection.Started(banner.started))
-                is QuickBannerState.Confirm -> add(WearSection.Confirm(banner.awaiting))
                 QuickBannerState.None -> Unit
             }
             if (snapshot.running == null) {
@@ -807,7 +773,6 @@ object QuickSurfaceState {
     fun pickNotification(
         snapshot: QuickSnapshot?,
         now: Instant = Instant.now(),
-        shownStartedActivityId: String? = null,
     ): QuickNotificationState {
         if (snapshot == null) return QuickNotificationState.None
         snapshot.running?.let { running ->
@@ -816,23 +781,6 @@ object QuickSurfaceState {
                 title = running.title,
                 startedAt = running.startedAt,
             )
-        }
-        snapshot.startedTask(now)?.let { started ->
-            val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
-            return QuickNotificationState.Started(
-                activityId = started.id,
-                title = started.title,
-                startsAt = started.startsAt,
-                endsAt = endsAt,
-            )
-        }
-        snapshot.awaitingConfirmation(now)?.let { awaiting ->
-            if (shownStartedActivityId != null && awaiting.id == shownStartedActivityId) {
-                return QuickNotificationState.Confirm(
-                    activityId = awaiting.id,
-                    title = awaiting.title,
-                )
-            }
         }
         return QuickNotificationState.None
     }

@@ -137,15 +137,6 @@ class QuickApi(
         decodeActionResult(raw)
     }
 
-    suspend fun finish(activityId: String): QuickActionResult = withContext(Dispatchers.IO) {
-        val idNum = activityId.toLongOrNull()
-            ?: throw QuickApiException(0, null, "Invalid activityId: $activityId")
-        val body = JSONObject()
-            .put("activityId", idNum)
-        val raw = send(path = "/api/quick/done", method = "POST", body = body)
-        decodeActionResult(raw)
-    }
-
     suspend fun stop(activityId: String): QuickActionResult = withContext(Dispatchers.IO) {
         val idNum = activityId.toLongOrNull()
             ?: throw QuickApiException(0, null, "Invalid activityId: $activityId")
@@ -159,15 +150,6 @@ class QuickApi(
         val body = JSONObject()
             .put("clientRef", clientRef)
         val raw = send(path = "/api/quick/undo", method = "POST", body = body)
-        decodeActionResult(raw)
-    }
-
-    suspend fun cancel(activityId: String): QuickActionResult = withContext(Dispatchers.IO) {
-        val idNum = activityId.toLongOrNull()
-            ?: throw QuickApiException(0, null, "Invalid activityId: $activityId")
-        val body = JSONObject()
-            .put("activityId", idNum)
-        val raw = send(path = "/api/quick/cancel", method = "POST", body = body)
         decodeActionResult(raw)
     }
 

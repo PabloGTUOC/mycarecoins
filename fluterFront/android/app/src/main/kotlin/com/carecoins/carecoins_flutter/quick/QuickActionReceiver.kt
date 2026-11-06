@@ -19,8 +19,6 @@ class QuickActionReceiver : BroadcastReceiver() {
                 when (action) {
                     ACTION_START -> if (id.isNotEmpty()) QuickActions.start(appCtx, id)
                     ACTION_DONE -> QuickActions.done(appCtx, id)
-                    ACTION_FINISH -> if (id.isNotEmpty()) QuickActions.finish(appCtx, id)
-                    ACTION_CANCEL -> if (id.isNotEmpty()) QuickActions.cancel(appCtx, id)
                     ACTION_START_NOW -> QuickActions.startNow(appCtx, id.ifEmpty { "care" })
                     ACTION_STOP -> if (id.isNotEmpty()) QuickActions.stop(appCtx, id)
                     ACTION_UNDO -> QuickActions.undo(appCtx, id.takeIf { it.isNotEmpty() })
@@ -37,8 +35,6 @@ class QuickActionReceiver : BroadcastReceiver() {
 
         const val ACTION_START = "start"
         const val ACTION_DONE = "done"
-        const val ACTION_FINISH = "finish"
-        const val ACTION_CANCEL = "cancel"
         const val ACTION_START_NOW = "start_now"
         const val ACTION_STOP = "stop"
         const val ACTION_UNDO = "undo"

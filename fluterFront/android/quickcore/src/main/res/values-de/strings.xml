@@ -2,6 +2,8 @@
 <resources>
     <string name="android_channel_quick">Aufgabe läuft</string>
     <string name="android_tile_since">seit %1$s</string>
+    <string name="android_watch_connect_body">Gehe zu Ich ▸ Widget &amp; Uhr und tippe auf Dieses Telefon verbinden.</string>
+    <string name="android_watch_connect_title">Öffne CareCoins auf deinem Telefon</string>
     <string name="widget_a11y_balance">Guthaben: %1$d Münzen</string>
     <string name="widget_a11y_done">%1$s als erledigt markieren</string>
     <string name="widget_a11y_start">%1$s starten, %2$d Minuten</string>
@@ -12,7 +14,6 @@
     <string name="widget_control_careNow_description">Starte jetzt eine Betreuungsaufgabe.</string>
     <string name="widget_control_logTop">%1$s erfassen</string>
     <string name="widget_control_logTop_name">Wichtigste Aufgabe erfassen</string>
-    <string name="widget_didYouFinish">Hast du %1$s erledigt?</string>
     <string name="widget_done">Erledigt</string>
     <string name="widget_error_alreadyRunning">Beende zuerst %1$s</string>
     <string name="widget_error_cancelRunning">Beende stattdessen die laufende Aufgabe.</string>
@@ -25,8 +26,6 @@
     <string name="widget_needsYou">Wartet auf dich: %1$d</string>
     <string name="widget_next">Als Nächstes: %1$s um %2$s</string>
     <string name="widget_noTasks">Noch keine üblichen Aufgaben. Füge eine in der App hinzu.</string>
-    <string name="widget_notDone">Nicht erledigt</string>
-    <string name="widget_notDone_done">Aus deinem Kalender entfernt</string>
     <string name="widget_notConnected">Verbinde in CareCoins ▸ Ich ▸ Widget &amp; Uhr.</string>
     <string name="widget_preview_task">Mittagessen vorbereiten</string>
     <string name="widget_running">Läuft · %1$s</string>
@@ -40,13 +39,10 @@
     <string name="widget_title_household">Haushalt</string>
     <string name="widget_undo">Rückgängig</string>
     <string name="widget_undone">Rückgängig gemacht</string>
-    <string name="widget_until">Bis %1$s</string>
     <string name="watch_addsToCalendar">Fügt %1$s–%2$s deinem Kalender hinzu</string>
     <string name="watch_coins">%1$d Münzen</string>
     <string name="watch_connect_body">Gehe zu Ich ▸ Widget &amp; Uhr und verbinde diese Uhr.</string>
     <string name="watch_connect_title">Öffne CareCoins auf deinem iPhone</string>
-    <string name="watch_logWhole">Ganz %1$s erfassen (%2$d Min.)?</string>
-    <string name="watch_notDone_confirm">%1$s aus deinem Kalender entfernen?</string>
     <string name="watch_now">Jetzt sofort</string>
     <string name="watch_pending">Wird gesendet, sobald verbunden</string>
     <string name="watch_tasks">Deine Aufgaben</string>

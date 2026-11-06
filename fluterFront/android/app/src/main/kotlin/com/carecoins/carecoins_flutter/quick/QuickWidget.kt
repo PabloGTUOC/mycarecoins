@@ -85,28 +85,6 @@ class DoneTaskActionCallback : ActionCallback {
     }
 }
 
-class FinishTaskActionCallback : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) {
-        val activityId = parameters[QuickActivityIdParam] ?: return
-        QuickActions.finish(context, activityId)
-    }
-}
-
-class CancelTaskActionCallback : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) {
-        val activityId = parameters[QuickActivityIdParam] ?: return
-        QuickActions.cancel(context, activityId)
-    }
-}
-
 class StartNowActionCallback : ActionCallback {
     override suspend fun onAction(
         context: Context,
@@ -143,7 +121,7 @@ class UndoActionCallback : ActionCallback {
 class QuickWidget : GlanceAppWidget() {
     companion object {
         val SMALL_SIZE = DpSize(110.dp, 110.dp)
-        val SMALL_TALL_SIZE = DpSize(180.dp, 220.dp)
+        val SMALL_TALL_SIZE = DpSize(160.dp, 180.dp)
         val MEDIUM_SIZE = DpSize(250.dp, 110.dp)
         val LARGE_SIZE = DpSize(250.dp, 250.dp)
 
@@ -359,12 +337,9 @@ private fun BannerSlot(
     context: Context,
     banner: QuickBannerState,
     now: Instant,
-    isSmall: Boolean,
 ) {
     when (banner) {
         is QuickBannerState.Running -> RunningBannerView(context, banner.running, now)
-        is QuickBannerState.Started -> StartedBannerView(context, banner.started, now, isSmall)
-        is QuickBannerState.Confirm -> ConfirmBannerView(context, banner.awaiting, isSmall)
         is QuickBannerState.None -> Unit
     }
 }
@@ -410,204 +385,6 @@ private fun RunningBannerView(
                 actionParametersOf(QuickActivityIdParam to running.id),
             ),
         )
-    }
-}
-
-@Composable
-private fun StartedBannerView(
-    context: Context,
-    started: QuickSnapshot.Upcoming,
-    now: Instant,
-    isSmall: Boolean,
-) {
-    val endsAt = started.endsAt ?: started.startsAt.plusSeconds(15 * 60L)
-    val base = QuickWidget.toElapsedRealtimeBase(endsAt, now)
-    val remoteViews = RemoteViews(context.packageName, R.layout.quick_widget_chronometer_countdown).apply {
-        setChronometerCountDown(R.id.quick_chronometer_countdown, true)
-        setChronometer(R.id.quick_chronometer_countdown, base, null, true)
-    }
-    val untilText = L10n.t(context, "widget.until", L10n.shortTime(context, endsAt))
-
-    if (isSmall) {
-        Column(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .cornerRadius(10.dp)
-                .background(WidgetColors.successSoft)
-                .padding(8.dp),
-        ) {
-            Text(
-                text = started.title,
-                style = TextStyle(
-                    color = WidgetColors.textPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                maxLines = 1,
-            )
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AndroidRemoteViews(remoteViews = remoteViews)
-                Spacer(modifier = GlanceModifier.width(4.dp))
-                Text(
-                    text = untilText,
-                    style = TextStyle(
-                        color = WidgetColors.textSecondary,
-                        fontSize = 10.sp,
-                    ),
-                    maxLines = 1,
-                )
-            }
-            Spacer(modifier = GlanceModifier.height(4.dp))
-            CapsuleButton(
-                text = L10n.t(context, "widget.done"),
-                textColor = WidgetColors.white,
-                bgColor = WidgetColors.success,
-                a11y = L10n.t(context, "widget.a11y.done", started.title),
-                fillWidth = true,
-                onClick = actionRunCallback<FinishTaskActionCallback>(
-                    actionParametersOf(QuickActivityIdParam to started.id),
-                ),
-            )
-        }
-    } else {
-        Row(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .cornerRadius(10.dp)
-                .background(WidgetColors.successSoft)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = GlanceModifier.defaultWeight()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = started.title,
-                        style = TextStyle(
-                            color = WidgetColors.textPrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                        ),
-                        maxLines = 1,
-                    )
-                    Spacer(modifier = GlanceModifier.width(6.dp))
-                    Text(
-                        text = untilText,
-                        style = TextStyle(
-                            color = WidgetColors.textSecondary,
-                            fontSize = 10.sp,
-                        ),
-                        maxLines = 1,
-                    )
-                }
-                AndroidRemoteViews(remoteViews = remoteViews)
-            }
-            Spacer(modifier = GlanceModifier.width(6.dp))
-            CapsuleButton(
-                text = L10n.t(context, "widget.done"),
-                textColor = WidgetColors.white,
-                bgColor = WidgetColors.success,
-                a11y = L10n.t(context, "widget.a11y.done", started.title),
-                onClick = actionRunCallback<FinishTaskActionCallback>(
-                    actionParametersOf(QuickActivityIdParam to started.id),
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ConfirmBannerView(
-    context: Context,
-    awaiting: QuickSnapshot.Upcoming,
-    isSmall: Boolean,
-) {
-    val prompt = L10n.t(context, "widget.didYouFinish", awaiting.title)
-    if (isSmall) {
-        Column(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .cornerRadius(10.dp)
-                .background(WidgetColors.warningSoft)
-                .padding(8.dp),
-        ) {
-            Text(
-                text = prompt,
-                style = TextStyle(
-                    color = WidgetColors.textPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                maxLines = 2,
-            )
-            Spacer(modifier = GlanceModifier.height(6.dp))
-            Row(
-                modifier = GlanceModifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(modifier = GlanceModifier.defaultWeight()) {
-                    CapsuleButton(
-                        text = L10n.t(context, "widget.done"),
-                        textColor = WidgetColors.white,
-                        bgColor = WidgetColors.success,
-                        a11y = L10n.t(context, "widget.a11y.done", awaiting.title),
-                        fillWidth = true,
-                        onClick = actionRunCallback<FinishTaskActionCallback>(
-                            actionParametersOf(QuickActivityIdParam to awaiting.id),
-                        ),
-                    )
-                }
-                Spacer(modifier = GlanceModifier.width(6.dp))
-                Box(modifier = GlanceModifier.defaultWeight()) {
-                    OutlinedDangerButton(
-                        text = L10n.t(context, "widget.notDone"),
-                        fillWidth = true,
-                        onClick = actionRunCallback<CancelTaskActionCallback>(
-                            actionParametersOf(QuickActivityIdParam to awaiting.id),
-                        ),
-                    )
-                }
-            }
-        }
-    } else {
-        Row(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .cornerRadius(10.dp)
-                .background(WidgetColors.warningSoft)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = prompt,
-                modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(
-                    color = WidgetColors.textPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                maxLines = 1,
-            )
-            Spacer(modifier = GlanceModifier.width(6.dp))
-            CapsuleButton(
-                text = L10n.t(context, "widget.done"),
-                textColor = WidgetColors.white,
-                bgColor = WidgetColors.success,
-                a11y = L10n.t(context, "widget.a11y.done", awaiting.title),
-                onClick = actionRunCallback<FinishTaskActionCallback>(
-                    actionParametersOf(QuickActivityIdParam to awaiting.id),
-                ),
-            )
-            Spacer(modifier = GlanceModifier.width(6.dp))
-            OutlinedDangerButton(
-                text = L10n.t(context, "widget.notDone"),
-                onClick = actionRunCallback<CancelTaskActionCallback>(
-                    actionParametersOf(QuickActivityIdParam to awaiting.id),
-                ),
-            )
-        }
     }
 }
 
@@ -705,7 +482,6 @@ private fun FeedbackChipView(
         LastAction.Kind.logged -> L10n.t(context, "widget.logged")
         LastAction.Kind.stopped -> L10n.t(context, "widget.stopped")
         LastAction.Kind.undone -> L10n.t(context, "widget.undone")
-        LastAction.Kind.cancelled -> L10n.t(context, "widget.notDone.done")
         LastAction.Kind.failed -> action.message ?: L10n.t(context, "widget.error.generic")
     }
     Row(
@@ -834,38 +610,6 @@ private fun SmallTaskRowView(
 }
 
 @Composable
-private fun OutlinedDangerButton(
-    text: String,
-    fillWidth: Boolean = false,
-    onClick: androidx.glance.action.Action,
-) {
-    val baseModifier = if (fillWidth) {
-        GlanceModifier.fillMaxWidth()
-    } else {
-        GlanceModifier
-    }
-    Box(
-        modifier = baseModifier
-            .background(ImageProvider(R.drawable.bg_capsule_outlined_danger))
-            .clickable(onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-            .semantics { contentDescription = text },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = TextStyle(
-                color = WidgetColors.danger,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-            ),
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
 private fun OutlinedPrimaryButton(
     text: String,
     fillWidth: Boolean = false,
@@ -906,8 +650,14 @@ private fun SmallWidgetContent(
     canUndo: Boolean,
 ) {
     val size = LocalSize.current
-    val rowCount = QuickSurfaceState.smallLayoutRowCount(size.height.value)
+    val isTallBucket = size == QuickWidget.SMALL_TALL_SIZE ||
+        QuickSurfaceState.isSmallTallBucket(size.width.value, size.height.value)
     val banner = QuickSurfaceState.pickBanner(snapshot, now)
+    val hasBanner = banner != QuickBannerState.None
+    val rowCount = QuickSurfaceState.smallLayoutRowCount(
+        isTallBucket = isTallBucket,
+        hasRunning = hasBanner,
+    )
     val isFailureChip = lastAction?.kind == LastAction.Kind.failed
 
     Column(modifier = GlanceModifier.fillMaxSize()) {
@@ -920,10 +670,9 @@ private fun SmallWidgetContent(
         }
         Spacer(modifier = GlanceModifier.height(6.dp))
 
-        if (rowCount > 1) {
-            val hasBanner = banner != QuickBannerState.None
+        if (isTallBucket) {
             if (hasBanner) {
-                BannerSlot(context, banner, now, isSmall = true)
+                BannerSlot(context, banner, now)
                 Spacer(modifier = GlanceModifier.height(4.dp))
             }
             if (lastAction != null && !isFailureChip) {
@@ -949,8 +698,8 @@ private fun SmallWidgetContent(
                     }
                 }
             }
-        } else if (banner != QuickBannerState.None) {
-            BannerSlot(context, banner, now, isSmall = true)
+        } else if (hasBanner) {
+            BannerSlot(context, banner, now)
             if (lastAction != null) {
                 Spacer(modifier = GlanceModifier.height(4.dp))
                 FeedbackChipView(context, lastAction, canUndo)
@@ -1038,7 +787,7 @@ private fun MediumWidgetContent(
         Spacer(modifier = GlanceModifier.height(4.dp))
 
         if (hasBanner) {
-            BannerSlot(context, banner, now, isSmall = false)
+            BannerSlot(context, banner, now)
         } else if (lastAction != null) {
             FeedbackChipView(context, lastAction, canUndo)
         } else {
@@ -1086,7 +835,7 @@ private fun LargeWidgetContent(
         Spacer(modifier = GlanceModifier.height(4.dp))
 
         if (hasBanner) {
-            BannerSlot(context, banner, now, isSmall = false)
+            BannerSlot(context, banner, now)
             Spacer(modifier = GlanceModifier.height(4.dp))
         }
 

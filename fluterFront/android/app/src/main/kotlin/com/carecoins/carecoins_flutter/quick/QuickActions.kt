@@ -27,7 +27,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -132,68 +131,6 @@ object QuickActions {
                 )
             }
             QuickRefresh.refreshNow(appCtx)
-        } catch (t: Throwable) {
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.failed, message = widgetMessage(appCtx, t)),
-            )
-            QuickRefresh.updateSurfaces(appCtx)
-        }
-    }
-
-    suspend fun finish(context: Context, activityId: String) = withContext(Dispatchers.IO) {
-        val appCtx = context.applicationContext ?: context
-        QuickRefresh.ensureWired()
-        val api = QuickApi.fromStore(appCtx)
-        if (api == null) {
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.failed, message = L10n.t(appCtx, "widget.error.revoked")),
-            )
-            QuickRefresh.updateSurfaces(appCtx)
-            return@withContext
-        }
-        try {
-            api.finish(activityId = activityId)
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.logged, activityId = activityId),
-            )
-            val refreshed = QuickRefresh.refreshNow(appCtx)
-            if (refreshed == null) {
-                QuickNotification.cancel(appCtx)
-            }
-        } catch (t: Throwable) {
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.failed, message = widgetMessage(appCtx, t)),
-            )
-            QuickRefresh.updateSurfaces(appCtx)
-        }
-    }
-
-    suspend fun cancel(context: Context, activityId: String) = withContext(Dispatchers.IO) {
-        val appCtx = context.applicationContext ?: context
-        QuickRefresh.ensureWired()
-        val api = QuickApi.fromStore(appCtx)
-        if (api == null) {
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.failed, message = L10n.t(appCtx, "widget.error.revoked")),
-            )
-            QuickRefresh.updateSurfaces(appCtx)
-            return@withContext
-        }
-        try {
-            api.cancel(activityId = activityId)
-            SnapshotStore.recordAction(
-                appCtx,
-                LastAction(kind = LastAction.Kind.cancelled, activityId = activityId),
-            )
-            val refreshed = QuickRefresh.refreshNow(appCtx)
-            if (refreshed == null) {
-                QuickNotification.cancel(appCtx)
-            }
         } catch (t: Throwable) {
             SnapshotStore.recordAction(
                 appCtx,
@@ -308,7 +245,6 @@ object QuickActions {
 
 object QuickRefresh {
     const val PERIODIC_WORK_NAME = "quick-refresh-periodic"
-    const val AT_END_WORK_NAME = "quick-at-end"
     const val CHIP_EXPIRY_WORK_NAME = "quick-chip-expiry"
     private val wired = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -435,22 +371,6 @@ object QuickRefresh {
         }
     }
 
-    fun scheduleAt(context: Context, instant: Instant) {
-        ensureWired()
-        val appCtx = context.applicationContext ?: context
-        runCatching {
-            val delayMillis = Duration.between(Instant.now(), instant).toMillis().coerceAtLeast(0L)
-            val request = OneTimeWorkRequestBuilder<QuickRefreshWorker>()
-                .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
-                .build()
-            WorkManager.getInstance(appCtx).enqueueUniqueWork(
-                AT_END_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                request,
-            )
-        }
-    }
-
     fun cancelAll(context: Context) {
         val appCtx = context.applicationContext ?: context
         chipExpiryJob?.cancel()
@@ -458,7 +378,6 @@ object QuickRefresh {
         runCatching {
             val wm = WorkManager.getInstance(appCtx)
             wm.cancelUniqueWork(PERIODIC_WORK_NAME)
-            wm.cancelUniqueWork(AT_END_WORK_NAME)
             wm.cancelUniqueWork(CHIP_EXPIRY_WORK_NAME)
         }
         runCatching {

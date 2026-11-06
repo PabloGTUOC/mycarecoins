@@ -12,12 +12,9 @@ import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.protolayout.material3.ButtonColors
-import androidx.wear.protolayout.material3.CircularProgressIndicatorDefaults
 import androidx.wear.protolayout.material3.ColorScheme
 import androidx.wear.protolayout.material3.MaterialScope
-import androidx.wear.protolayout.material3.ProgressIndicatorColors
 import androidx.wear.protolayout.material3.Typography
-import androidx.wear.protolayout.material3.circularProgressIndicator
 import androidx.wear.protolayout.material3.materialScope
 import androidx.wear.protolayout.material3.primaryLayout
 import androidx.wear.protolayout.material3.text
@@ -37,7 +34,6 @@ import com.carecoins.quickcore.SnapshotStore
 import com.carecoins.quickcore.WearNextState
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.time.Duration
 import java.time.Instant
 
 class QuickTileService : TileService() {
@@ -158,7 +154,6 @@ class QuickTileService : TileService() {
                         buildMainSlot(
                             context = context,
                             state = state,
-                            atTime = atTime,
                         )
                     },
                     bottomSlot = {
@@ -215,7 +210,6 @@ class QuickTileService : TileService() {
         private fun MaterialScope.buildMainSlot(
             context: Context,
             state: WearNextState,
-            atTime: Instant,
         ): LayoutElementBuilders.LayoutElement {
             return when (state) {
                 is WearNextState.Running -> {
@@ -251,75 +245,6 @@ class QuickTileService : TileService() {
                         )
                         .build()
                 }
-                is WearNextState.Started -> {
-                    val totalMillis = Duration.between(state.started.startsAt, state.endsAt)
-                        .toMillis()
-                        .coerceAtLeast(1L)
-                    val elapsedMillis = Duration.between(state.started.startsAt, atTime)
-                        .toMillis()
-                        .coerceIn(0L, totalMillis)
-                    val progress = (elapsedMillis.toFloat() / totalMillis.toFloat()).coerceIn(0f, 1f)
-                    val untilText = L10n.t(
-                        context,
-                        "widget.until",
-                        L10n.shortTime(context, state.endsAt),
-                    )
-                    val progressColors = ProgressIndicatorColors(
-                        indicatorColor = LayoutColor(Palette.successOnDark.toInt()),
-                        trackColor = LayoutColor(Palette.successInk.toInt()),
-                    )
-
-                    LayoutElementBuilders.Row.Builder()
-                        .setWidth(wrap())
-                        .setHeight(wrap())
-                        .setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
-                        .addContent(
-                            circularProgressIndicator(
-                                staticProgress = progress,
-                                strokeWidth = CircularProgressIndicatorDefaults.SMALL_STROKE_WIDTH,
-                                colors = progressColors,
-                                size = dp(32f),
-                            ),
-                        )
-                        .addContent(
-                            LayoutElementBuilders.Spacer.Builder()
-                                .setWidth(dp(8f))
-                                .build(),
-                        )
-                        .addContent(
-                            LayoutElementBuilders.Column.Builder()
-                                .setWidth(wrap())
-                                .setHeight(wrap())
-                                .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_START)
-                                .addContent(
-                                    text(
-                                        text = LayoutString(state.started.title),
-                                        typography = Typography.TITLE_SMALL,
-                                        color = LayoutColor(0xFFFFFFFF.toInt()),
-                                        maxLines = 2,
-                                    ),
-                                )
-                                .addContent(
-                                    text(
-                                        text = LayoutString(untilText),
-                                        typography = Typography.BODY_EXTRA_SMALL,
-                                        color = LayoutColor(Palette.successOnDark.toInt()),
-                                        maxLines = 1,
-                                    ),
-                                )
-                                .build(),
-                        )
-                        .build()
-                }
-                is WearNextState.Confirm -> {
-                    val prompt = L10n.t(context, "widget.didYouFinish", state.awaiting.title)
-                    text(
-                        text = LayoutString(prompt),
-                        typography = Typography.TITLE_SMALL,
-                        color = LayoutColor(0xFFFFFFFF.toInt()),
-                        maxLines = 3,
-                    )
-                }
                 is WearNextState.NextUpcoming -> {
                     val nextStr = L10n.t(
                         context,
@@ -344,7 +269,7 @@ class QuickTileService : TileService() {
                 }
                 WearNextState.NotConnected -> {
                     text(
-                        text = LayoutString(L10n.t(context, "watch.connect.title")),
+                        text = LayoutString(L10n.t(context, "android.watch.connect.title")),
                         typography = Typography.TITLE_SMALL,
                         color = LayoutColor(0xFFFFFFFF.toInt()),
                         maxLines = 3,
@@ -358,8 +283,6 @@ class QuickTileService : TileService() {
             state: WearNextState,
         ): LayoutElementBuilders.LayoutElement {
             val opensApp = state is WearNextState.Running ||
-                state is WearNextState.Started ||
-                state is WearNextState.Confirm ||
                 state is WearNextState.NotConnected
 
             return if (opensApp) {
