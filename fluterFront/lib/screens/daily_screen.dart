@@ -53,6 +53,78 @@ const int kStartHour = 6;
 const int kTotalHours = 18;
 const double kGridHeight = 18 * 64.0;
 
+/// Minimum rendered height of an activity card in the day grid. Shared by
+/// [_buildChip] and [assignDayColumns] so layout and clustering never drift.
+const double kChipMinHeight = 52.0;
+
+/// Minutes of grid covered by [kChipMinHeight].
+const double kChipMinMinutes = kChipMinHeight / kGridHeight * 18 * 60;
+
+/// Annotates [sorted] activities (ordered by start, then longer first) with
+/// `_colIndex`, `_colCount` and `_overlapCount`. Overlap is decided by
+/// *visual* extent: `max(duration, kChipMinMinutes)`.
+List<Map<String, dynamic>> assignDayColumns(List<Map<String, dynamic>> sorted) {
+  final positioned = <Map<String, dynamic>>[];
+  var cluster = <Map<String, dynamic>>[];
+  DateTime? clusterMaxEnd;
+
+  DateTime startOf(Map<String, dynamic> a) =>
+      DateTime.parse(a['starts_at'].toString()).toLocal();
+
+  DateTime visualEnd(Map<String, dynamic> a) {
+    final durMin = toNum(a['duration_minutes']).toDouble();
+    final safeDur = durMin <= 0 ? 30.0 : durMin;
+    final vis = safeDur > kChipMinMinutes ? safeDur : kChipMinMinutes;
+    return startOf(a).add(Duration(seconds: (vis * 60).round()));
+  }
+
+  void processCluster(List<Map<String, dynamic>> cl) {
+    if (cl.isEmpty) return;
+    final colEndTimes = <DateTime>[];
+    for (final a in cl) {
+      final start = startOf(a);
+      final end = visualEnd(a);
+      int col = -1;
+      for (var c = 0; c < colEndTimes.length; c++) {
+        if (!start.isBefore(colEndTimes[c])) {
+          col = c;
+          colEndTimes[c] = end;
+          break;
+        }
+      }
+      if (col == -1) {
+        col = colEndTimes.length;
+        colEndTimes.add(end);
+      }
+      a['_colIndex'] = col;
+    }
+    final numCols = colEndTimes.length;
+    for (final a in cl) {
+      a['_colCount'] = numCols;
+      a['_overlapCount'] = a['_colIndex'];
+      positioned.add(a);
+    }
+  }
+
+  for (final a in sorted) {
+    final start = startOf(a);
+    final end = visualEnd(a);
+    if (cluster.isEmpty) {
+      cluster.add(a);
+      clusterMaxEnd = end;
+    } else if (start.isBefore(clusterMaxEnd!)) {
+      cluster.add(a);
+      if (end.isAfter(clusterMaxEnd)) clusterMaxEnd = end;
+    } else {
+      processCluster(cluster);
+      cluster = [a];
+      clusterMaxEnd = end;
+    }
+  }
+  processCluster(cluster);
+  return positioned;
+}
+
 /// Collapsed height of the phone task tray, as a fraction of the screen: the
 /// handle, the header row with "All tasks", and one row of chips.
 const double kTrayCollapsed = 0.21;
@@ -332,65 +404,9 @@ class _DailyScreenState extends State<DailyScreen> {
           .compareTo(toNum(a['duration_minutes']));
     });
 
-    final positioned = <Map<String, dynamic>>[];
-    var cluster = <Map<String, dynamic>>[];
-    DateTime? clusterMaxEnd;
-
-    void processCluster(List<Map<String, dynamic>> cl) {
-      if (cl.isEmpty) return;
-      final colEndTimes = <DateTime>[];
-      for (final a in cl) {
-        final start = _startsAt(a)!;
-        final durMin = toNum(a['duration_minutes']).toDouble();
-        final safeDur = durMin <= 0 ? 30.0 : durMin;
-        final end = start.add(Duration(minutes: safeDur.round()));
-
-        int col = -1;
-        for (var c = 0; c < colEndTimes.length; c++) {
-          if (!start.isBefore(colEndTimes[c])) {
-            col = c;
-            colEndTimes[c] = end;
-            break;
-          }
-        }
-        if (col == -1) {
-          col = colEndTimes.length;
-          colEndTimes.add(end);
-        }
-        a['_colIndex'] = col;
-      }
-      final numCols = colEndTimes.length;
-      for (final a in cl) {
-        a['_colCount'] = numCols;
-        a['_overlapCount'] = a['_colIndex'];
-        positioned.add(a);
-      }
-    }
-
-    for (var i = 0; i < acts.length; i++) {
-      final a = Map<String, dynamic>.from(acts[i]);
-      final start = _startsAt(a)!;
-      final durMin = toNum(a['duration_minutes']).toDouble();
-      final safeDur = durMin <= 0 ? 30.0 : durMin;
-      final end = start.add(Duration(minutes: safeDur.round()));
-
-      if (cluster.isEmpty) {
-        cluster.add(a);
-        clusterMaxEnd = end;
-      } else {
-        if (start.isBefore(clusterMaxEnd!)) {
-          cluster.add(a);
-          if (end.isAfter(clusterMaxEnd)) {
-            clusterMaxEnd = end;
-          }
-        } else {
-          processCluster(cluster);
-          cluster = [a];
-          clusterMaxEnd = end;
-        }
-      }
-    }
-    processCluster(cluster);
+    final positioned = assignDayColumns(
+      [for (final a in acts) Map<String, dynamic>.from(a)],
+    );
 
     for (var i = 0; i < positioned.length; i++) {
       final a = positioned[i];
@@ -3918,13 +3934,14 @@ class _DayHourGridState extends State<_DayHourGrid> {
     final durH = (durMin <= 0 ? 30.0 : durMin) / 60.0;
     final visibleH = durH < (24 - clamped) ? durH : (24 - clamped);
     final height =
-        (visibleH / kTotalHours * kGridHeight).clamp(52.0, kGridHeight);
+        (visibleH / kTotalHours * kGridHeight)
+            .clamp(kChipMinHeight, kGridHeight);
 
     final colCount = (a['_colCount'] as int?) ?? 1;
     final colIndex = (a['_colIndex'] as int?) ?? 0;
     final colWidth = availableWidth / colCount;
     final left = leftHourWidth + colIndex * colWidth;
-    final width = (colWidth - 4.0).clamp(40.0, availableWidth);
+    final width = (colWidth - 2.0).clamp(1.0, availableWidth);
 
     final status = a['status']?.toString() ?? 'pending';
     final completed = status == 'completed';
@@ -4232,11 +4249,11 @@ class DayActivityBlock extends StatelessWidget {
                   )
                 else
                   titleWidget,
-                if (blockH >= 44) ...[
+                if (blockH >= 44 && blockW >= 90) ...[
                   const SizedBox(height: 3),
                   metaRow,
                 ],
-                if (blockH >= 72 && hasAction) ...[
+                if (blockH >= 72 && blockW >= 90 && hasAction) ...[
                   const SizedBox(height: 3),
                   _ActivityAction(
                     item: a,
