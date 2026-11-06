@@ -56,7 +56,13 @@ class QuickTileService : TileService() {
             TimelineBuilders.TimelineEntry.fromLayoutElement(defaultLayout),
         )
 
-        val instants = QuickSurfaceState.nextTimelineInstants(snapshot, now)
+        val boundary = QuickSurfaceState.nextBoundary(snapshot, now)
+        val instants = buildList {
+            if (boundary != null && boundary.isAfter(now)) {
+                add(boundary)
+            }
+            addAll(QuickSurfaceState.nextTimelineInstants(snapshot, now))
+        }.distinct().sorted().take(3)
         for (i in instants.indices) {
             val start = instants[i]
             val end = if (i + 1 < instants.size) {
@@ -82,9 +88,16 @@ class QuickTileService : TileService() {
             timelineBuilder.addTimelineEntry(entry)
         }
 
+        val freshnessMillis = if (boundary != null) {
+            val millisUntilBoundary = java.time.Duration.between(now, boundary).toMillis().coerceAtLeast(1_000L)
+            minOf(millisUntilBoundary, FRESHNESS_INTERVAL_MILLIS)
+        } else {
+            FRESHNESS_INTERVAL_MILLIS
+        }
+
         val tile = TileBuilders.Tile.Builder()
             .setResourcesVersion(RESOURCES_VERSION)
-            .setFreshnessIntervalMillis(FRESHNESS_INTERVAL_MILLIS)
+            .setFreshnessIntervalMillis(freshnessMillis)
             .setTileTimeline(timelineBuilder.build())
             .build()
         return Futures.immediateFuture(tile)
@@ -136,6 +149,7 @@ class QuickTileService : TileService() {
                 now = atTime,
                 connected = snapshot != null,
             )
+            val currentPlanned = if (snapshot?.running == null) snapshot?.currentPlanned(atTime) else null
             val openClickable = clickable(openAppAction(context))
 
             return materialScope(
@@ -154,6 +168,7 @@ class QuickTileService : TileService() {
                         buildMainSlot(
                             context = context,
                             state = state,
+                            currentPlanned = currentPlanned,
                         )
                     },
                     bottomSlot = {
@@ -210,41 +225,59 @@ class QuickTileService : TileService() {
         private fun MaterialScope.buildMainSlot(
             context: Context,
             state: WearNextState,
+            currentPlanned: QuickSnapshot.Upcoming? = null,
         ): LayoutElementBuilders.LayoutElement {
-            return when (state) {
-                is WearNextState.Running -> {
-                    val sinceText = L10n.t(
-                        context,
-                        "android.tile.since",
-                        L10n.shortTime(context, state.running.startedAt),
+            if (state is WearNextState.Running) {
+                val sinceText = L10n.t(
+                    context,
+                    "android.tile.since",
+                    L10n.shortTime(context, state.running.startedAt),
+                )
+                return LayoutElementBuilders.Column.Builder()
+                    .setWidth(wrap())
+                    .setHeight(wrap())
+                    .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+                    .addContent(
+                        text(
+                            text = LayoutString(state.running.title),
+                            typography = Typography.TITLE_MEDIUM,
+                            color = LayoutColor(0xFFFFFFFF.toInt()),
+                            maxLines = 2,
+                        ),
                     )
-                    LayoutElementBuilders.Column.Builder()
-                        .setWidth(wrap())
-                        .setHeight(wrap())
-                        .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
-                        .addContent(
-                            text(
-                                text = LayoutString(state.running.title),
-                                typography = Typography.TITLE_MEDIUM,
-                                color = LayoutColor(0xFFFFFFFF.toInt()),
-                                maxLines = 2,
-                            ),
-                        )
-                        .addContent(
-                            LayoutElementBuilders.Spacer.Builder()
-                                .setHeight(dp(4f))
-                                .build(),
-                        )
-                        .addContent(
-                            text(
-                                text = LayoutString(sinceText),
-                                typography = Typography.BODY_SMALL,
-                                color = LayoutColor(Palette.dangerOnDark.toInt()),
-                                maxLines = 1,
-                            ),
-                        )
-                        .build()
-                }
+                    .addContent(
+                        LayoutElementBuilders.Spacer.Builder()
+                            .setHeight(dp(4f))
+                            .build(),
+                    )
+                    .addContent(
+                        text(
+                            text = LayoutString(sinceText),
+                            typography = Typography.BODY_SMALL,
+                            color = LayoutColor(Palette.dangerOnDark.toInt()),
+                            maxLines = 1,
+                        ),
+                    )
+                    .build()
+            }
+            if (currentPlanned != null) {
+                val endsAt = currentPlanned.endsAt
+                val timeStr = if (endsAt != null) L10n.shortTime(context, endsAt) else ""
+                val nowStr = L10n.t(
+                    context,
+                    "widget_now_planned",
+                    currentPlanned.title,
+                    timeStr,
+                )
+                return text(
+                    text = LayoutString(nowStr),
+                    typography = Typography.TITLE_SMALL,
+                    color = LayoutColor(0xFFFFFFFF.toInt()),
+                    maxLines = 3,
+                )
+            }
+            return when (state) {
+                is WearNextState.Running -> error("Handled above")
                 is WearNextState.NextUpcoming -> {
                     val nextStr = L10n.t(
                         context,
@@ -256,6 +289,14 @@ class QuickTileService : TileService() {
                         text = LayoutString(nextStr),
                         typography = Typography.TITLE_SMALL,
                         color = LayoutColor(0xFFFFFFFF.toInt()),
+                        maxLines = 3,
+                    )
+                }
+                WearNextState.NothingPlanned -> {
+                    text(
+                        text = LayoutString(L10n.t(context, "watch.nothingPlanned")),
+                        typography = Typography.BODY_MEDIUM,
+                        color = LayoutColor(Palette.inkMuted.toInt()),
                         maxLines = 3,
                     )
                 }

@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -278,6 +279,53 @@ fun WearApp() {
         }
     }
 
+    val currentPlanned = if (state.snapshot?.running == null) {
+        state.snapshot?.currentPlanned(now)
+    } else {
+        null
+    }
+    val sections = QuickSurfaceState.wearSections(state.snapshot, now)
+    val runningSection = sections.filterIsInstance<WearSection.Running>().firstOrNull()
+    val errorText = state.error
+
+    val topItemKeys = buildList {
+        add("header_balance")
+        if (currentPlanned != null) add("now_planned")
+        if (!errorText.isNullOrEmpty()) add("error_toast")
+        if (activeLastAction != null) add("last_action_chip")
+        if (runningSection != null) add("running_${runningSection.running.id}")
+    }
+
+    var wasAtTop by remember { mutableStateOf(true) }
+    var stableTopKeys by remember { mutableStateOf<List<String>?>(null) }
+    var previousTopKeys by remember { mutableStateOf<List<String>?>(null) }
+
+    LaunchedEffect(columnState) {
+        snapshotFlow {
+            val firstItem = columnState.layoutInfo.visibleItems.firstOrNull()
+            val isAtTop = !columnState.canScrollBackward || (firstItem?.index == 0 && firstItem.offset >= -20)
+            Pair(columnState.isScrollInProgress, isAtTop)
+        }.collect { (isScrollInProgress, isAtTop) ->
+            if (!isScrollInProgress && topItemKeys == stableTopKeys) {
+                wasAtTop = isAtTop
+            }
+        }
+    }
+
+    LaunchedEffect(topItemKeys) {
+        val previous = previousTopKeys
+        previousTopKeys = topItemKeys
+        if (previous != null && previous != topItemKeys) {
+            if (wasAtTop && !columnState.isScrollInProgress) {
+                withFrameNanos { }
+                columnState.scrollToItem(0)
+                columnState.scrollBy(-100_000f)
+                wasAtTop = true
+            }
+        }
+        stableTopKeys = topItemKeys
+    }
+
     MaterialTheme(colorScheme = WearColorScheme) {
         AppScaffold(
             timeText = { TimeText() },
@@ -308,7 +356,6 @@ fun WearApp() {
                         bottom = contentPadding.calculateBottomPadding(),
                     )
 
-                    val sections = QuickSurfaceState.wearSections(state.snapshot, now)
                     val canUndo = SnapshotStore.canUndo(context, maxOf(now, activeLastAction?.at ?: now))
 
                     TransformingLazyColumn(
@@ -332,8 +379,58 @@ fun WearApp() {
                             )
                         }
 
+                        // Read-only "Now" line for a planned task in progress
+                        if (currentPlanned != null) {
+                            item(key = "now_planned") {
+                                Card(
+                                    onClick = {},
+                                    enabled = false,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(Palette.primaryInk),
+                                    ),
+                                    transformation = SurfaceTransformation(spec),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .transformedHeight(this, spec),
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text(
+                                            text = L10n.t(
+                                                context,
+                                                "widget_now_planned_short",
+                                                currentPlanned.title,
+                                            ),
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                        val endsAt = currentPlanned.endsAt
+                                        if (endsAt != null) {
+                                            Text(
+                                                text = L10n.t(
+                                                    context,
+                                                    "watch_until",
+                                                    L10n.shortTime(context, endsAt),
+                                                ),
+                                                color = Color(Palette.inkMuted),
+                                                fontSize = 13.sp,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 2. Error toast at the top (shown for 4s)
-                        val errorText = state.error
                         if (!errorText.isNullOrEmpty()) {
                             item(key = "error_toast") {
                                 Card(
@@ -380,7 +477,6 @@ fun WearApp() {
                         }
 
                         // 4. Running card
-                        val runningSection = sections.filterIsInstance<WearSection.Running>().firstOrNull()
                         if (runningSection != null) {
                             val isPending = state.pending.any { it.activityId == runningSection.running.id }
                             item(key = "running_${runningSection.running.id}") {

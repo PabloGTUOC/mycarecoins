@@ -55,10 +55,12 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
         val now = Instant.now()
         val snapshot = SnapshotStore.load(ctx)
         val nowState = QuickSurfaceState.pickNext(snapshot, now, connected = snapshot != null)
+        val currentPlanned = if (snapshot?.running == null) snapshot?.currentPlanned(now) else null
         val defaultData = buildNextData(
             context = ctx,
             type = request.complicationType,
             state = nowState,
+            currentPlanned = currentPlanned,
             includeTapAction = true,
         ) ?: return null
 
@@ -81,7 +83,13 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
         now: Instant = Instant.now(),
     ): List<TimelineEntry> {
         if (snapshot == null) return emptyList()
-        val instants = QuickSurfaceState.nextTimelineInstants(snapshot, now)
+        val boundary = QuickSurfaceState.nextBoundary(snapshot, now)
+        val instants = buildList {
+            if (boundary != null && boundary.isAfter(now)) {
+                add(boundary)
+            }
+            addAll(QuickSurfaceState.nextTimelineInstants(snapshot, now))
+        }.distinct().sorted().take(3)
         if (instants.isEmpty()) return emptyList()
 
         return buildList(instants.size) {
@@ -94,10 +102,12 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
                 }
                 if (!start.isBefore(end)) continue
                 val stateAtStart = QuickSurfaceState.pickNext(snapshot, start, connected = true)
+                val currentAtStart = if (snapshot.running == null) snapshot.currentPlanned(start) else null
                 val data = buildNextData(
                     context = context,
                     type = type,
                     state = stateAtStart,
+                    currentPlanned = currentAtStart,
                     includeTapAction = true,
                 ) ?: continue
                 add(TimelineEntry(TimeInterval(start, end), data))
@@ -113,6 +123,7 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
             context: Context,
             type: ComplicationType,
             state: WearNextState,
+            currentPlanned: QuickSnapshot.Upcoming? = null,
             includeTapAction: Boolean,
         ): ComplicationData? {
             if (type != ComplicationType.SHORT_TEXT && type != ComplicationType.LONG_TEXT) {
@@ -128,35 +139,53 @@ class NextComplicationService : SuspendingTimelineComplicationDataSourceService(
             val title: ComplicationText?
             val contentDescription: ComplicationText
 
-            when (state) {
-                is WearNextState.Running -> {
-                    title = PlainComplicationText.Builder(state.running.title).build()
-                    text = TimeDifferenceComplicationText.Builder(
-                        TimeDifferenceStyle.STOPWATCH,
-                        CountUpTimeReference(state.running.startedAt),
-                    ).build()
-                    contentDescription = PlainComplicationText.Builder(
-                        L10n.t(context, "widget.running", state.running.title),
-                    ).build()
-                }
-                is WearNextState.NextUpcoming -> {
-                    val shortStart = L10n.shortTime(context, state.upcoming.startsAt)
-                    val nextStr = L10n.t(context, "widget.next", state.upcoming.title, shortStart)
+            if (state is WearNextState.Running) {
+                title = PlainComplicationText.Builder(state.running.title).build()
+                text = TimeDifferenceComplicationText.Builder(
+                    TimeDifferenceStyle.STOPWATCH,
+                    CountUpTimeReference(state.running.startedAt),
+                ).build()
+                contentDescription = PlainComplicationText.Builder(
+                    L10n.t(context, "widget.running", state.running.title),
+                ).build()
+            } else if (currentPlanned != null) {
+                val fullText = L10n.t(context, "widget_now_planned_short", currentPlanned.title)
+                contentDescription = PlainComplicationText.Builder(fullText).build()
+                if (type == ComplicationType.SHORT_TEXT) {
+                    text = PlainComplicationText.Builder(L10n.t(context, "watch_now_label")).build()
+                    title = PlainComplicationText.Builder(currentPlanned.title).build()
+                } else {
+                    text = PlainComplicationText.Builder(fullText).build()
                     title = null
-                    text = PlainComplicationText.Builder(nextStr).build()
-                    contentDescription = text
                 }
-                WearNextState.NoTasks -> {
-                    val noTasksStr = L10n.t(context, "widget.noTasks")
-                    title = null
-                    text = PlainComplicationText.Builder(noTasksStr).build()
-                    contentDescription = text
-                }
-                WearNextState.NotConnected -> {
-                    val notConnectedStr = L10n.t(context, "widget.notConnected")
-                    title = null
-                    text = PlainComplicationText.Builder(notConnectedStr).build()
-                    contentDescription = text
+            } else {
+                when (state) {
+                    is WearNextState.Running -> error("Handled above")
+                    is WearNextState.NextUpcoming -> {
+                        val shortStart = L10n.shortTime(context, state.upcoming.startsAt)
+                        val nextStr = L10n.t(context, "widget.next", state.upcoming.title, shortStart)
+                        title = null
+                        text = PlainComplicationText.Builder(nextStr).build()
+                        contentDescription = text
+                    }
+                    WearNextState.NothingPlanned -> {
+                        val str = L10n.t(context, "watch.nothingPlanned")
+                        title = null
+                        text = PlainComplicationText.Builder(str).build()
+                        contentDescription = text
+                    }
+                    WearNextState.NoTasks -> {
+                        val noTasksStr = L10n.t(context, "widget.noTasks")
+                        title = null
+                        text = PlainComplicationText.Builder(noTasksStr).build()
+                        contentDescription = text
+                    }
+                    WearNextState.NotConnected -> {
+                        val notConnectedStr = L10n.t(context, "widget.notConnected")
+                        title = null
+                        text = PlainComplicationText.Builder(notConnectedStr).build()
+                        contentDescription = text
+                    }
                 }
             }
 

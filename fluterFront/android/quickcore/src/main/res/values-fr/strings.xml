@@ -25,6 +25,8 @@
     <string name="widget_logged">Enregistrée</string>
     <string name="widget_needsYou">À traiter · %1$d</string>
     <string name="widget_next">Ensuite · %1$s · %2$s</string>
+    <string name="widget_now_planned">En cours · %1$s · jusqu\'à %2$s</string>
+    <string name="widget_now_planned_short">En cours · %1$s</string>
     <string name="widget_noTasks">Pas encore de tâches habituelles. Ajoutez-en une dans l\'app.</string>
     <string name="widget_notConnected">Connectez-vous dans CareCoins ▸ Moi ▸ Widget et montre.</string>
     <string name="widget_allTasks">Voir toutes les tâches</string>
@@ -48,6 +50,9 @@
     <string name="watch_connect_body">Allez dans Moi ▸ Widget et montre et connectez cette montre.</string>
     <string name="watch_connect_title">Ouvrez CareCoins sur votre iPhone</string>
     <string name="watch_now">Maintenant</string>
+    <string name="watch_now_label">En cours</string>
+    <string name="watch_until">jusqu\'à %1$s</string>
+    <string name="watch_nothingPlanned">Rien de prévu pour l\'instant</string>
     <string name="watch_pending">En attente d\'envoi</string>
     <string name="watch_tasks">Vos tâches</string>
     <string name="watch_titleOptional">Nom (facultatif)</string>

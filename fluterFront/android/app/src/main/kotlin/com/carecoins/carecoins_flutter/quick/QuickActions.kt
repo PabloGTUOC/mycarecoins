@@ -246,9 +246,11 @@ object QuickActions {
 object QuickRefresh {
     const val PERIODIC_WORK_NAME = "quick-refresh-periodic"
     const val CHIP_EXPIRY_WORK_NAME = "quick-chip-expiry"
+    const val BOUNDARY_WORK_NAME = "quick-boundary"
     private val wired = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var chipExpiryJob: Job? = null
+    private var boundaryJob: Job? = null
 
     fun ensureWired() {
         if (wired.compareAndSet(false, true)) {
@@ -290,6 +292,42 @@ object QuickRefresh {
                 .build()
             WorkManager.getInstance(appCtx).enqueueUniqueWork(
                 CHIP_EXPIRY_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
+        }
+    }
+
+    fun scheduleBoundary(
+        context: Context,
+        boundary: Instant?,
+        now: Instant = Instant.now(),
+    ) {
+        ensureWired()
+        val appCtx = context.applicationContext ?: context
+        boundaryJob?.cancel()
+        boundaryJob = null
+        if (boundary == null) {
+            runCatching {
+                WorkManager.getInstance(appCtx).cancelUniqueWork(BOUNDARY_WORK_NAME)
+            }
+            return
+        }
+        val target = boundary.plusSeconds(1)
+        val delayMillis = java.time.Duration.between(now, target).toMillis().coerceAtLeast(0L)
+        boundaryJob = scope.launch {
+            delay(delayMillis)
+            SnapshotStore.bumpVersion()
+            runCatching {
+                QuickWidget().updateAll(appCtx)
+            }
+        }
+        runCatching {
+            val request = OneTimeWorkRequestBuilder<QuickBoundaryWorker>()
+                .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+                .build()
+            WorkManager.getInstance(appCtx).enqueueUniqueWork(
+                BOUNDARY_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
                 request,
             )
@@ -375,10 +413,13 @@ object QuickRefresh {
         val appCtx = context.applicationContext ?: context
         chipExpiryJob?.cancel()
         chipExpiryJob = null
+        boundaryJob?.cancel()
+        boundaryJob = null
         runCatching {
             val wm = WorkManager.getInstance(appCtx)
             wm.cancelUniqueWork(PERIODIC_WORK_NAME)
             wm.cancelUniqueWork(CHIP_EXPIRY_WORK_NAME)
+            wm.cancelUniqueWork(BOUNDARY_WORK_NAME)
         }
         runCatching {
             QuickNotification.cancel(appCtx)
@@ -412,6 +453,20 @@ class QuickRefreshWorker(
 }
 
 class QuickChipExpiryWorker(
+    appContext: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(appContext, params) {
+    override suspend fun doWork(): Result {
+        QuickRefresh.ensureWired()
+        SnapshotStore.bumpVersion()
+        runCatching {
+            QuickWidget().updateAll(applicationContext)
+        }
+        return Result.success()
+    }
+}
+
+class QuickBoundaryWorker(
     appContext: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {

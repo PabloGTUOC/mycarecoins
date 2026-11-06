@@ -81,6 +81,160 @@ class QuickCoreTest {
     }
 
     @Test
+    fun `currentPlanned handles start and end boundaries, overlaps, and running priority on surfaces`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+
+        // In quick_snapshot.json, item 503 has startsAt: 15:45:00.123Z, endsAt: 16:15:00.123Z
+        val tStart = Instant.parse("2026-11-05T15:45:00.123Z")
+        val tMid = Instant.parse("2026-11-05T16:00:00Z")
+        val tEnd = Instant.parse("2026-11-05T16:15:00.123Z")
+        val beforeStart = tStart.minusSeconds(1)
+        val afterEnd = tEnd.plusSeconds(1)
+
+        // Before start -> null
+        assertNull(snap.currentPlanned(beforeStart))
+
+        // At start (startsAt <= now) -> returns item 503
+        val atStart = snap.currentPlanned(tStart)
+        assertNotNull(atStart)
+        assertEquals("503", atStart?.id)
+
+        // Mid-flight -> returns item 503
+        val mid = snap.currentPlanned(tMid)
+        assertNotNull(mid)
+        assertEquals("503", mid?.id)
+
+        // At endsAt (endsAt > now is false) -> null
+        assertNull(snap.currentPlanned(tEnd))
+
+        // After endsAt -> null
+        assertNull(snap.currentPlanned(afterEnd))
+
+        // When several overlap, picks the one that ends first
+        val overlappingSnap = snap.copy(
+            upcoming = listOf(
+                QuickSnapshot.Upcoming(
+                    id = "early-end",
+                    title = "Ends first",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T15:00:00Z"),
+                    endsAt = Instant.parse("2026-11-05T16:30:00Z"),
+                    status = "approved",
+                ),
+                QuickSnapshot.Upcoming(
+                    id = "late-end",
+                    title = "Ends later",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T15:10:00Z"),
+                    endsAt = Instant.parse("2026-11-05T17:00:00Z"),
+                    status = "approved",
+                ),
+            ),
+        )
+        val pickOverlapping = overlappingSnap.currentPlanned(tMid)
+        assertNotNull(pickOverlapping)
+        assertEquals("early-end", pickOverlapping?.id)
+
+        // Running present: snapshot.currentPlanned still finds the planned task...
+        assertNotNull(snap.running)
+        assertNotNull(snap.currentPlanned(tMid))
+        // ...but surfaces ignore it and prioritize the running task:
+        val banner = QuickSurfaceState.pickBanner(snap, tMid)
+        assertTrue(banner is QuickBannerState.Running)
+        val layoutWithRunning = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            hasRunning = true,
+            hasNowPlanned = true,
+        )
+        assertFalse(layoutWithRunning.showFooter)
+    }
+
+    @Test
+    fun `nextBoundary returns earliest of currentPlanned endsAt and nextUpcoming startsAt`() {
+        val raw = loadFixture("quick_snapshot.json")
+        val snap = QuickSnapshot.fromJson(JSONObject(raw))
+        val now = Instant.parse("2026-11-05T16:00:00Z")
+
+        // At 16:00:00Z:
+        // currentPlanned is 503 (endsAt 16:15:00.123Z)
+        // nextUpcoming is 504 (startsAt 18:00:00Z)
+        // nextBoundary is min(16:15:00.123Z, 18:00:00Z) = 16:15:00.123Z
+        val boundary = QuickSurfaceState.nextBoundary(snap, now)
+        assertEquals(Instant.parse("2026-11-05T16:15:00.123Z"), boundary)
+
+        // When current ends later than next starts: min is next startsAt
+        val snapEarlierNext = snap.copy(
+            upcoming = listOf(
+                QuickSnapshot.Upcoming(
+                    id = "curr",
+                    title = "Current",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T15:30:00Z"),
+                    endsAt = Instant.parse("2026-11-05T17:00:00Z"),
+                    status = "approved",
+                ),
+                QuickSnapshot.Upcoming(
+                    id = "next",
+                    title = "Next",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T16:30:00Z"),
+                    endsAt = Instant.parse("2026-11-05T17:30:00Z"),
+                    status = "approved",
+                ),
+            ),
+        )
+        assertEquals(
+            Instant.parse("2026-11-05T16:30:00Z"),
+            QuickSurfaceState.nextBoundary(snapEarlierNext, now),
+        )
+
+        // Only currentPlanned present (no nextUpcoming)
+        val snapOnlyCurrent = snap.copy(
+            upcoming = listOf(
+                QuickSnapshot.Upcoming(
+                    id = "curr",
+                    title = "Current",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T15:30:00Z"),
+                    endsAt = Instant.parse("2026-11-05T17:00:00Z"),
+                    status = "approved",
+                ),
+            ),
+        )
+        assertEquals(
+            Instant.parse("2026-11-05T17:00:00Z"),
+            QuickSurfaceState.nextBoundary(snapOnlyCurrent, now),
+        )
+
+        // Only nextUpcoming present (no currentPlanned)
+        val snapOnlyNext = snap.copy(
+            upcoming = listOf(
+                QuickSnapshot.Upcoming(
+                    id = "next",
+                    title = "Next",
+                    type = "care",
+                    startsAt = Instant.parse("2026-11-05T18:00:00Z"),
+                    endsAt = Instant.parse("2026-11-05T18:30:00Z"),
+                    status = "approved",
+                ),
+            ),
+        )
+        assertEquals(
+            Instant.parse("2026-11-05T18:00:00Z"),
+            QuickSurfaceState.nextBoundary(snapOnlyNext, now),
+        )
+
+        // Neither present
+        val snapEmpty = snap.copy(upcoming = emptyList())
+        assertNull(QuickSurfaceState.nextBoundary(snapEmpty, now))
+
+        // Null snapshot
+        assertNull(QuickSurfaceState.nextBoundary(null, now))
+    }
+
+    @Test
     fun `SnapshotStore saves and loads snapshot and enforces 30s undo window`() {
         val raw = loadFixture("quick_snapshot.json")
         assertTrue(SnapshotStore.save(testFilesDir, raw))
@@ -282,10 +436,15 @@ class QuickCoreTest {
         if (xcstringsFile != null) {
             val xcJson = JSONObject(xcstringsFile.readText(Charsets.UTF_8))
             val xcStrings = xcJson.getJSONObject("strings")
+            val aliasKeys = mapOf(
+                "widget_nowPlanned" to "widget_now_planned",
+                "widget_nowPlannedShort" to "widget_now_planned_short",
+            )
             val expectedKeys = mutableSetOf<String>()
             val iter = xcStrings.keys()
             while (iter.hasNext()) {
-                val resName = L10n.resourceName(iter.next())
+                val raw = L10n.resourceName(iter.next())
+                val resName = aliasKeys[raw] ?: raw
                 if (resName !in removedKeys) {
                     expectedKeys.add(resName)
                 }
@@ -301,6 +460,11 @@ class QuickCoreTest {
                 "widget_allTasks",
                 "widget_row_meta",
                 "widget_running_label",
+                "widget_now_planned",
+                "widget_now_planned_short",
+                "watch_now_label",
+                "watch_until",
+                "watch_nothingPlanned",
             )
             val extraKeys = enMap.keys - expectedKeys
             assertTrue(
@@ -502,9 +666,13 @@ class QuickCoreTest {
         assertTrue(s2 is WearNextState.NextUpcoming)
         assertEquals("504", (s2 as WearNextState.NextUpcoming).upcoming.id)
 
-        // 3. Late night (nothing running or future upcoming) -> NoTasks
+        // 3. Late night (nothing running or future upcoming, but tasks exist) -> NothingPlanned
         val lateNight = Instant.parse("2026-11-05T22:00:00Z")
-        assertEquals(WearNextState.NoTasks, QuickSurfaceState.pickNext(noRunning, lateNight))
+        assertEquals(WearNextState.NothingPlanned, QuickSurfaceState.pickNext(noRunning, lateNight))
+
+        // 4. Truly empty (no tasks at all) -> NoTasks
+        val emptyTasks = noRunning.copy(tasks = emptyList())
+        assertEquals(WearNextState.NoTasks, QuickSurfaceState.pickNext(emptyTasks, lateNight))
 
         // Timeline instants only include future startsAt values
         val instants = QuickSurfaceState.nextTimelineInstants(noRunning, now)
@@ -702,6 +870,34 @@ class QuickCoreTest {
             hasRunning = false,
         )
         assertTrue(emptyLayout.showFooter)
+
+        // With hasNowPlanned = true (32dp + 6dp gap), space reduces:
+        // Wide 4x2 without nowPlanned has footer:
+        val wideNoNow = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasNowPlanned = false,
+        )
+        assertTrue(wideNoNow.showFooter)
+
+        // When running is true, hasNowPlanned does not affect layout
+        val runningWithNow = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasRunning = true,
+            hasNowPlanned = true,
+        )
+        val runningWithoutNow = QuickSurfaceState.computeWidgetLayout(
+            widthDp = 365f,
+            heightDp = 210f,
+            taskCount = 4,
+            hasRunning = true,
+            hasNowPlanned = false,
+        )
+        assertEquals(runningWithoutNow.showFooter, runningWithNow.showFooter)
+        assertEquals(runningWithoutNow.rowHeightDp, runningWithNow.rowHeightDp)
     }
 
     @Test
@@ -713,20 +909,22 @@ class QuickCoreTest {
                     for (running in listOf(false, true)) {
                         for (chip in listOf(false, true)) {
                             for (next in listOf(false, true)) {
-                                val l = QuickSurfaceState.computeWidgetLayout(w, h, tasks, running, chip, next)
-                                val n = QuickSurfaceState.bodyChildCount(l, tasks, running, chip, next)
-                                worst = maxOf(worst, n)
-                                assertTrue(
-                                    "body has $n children at ${w}x$h tasks=$tasks running=$running chip=$chip",
-                                    n <= QuickSurfaceState.GLANCE_MAX_CHILDREN,
-                                )
+                                for (nowPlanned in listOf(false, true)) {
+                                    val l = QuickSurfaceState.computeWidgetLayout(w, h, tasks, running, chip, next, nowPlanned)
+                                    val n = QuickSurfaceState.bodyChildCount(l, tasks, running, chip, next, nowPlanned)
+                                    worst = maxOf(worst, n)
+                                    assertTrue(
+                                        "body has $n children at ${w}x$h tasks=$tasks running=$running chip=$chip nowPlanned=$nowPlanned",
+                                        n <= QuickSurfaceState.GLANCE_MAX_CHILDREN,
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        // Root has at most 5 children (HeaderBar, running banner, chip, LazyColumn, footer).
+        // Root has at most 5 children (HeaderBar, running banner or now planned, chip, LazyColumn, footer).
         // LazyColumn items do not count toward Glance's 10-child container limit.
         assertTrue(worst <= 10)
     }

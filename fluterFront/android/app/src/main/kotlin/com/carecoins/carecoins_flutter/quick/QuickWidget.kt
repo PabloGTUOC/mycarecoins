@@ -279,8 +279,14 @@ private fun WidgetContent(
     val size = LocalSize.current
     val banner = QuickSurfaceState.pickBanner(snapshot, now)
     val hasRunning = banner is QuickBannerState.Running
+    val currentPlanned = if (!hasRunning) snapshot?.currentPlanned(now) else null
     val nextUpcoming = snapshot?.nextUpcoming(now)
     val taskCount = snapshot?.tasks?.size ?: 0
+
+    if (connected && snapshot != null) {
+        val boundary = QuickSurfaceState.nextBoundary(snapshot, now)
+        QuickRefresh.scheduleBoundary(context, boundary, now)
+    }
 
     val layout = QuickSurfaceState.computeWidgetLayout(
         widthDp = size.width.value,
@@ -289,6 +295,7 @@ private fun WidgetContent(
         hasRunning = hasRunning,
         hasLastAction = lastAction != null,
         hasNextUpcoming = nextUpcoming != null,
+        hasNowPlanned = currentPlanned != null,
     )
 
     Box(
@@ -306,6 +313,7 @@ private fun WidgetContent(
                 context = context,
                 snapshot = snapshot,
                 banner = banner,
+                currentPlanned = currentPlanned,
                 now = now,
                 lastAction = lastAction,
                 canUndo = canUndo,
@@ -377,6 +385,7 @@ private fun ConnectedWidgetContent(
     context: Context,
     snapshot: QuickSnapshot?,
     banner: QuickBannerState,
+    currentPlanned: QuickSnapshot.Upcoming?,
     now: Instant,
     lastAction: LastAction?,
     canUndo: Boolean,
@@ -390,7 +399,7 @@ private fun ConnectedWidgetContent(
     val hasRunning = banner is QuickBannerState.Running
 
     // Glance allows at most 10 children per Column / Row. The root Column has at most 5 children:
-    // header, running banner (if any), feedback chip (if any), LazyColumn, and footer (if any).
+    // header, running banner or now planned (if any), feedback chip (if any), LazyColumn, and footer (if any).
     // The task list scrolls in a LazyColumn filling the body space with all snapshot tasks.
     // LazyColumn items (tasks, next-line, see-all) do not count toward the 10-child limit.
     Column(modifier = GlanceModifier.fillMaxSize()) {
@@ -404,6 +413,16 @@ private fun ConnectedWidgetContent(
         if (banner is QuickBannerState.Running) {
             Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
                 RunningBannerView(context = context, running = banner.running, now = now)
+            }
+        }
+
+        if (!hasRunning && currentPlanned != null) {
+            Box(modifier = GlanceModifier.fillMaxWidth().padding(top = gap)) {
+                NowPlannedPillView(
+                    context = context,
+                    currentPlanned = currentPlanned,
+                    isWide = layout.isWide,
+                )
             }
         }
 
@@ -479,6 +498,56 @@ private fun HeaderBar(
         Spacer(modifier = GlanceModifier.defaultWeight())
         if (needsYou > 0) {
             NeedsYouIndicator(context = context, needsYou = needsYou, isWide = isWide)
+        }
+    }
+}
+
+@Composable
+private fun NowPlannedPillView(
+    context: Context,
+    currentPlanned: QuickSnapshot.Upcoming,
+    isWide: Boolean,
+) {
+    val isHousehold = currentPlanned.type == "household"
+    val iconRes = if (isHousehold) R.drawable.ic_widget_household else R.drawable.ic_widget_care
+    val text = if (isWide) {
+        val endsAt = currentPlanned.endsAt
+        val timeStr = if (endsAt != null) L10n.shortTime(context, endsAt) else ""
+        L10n.t(context, "widget_now_planned", currentPlanned.title, timeStr)
+    } else {
+        L10n.t(context, "widget_now_planned_short", currentPlanned.title)
+    }
+
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .cornerRadius(999.dp)
+            .background(WidgetColors.primarySoft)
+            .clickable(actionStartActivity<MainActivity>())
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                provider = ImageProvider(iconRes),
+                contentDescription = null,
+                modifier = GlanceModifier.size(16.dp),
+                colorFilter = ColorFilter.tint(WidgetColors.primaryInk),
+            )
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Text(
+                text = text,
+                style = TextStyle(
+                    color = WidgetColors.primaryInk,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+                maxLines = 1,
+            )
         }
     }
 }

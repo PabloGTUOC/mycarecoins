@@ -225,6 +225,14 @@ data class QuickSnapshot(
         }
     }
 
+    fun currentPlanned(now: Instant = Instant.now()): Upcoming? {
+        return upcoming
+            .filter { item ->
+                !item.startsAt.isAfter(now) && item.endsAt != null && item.endsAt.isAfter(now)
+            }
+            .minByOrNull { it.endsAt!! }
+    }
+
     fun nextUpcoming(now: Instant = Instant.now()): Upcoming? {
         return upcoming.firstOrNull { item ->
             item.startsAt.isAfter(now)
@@ -442,6 +450,7 @@ sealed interface WearNextState {
     data object NotConnected : WearNextState
     data class Running(val running: QuickSnapshot.Running) : WearNextState
     data class NextUpcoming(val upcoming: QuickSnapshot.Upcoming) : WearNextState
+    data object NothingPlanned : WearNextState
     data object NoTasks : WearNextState
 }
 
@@ -629,6 +638,7 @@ object QuickSurfaceState {
     const val WIDE_ROW_HEIGHT_DP = 52
     const val NARROW_ROW_HEIGHT_DP = 64
     const val RUNNING_BANNER_HEIGHT_DP = 64
+    const val NOW_PLANNED_HEIGHT_DP = 32
     const val CHIP_HEIGHT_DP = 30
     const val FOOTER_HEIGHT_DP = 40
     const val NEXT_LINE_HEIGHT_DP = 18
@@ -656,15 +666,17 @@ object QuickSurfaceState {
         hasRunning: Boolean = false,
         hasLastAction: Boolean = false,
         hasNextUpcoming: Boolean = false,
+        hasNowPlanned: Boolean = false,
     ): QuickWidgetLayout {
         val isWide = widthDp >= WIDE_WIDTH_DP
         val rowHeight = if (isWide) WIDE_ROW_HEIGHT_DP else NARROW_ROW_HEIGHT_DP
         val rowStep = rowHeight + DEFAULT_GAP_DP
         val safeHeight = if (heightDp > 0f) heightDp.toInt() else 180
 
-        // Header, banner and chip are always counted; the footer never depends on the chip.
+        // Header, banner, now line and chip are always counted; the footer never depends on the chip.
         var used = HEADER_HEIGHT_DP
         if (hasRunning) used += DEFAULT_GAP_DP + RUNNING_BANNER_HEIGHT_DP
+        if (hasNowPlanned && !hasRunning) used += DEFAULT_GAP_DP + NOW_PLANNED_HEIGHT_DP
         if (hasLastAction) used += DEFAULT_GAP_DP + CHIP_HEIGHT_DP
         val available = (safeHeight - 2 * DEFAULT_PADDING_DP - used).coerceAtLeast(0)
         val footerCost = DEFAULT_GAP_DP + FOOTER_HEIGHT_DP
@@ -724,9 +736,11 @@ object QuickSurfaceState {
         layout: QuickWidgetLayout,
         hasRunning: Boolean = false,
         hasLastAction: Boolean = false,
+        hasNowPlanned: Boolean = false,
     ): Int {
         var n = 2 // HeaderBar + LazyColumn
         if (hasRunning) n++
+        if (hasNowPlanned && !hasRunning) n++
         if (hasLastAction) n++
         if (layout.showFooter) n++
         return n
@@ -739,7 +753,18 @@ object QuickSurfaceState {
         hasRunning: Boolean = false,
         hasLastAction: Boolean = false,
         hasNextUpcoming: Boolean = false,
-    ): Int = rootChildCount(layout, hasRunning, hasLastAction)
+        hasNowPlanned: Boolean = false,
+    ): Int = rootChildCount(layout, hasRunning, hasLastAction, hasNowPlanned)
+
+    fun nextBoundary(
+        snapshot: QuickSnapshot?,
+        now: Instant = Instant.now(),
+    ): Instant? {
+        if (snapshot == null) return null
+        val currentEndsAt = snapshot.currentPlanned(now)?.endsAt
+        val nextStartsAt = snapshot.nextUpcoming(now)?.startsAt
+        return listOfNotNull(currentEndsAt, nextStartsAt).minOrNull()
+    }
 
     fun chipExpiryInstant(
         actionAt: Instant,
@@ -827,7 +852,11 @@ object QuickSurfaceState {
         if (!connected || snapshot == null) return WearNextState.NotConnected
         snapshot.running?.let { return WearNextState.Running(it) }
         snapshot.nextUpcoming(now)?.let { return WearNextState.NextUpcoming(it) }
-        return WearNextState.NoTasks
+        return if (snapshot.tasks.isNotEmpty()) {
+            WearNextState.NothingPlanned
+        } else {
+            WearNextState.NoTasks
+        }
     }
 
     fun selectReminders(

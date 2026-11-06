@@ -75,7 +75,10 @@ export async function getQuick(client, userId, familyId) {
      WHERE family_id = $1 AND assigned_to = $2 AND is_template = false AND category = 'care'
        AND status IN ('approved', 'pending_validation')
        AND running_since IS NULL
-       AND starts_at BETWEEN NOW() - interval '2 hours' AND NOW() + interval '24 hours'
+       AND (
+         starts_at BETWEEN NOW() AND NOW() + interval '24 hours'
+         OR (starts_at <= NOW() AND ends_at > NOW())
+       )
      ORDER BY starts_at ASC`,
     [familyId, userId]
   );
