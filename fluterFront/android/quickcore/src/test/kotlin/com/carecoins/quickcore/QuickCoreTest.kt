@@ -417,23 +417,23 @@ class QuickCoreTest {
     }
 
     @Test
-    fun `wearSections orders Running, Now, Tasks, Coins and hides Now while running`() {
+    fun `wearSections orders Coins, Running, Tasks and hides Now while running`() {
         val raw = loadFixture("quick_snapshot.json")
         val snap = QuickSnapshot.fromJson(JSONObject(raw))
         val now = Instant.parse("2026-11-05T16:00:00Z")
 
-        // 1. With running task ("701"): [Running, Tasks, Coins] — Now is hidden while running
+        // 1. With running task ("701"): [Coins, Running, Tasks] — Now is hidden while running
         val runningSections = QuickSurfaceState.wearSections(snap, now)
         assertEquals(3, runningSections.size)
-        assertTrue(runningSections[0] is WearSection.Running)
-        assertEquals("701", (runningSections[0] as WearSection.Running).running.id)
-        assertTrue(runningSections[1] is WearSection.Tasks)
-        assertEquals(WearSection.Coins(240), runningSections[2])
+        assertEquals(WearSection.Coins(240, 2), runningSections[0])
+        assertTrue(runningSections[1] is WearSection.Running)
+        assertEquals("701", (runningSections[1] as WearSection.Running).running.id)
+        assertTrue(runningSections[2] is WearSection.Tasks)
 
-        // 2. Without running: [Now, Tasks, Coins]
+        // 2. Without running: [Coins, Now, Tasks]
         val noRunning = snap.copy(running = null)
         val idleSections = QuickSurfaceState.wearSections(noRunning, now)
-        assertEquals(listOf(WearSection.Now, WearSection.Tasks(snap.tasks), WearSection.Coins(240)), idleSections)
+        assertEquals(listOf(WearSection.Coins(240, 2), WearSection.Now, WearSection.Tasks(snap.tasks)), idleSections)
 
         // 3. Null snapshot -> empty
         assertTrue(QuickSurfaceState.wearSections(null, now).isEmpty())

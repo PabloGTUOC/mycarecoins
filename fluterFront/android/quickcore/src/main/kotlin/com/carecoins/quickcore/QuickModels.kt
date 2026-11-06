@@ -435,7 +435,7 @@ sealed interface WearSection {
     data class Running(val running: QuickSnapshot.Running) : WearSection
     data object Now : WearSection
     data class Tasks(val tasks: List<QuickSnapshot.Task>) : WearSection
-    data class Coins(val balance: Int) : WearSection
+    data class Coins(val balance: Int, val needsYou: Int = 0) : WearSection
 }
 
 sealed interface WearNextState {
@@ -878,6 +878,7 @@ object QuickSurfaceState {
     ): List<WearSection> {
         if (snapshot == null) return emptyList()
         return buildList {
+            add(WearSection.Coins(snapshot.balance, snapshot.needsYou))
             when (val banner = pickBanner(snapshot, now)) {
                 is QuickBannerState.Running -> add(WearSection.Running(banner.running))
                 QuickBannerState.None -> Unit
@@ -888,7 +889,6 @@ object QuickSurfaceState {
             if (snapshot.tasks.isNotEmpty()) {
                 add(WearSection.Tasks(snapshot.tasks))
             }
-            add(WearSection.Coins(snapshot.balance))
         }
     }
 

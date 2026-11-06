@@ -8,7 +8,8 @@
 
     <application
         android:label="CareCoins"
-        android:icon="@drawable/ic_stat_carecoins"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:theme="@android:style/Theme.DeviceDefault">
         <!-- Standalone: works on its own network once the phone has handed over the key. -->
         <meta-data
