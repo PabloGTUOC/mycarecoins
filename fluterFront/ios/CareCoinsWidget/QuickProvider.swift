@@ -99,18 +99,45 @@ public struct QuickProvider: TimelineProvider {
 
       let action = SnapshotStore.lastAction(now: now)
       let canUndo = SnapshotStore.canUndo(now: now)
-      let entryNow = QuickEntry(date: now, state: state, lastAction: action, canUndo: canUndo)
-      var entries = [entryNow]
 
-      if let action = action {
-        let expireDate = action.at.addingTimeInterval(SnapshotStore.undoWindow)
-        if expireDate > now {
-          let entryAfterUndo = QuickEntry(date: expireDate, state: state, lastAction: nil, canUndo: false)
-          entries.append(entryAfterUndo)
+      let reloadDate = now.addingTimeInterval(30 * 60)
+      var entryDates: Set<Date> = [now]
+
+      if let snap = snapshot {
+        if let currentEnds = snap.currentPlanned(now: now)?.endsAt, currentEnds > now && currentEnds <= reloadDate {
+          entryDates.insert(currentEnds)
+        }
+
+        let upcomingInWindow = snap.upcoming
+          .filter { $0.startsAt > now && $0.startsAt <= reloadDate }
+          .sorted { $0.startsAt < $1.startsAt }
+
+        for item in upcomingInWindow.prefix(max(3, upcomingInWindow.count)) {
+          entryDates.insert(item.startsAt)
+          if let endsAt = item.endsAt, endsAt > now && endsAt <= reloadDate {
+            entryDates.insert(endsAt)
+          }
         }
       }
 
-      let policy = TimelineReloadPolicy.after(now.addingTimeInterval(30 * 60))
+      var expireDate: Date? = nil
+      if let action = action {
+        let exp = action.at.addingTimeInterval(SnapshotStore.undoWindow)
+        if exp > now {
+          expireDate = exp
+          if exp <= reloadDate {
+            entryDates.insert(exp)
+          }
+        }
+      }
+
+      let entries = entryDates.sorted().map { date in
+        let actionForDate = (action != nil && expireDate != nil && date < expireDate!) ? action : nil
+        let canUndoForDate = actionForDate != nil ? canUndo : false
+        return QuickEntry(date: date, state: state, lastAction: actionForDate, canUndo: canUndoForDate)
+      }
+
+      let policy = TimelineReloadPolicy.after(reloadDate)
       let timeline = Timeline(entries: entries, policy: policy)
       completion(timeline)
     }

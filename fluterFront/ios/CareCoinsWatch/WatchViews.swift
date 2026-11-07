@@ -66,19 +66,40 @@ private struct WatchContentView: View {
   @State private var showStopConfirm = false
 
   var body: some View {
-    List {
-      // 6. Feedback chip at the top
-      TimelineView(.periodic(from: .now, by: 1.0)) { timeline in
-        if let action = store.lastAction,
-           timeline.date.timeIntervalSince(action.at) <= SnapshotStore.undoWindow {
-          WatchFeedbackRow(action: action, canUndo: store.canUndo) {
-            Task { await store.undo() }
+    TimelineView(.everyMinute) { timeline in
+      List {
+        // Feedback chip at the top
+        TimelineView(.periodic(from: .now, by: 1.0)) { feedbackTimeline in
+          if let action = store.lastAction,
+             feedbackTimeline.date.timeIntervalSince(action.at) <= SnapshotStore.undoWindow {
+            WatchFeedbackRow(action: action, canUndo: store.canUndo) {
+              Task { await store.undo() }
+            }
           }
         }
-      }
 
-      // 2. Running task
-      if let running = store.snapshot?.running {
+        // Read-only "Now" row for a planned task in progress
+        if store.snapshot?.running == nil,
+           let planned = store.snapshot?.currentPlanned(now: timeline.date) {
+          Section {
+            VStack(alignment: .leading, spacing: 2) {
+              Text(L10n.t("widget.nowPlannedShort", planned.title))
+                .font(.headline)
+                .foregroundColor(.white)
+                .lineLimit(2)
+              if let endsAt = planned.endsAt {
+                Text(L10n.t("watch.until", formatShortTime(endsAt)))
+                  .font(.footnote)
+                  .foregroundColor(Palette.inkMuted)
+                  .lineLimit(1)
+              }
+            }
+            .padding(.vertical, 4)
+          }
+        }
+
+        // Running task
+        if let running = store.snapshot?.running {
         Section {
           VStack(alignment: .leading, spacing: 6) {
             Text(running.title)
@@ -214,6 +235,7 @@ private struct WatchContentView: View {
           Task { await store.done(task: task) }
         }
       )
+    }
     }
   }
 }

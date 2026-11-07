@@ -281,10 +281,32 @@ public struct QuickSnapshot: Codable, Equatable {
     serverTime = try container.decode(Date.self, forKey: .serverTime)
   }
 
+  public func currentPlanned(now: Date = Date()) -> Upcoming? {
+    upcoming
+      .filter { item in
+        item.startsAt <= now && (item.endsAt.map { $0 > now } ?? false)
+      }
+      .min { a, b in
+        guard let aEnd = a.endsAt, let bEnd = b.endsAt else { return false }
+        return aEnd < bEnd
+      }
+  }
+
   public func nextUpcoming(now: Date = Date()) -> Upcoming? {
     upcoming.first { item in
       item.startsAt > now
     }
+  }
+
+  public func nextBoundary(now: Date = Date()) -> Date? {
+    let currentEndsAt = currentPlanned(now: now)?.endsAt
+    let nextStartsAt = nextUpcoming(now: now)?.startsAt
+    let candidates = [currentEndsAt, nextStartsAt].compactMap { $0 }
+    return candidates.min()
+  }
+
+  public static func nextBoundary(snapshot: QuickSnapshot?, now: Date = Date()) -> Date? {
+    snapshot?.nextBoundary(now: now)
   }
 }
 

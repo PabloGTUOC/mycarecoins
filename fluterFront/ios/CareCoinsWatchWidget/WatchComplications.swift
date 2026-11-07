@@ -40,6 +40,11 @@ struct WatchComplicationProvider: TimelineProvider {
     let calendar = Calendar.current
     var entryDates: Set<Date> = [now]
 
+    if let current = snapshot.currentPlanned(now: now),
+       let endsAt = current.endsAt, endsAt > now {
+      entryDates.insert(endsAt)
+    }
+
     let todayUpcoming = snapshot.upcoming.filter { item in
       calendar.isDate(item.startsAt, inSameDayAs: now) ||
       (item.endsAt != nil && calendar.isDate(item.endsAt!, inSameDayAs: now))
@@ -49,10 +54,10 @@ struct WatchComplicationProvider: TimelineProvider {
     }.sorted { $0.startsAt < $1.startsAt }
 
     for item in futureItems.prefix(3) {
-      if item.startsAt > now && calendar.isDate(item.startsAt, inSameDayAs: now) {
+      if item.startsAt > now {
         entryDates.insert(item.startsAt)
       }
-      if let endsAt = item.endsAt, endsAt > now && calendar.isDate(endsAt, inSameDayAs: now) {
+      if let endsAt = item.endsAt, endsAt > now {
         entryDates.insert(endsAt)
       }
     }
@@ -176,12 +181,21 @@ struct WatchRectangularNextView: View {
           Text(running.startedAt, style: .timer)
             .font(.body.monospacedDigit())
             .foregroundColor(Palette.dangerOnDark)
+        } else if let planned = snapshot.currentPlanned(now: entry.date) {
+          let endTime = planned.endsAt != nil ? formatShortTime(planned.endsAt!) : ""
+          Text(L10n.t("widget.nowPlanned", planned.title, endTime))
+            .font(.headline)
+            .lineLimit(2)
         } else if let next = snapshot.nextUpcoming(now: entry.date) {
           Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
             .font(.headline)
             .lineLimit(2)
-        } else {
+        } else if snapshot.tasks.isEmpty {
           Text(L10n.t("widget.noTasks"))
+            .font(.caption)
+            .lineLimit(2)
+        } else {
+          Text(L10n.t("watch.nothingPlanned"))
             .font(.caption)
             .lineLimit(2)
         }
@@ -202,13 +216,90 @@ struct WatchInlineNextView: View {
     if let snapshot = entry.snapshot {
       if let running = snapshot.running {
         Text("\(running.title) \(Text(running.startedAt, style: .timer))")
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        Text(L10n.t("widget.nowPlannedShort", planned.title))
       } else if let next = snapshot.nextUpcoming(now: entry.date) {
         Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
-      } else {
+      } else if snapshot.tasks.isEmpty {
         Text(L10n.t("widget.noTasks"))
+      } else {
+        Text(L10n.t("watch.nothingPlanned"))
       }
     } else {
       Text(L10n.t("widget.notConnected"))
+    }
+  }
+}
+
+struct WatchCircularNextView: View {
+  let entry: WatchComplicationEntry
+
+  var body: some View {
+    if let snapshot = entry.snapshot {
+      if let running = snapshot.running {
+        VStack(spacing: 1) {
+          Image(systemName: running.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+            .font(.caption2)
+          Text(running.startedAt, style: .timer)
+            .font(.system(.caption2, design: .rounded).monospacedDigit())
+            .foregroundColor(Palette.dangerOnDark)
+        }
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        VStack(spacing: 1) {
+          Image(systemName: planned.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+            .font(.caption2)
+          Text(L10n.t("widget.nowPlannedShort", planned.title))
+            .font(.system(.caption2, design: .rounded).bold())
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+      } else if let next = snapshot.nextUpcoming(now: entry.date) {
+        VStack(spacing: 1) {
+          Image(systemName: next.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+            .font(.caption2)
+          Text(formatShortTime(next.startsAt))
+            .font(.system(.caption2, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+      } else {
+        Image(systemName: "checkmark")
+          .font(.caption)
+      }
+    } else {
+      Text("--")
+        .font(.system(.caption2, design: .rounded))
+    }
+  }
+}
+
+struct WatchCornerNextView: View {
+  let entry: WatchComplicationEntry
+
+  var body: some View {
+    if let snapshot = entry.snapshot {
+      if let running = snapshot.running {
+        Image(systemName: running.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+          .widgetLabel {
+            Text("\(running.title) \(Text(running.startedAt, style: .timer))")
+          }
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        Image(systemName: planned.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+          .widgetLabel {
+            Text(L10n.t("widget.nowPlannedShort", planned.title))
+          }
+      } else if let next = snapshot.nextUpcoming(now: entry.date) {
+        Image(systemName: next.type.lowercased() == "care" ? "heart.fill" : "house.fill")
+          .widgetLabel {
+            Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
+          }
+      } else if snapshot.tasks.isEmpty {
+        Text(L10n.t("widget.noTasks"))
+      } else {
+        Text(L10n.t("watch.nothingPlanned"))
+      }
+    } else {
+      Text("--")
     }
   }
 }
@@ -221,6 +312,14 @@ struct WatchNextEntryView: View {
     switch family {
     case .accessoryRectangular:
       WatchRectangularNextView(entry: entry)
+        .containerBackground(.clear, for: .widget)
+    case .accessoryCircular:
+      WatchCircularNextView(entry: entry)
+        .containerBackground(for: .widget) {
+          AccessoryWidgetBackground()
+        }
+    case .accessoryCorner:
+      WatchCornerNextView(entry: entry)
         .containerBackground(.clear, for: .widget)
     default:
       WatchInlineNextView(entry: entry)
@@ -240,6 +339,6 @@ public struct WatchNextComplication: Widget {
     }
     .configurationDisplayName(Text(L10n.t("watch.complication.next.name")))
     .description(Text(L10n.t("watch.complication.description")))
-    .supportedFamilies([.accessoryRectangular, .accessoryInline])
+    .supportedFamilies([.accessoryRectangular, .accessoryInline, .accessoryCircular, .accessoryCorner])
   }
 }

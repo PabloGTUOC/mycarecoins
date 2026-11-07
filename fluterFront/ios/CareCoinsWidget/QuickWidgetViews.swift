@@ -296,6 +296,48 @@ struct FeedbackChip: View {
 
 // MARK: - Family Views
 
+struct NowPlannedPill: View {
+  let planned: QuickSnapshot.Upcoming
+  var shortForm: Bool = false
+  @Environment(\.colorScheme) var colorScheme
+  @Environment(\.widgetRenderingMode) var renderingMode
+
+  private var symbol: String {
+    planned.type.lowercased() == "care" ? "heart.fill" : "house.fill"
+  }
+
+  private var pillText: String {
+    if shortForm {
+      return L10n.t("widget.nowPlannedShort", planned.title)
+    } else {
+      let endTime = planned.endsAt != nil ? formatShortTime(planned.endsAt!) : ""
+      return L10n.t("widget.nowPlanned", planned.title, endTime)
+    }
+  }
+
+  var body: some View {
+    HStack(spacing: 6) {
+      Image(systemName: symbol)
+        .font(.caption2)
+        .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
+      Text(pillText)
+        .font(.caption.weight(.medium))
+        .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .truncationMode(.tail)
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 8)
+    .frame(height: 26)
+    .background(
+      Capsule()
+        .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
+    )
+    .widgetAccentable(renderingMode == .accented)
+  }
+}
+
 struct SmallWidgetView: View {
   let entry: QuickEntry
   let snapshot: QuickSnapshot
@@ -311,63 +353,69 @@ struct SmallWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
-      } else if let task = snapshot.tasks.first {
-        Text(task.title)
-          .font(.subheadline.weight(.semibold))
-          .foregroundColor(Palette.widgetText(colorScheme))
-          .lineLimit(2)
-          .minimumScaleFactor(0.8)
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-        if let action = entry.lastAction {
-          FeedbackChip(action: action, canUndo: entry.canUndo)
-        } else {
-          HStack(spacing: 8) {
-            Button(intent: StartTaskIntent(taskId: task.id)) {
-              Text(L10n.t("widget.start"))
-                .font(.caption.weight(.semibold))
-                .foregroundColor(renderingMode == .accented ? .primary : .white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 30)
-                .background(
-                  Capsule()
-                    .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.primary)
-                )
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-            .frame(height: 30)
-            .contentShape(Rectangle())
-            .controlSize(.small)
-            .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
-            .widgetAccentable(renderingMode == .accented)
-
-            Button(intent: DoneTaskIntent(taskId: task.id)) {
-              Text(L10n.t("widget.done"))
-                .font(.caption.weight(.semibold))
-                .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
-                .frame(maxWidth: .infinity)
-                .frame(height: 30)
-                .background(
-                  Capsule()
-                    .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
-                )
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-            .frame(height: 30)
-            .contentShape(Rectangle())
-            .controlSize(.small)
-            .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
-            .widgetAccentable(renderingMode == .accented)
-          }
-          .frame(height: 30)
-        }
       } else {
-        Text(L10n.t("widget.noTasks"))
-          .font(.caption)
-          .foregroundColor(Palette.widgetSecondaryText(colorScheme))
-          .frame(maxWidth: .infinity, alignment: .center)
+        if let planned = snapshot.currentPlanned(now: entry.date) {
+          NowPlannedPill(planned: planned, shortForm: true)
+        }
+
+        if let task = snapshot.tasks.first {
+          Text(task.title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(Palette.widgetText(colorScheme))
+            .lineLimit(snapshot.currentPlanned(now: entry.date) != nil ? 1 : 2)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+          if let action = entry.lastAction {
+            FeedbackChip(action: action, canUndo: entry.canUndo)
+          } else {
+            HStack(spacing: 8) {
+              Button(intent: StartTaskIntent(taskId: task.id)) {
+                Text(L10n.t("widget.start"))
+                  .font(.caption.weight(.semibold))
+                  .foregroundColor(renderingMode == .accented ? .primary : .white)
+                  .frame(maxWidth: .infinity)
+                  .frame(height: 30)
+                  .background(
+                    Capsule()
+                      .fill(renderingMode == .accented ? Color.primary.opacity(0.2) : Palette.primary)
+                  )
+              }
+              .buttonStyle(.plain)
+              .frame(maxWidth: .infinity)
+              .frame(height: 30)
+              .contentShape(Rectangle())
+              .controlSize(.small)
+              .accessibilityLabel(L10n.t("widget.a11y.start", task.title, Int64(task.durationMinutes)))
+              .widgetAccentable(renderingMode == .accented)
+
+              Button(intent: DoneTaskIntent(taskId: task.id)) {
+                Text(L10n.t("widget.done"))
+                  .font(.caption.weight(.semibold))
+                  .foregroundColor(renderingMode == .accented ? .primary : Palette.primaryInk)
+                  .frame(maxWidth: .infinity)
+                  .frame(height: 30)
+                  .background(
+                    Capsule()
+                      .fill(renderingMode == .accented ? Color.clear : Palette.primarySoft)
+                  )
+              }
+              .buttonStyle(.plain)
+              .frame(maxWidth: .infinity)
+              .frame(height: 30)
+              .contentShape(Rectangle())
+              .controlSize(.small)
+              .accessibilityLabel(L10n.t("widget.a11y.done", task.title))
+              .widgetAccentable(renderingMode == .accented)
+            }
+            .frame(height: 30)
+          }
+        } else if snapshot.currentPlanned(now: entry.date) == nil {
+          Text(L10n.t("widget.noTasks"))
+            .font(.caption)
+            .foregroundColor(Palette.widgetSecondaryText(colorScheme))
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -387,7 +435,10 @@ struct MediumWidgetView: View {
   @Environment(\.colorScheme) var colorScheme
 
   var maxTasks: Int {
-    snapshot.running != nil ? 1 : 2
+    if snapshot.running != nil || snapshot.currentPlanned(now: entry.date) != nil {
+      return 1
+    }
+    return 2
   }
 
   var body: some View {
@@ -421,10 +472,12 @@ struct MediumWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        NowPlannedPill(planned: planned, shortForm: false)
       }
 
       let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
-      if snapshot.tasks.isEmpty && snapshot.running == nil {
+      if snapshot.tasks.isEmpty && snapshot.running == nil && snapshot.currentPlanned(now: entry.date) == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
@@ -453,7 +506,10 @@ struct LargeWidgetView: View {
   @Environment(\.colorScheme) var colorScheme
 
   var maxTasks: Int {
-    snapshot.running != nil ? 4 : 5
+    if snapshot.running != nil || snapshot.currentPlanned(now: entry.date) != nil {
+      return 4
+    }
+    return 5
   }
 
   var body: some View {
@@ -475,10 +531,12 @@ struct LargeWidgetView: View {
 
       if let running = snapshot.running {
         RunningBanner(running: running)
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        NowPlannedPill(planned: planned, shortForm: false)
       }
 
       let visibleTasks = Array(snapshot.tasks.prefix(tasksToShow))
-      if snapshot.tasks.isEmpty && snapshot.running == nil {
+      if snapshot.tasks.isEmpty && snapshot.running == nil && snapshot.currentPlanned(now: entry.date) == nil {
         Text(L10n.t("widget.noTasks"))
           .font(.caption)
           .foregroundColor(Palette.widgetSecondaryText(colorScheme))
@@ -504,6 +562,54 @@ struct LargeWidgetView: View {
           .minimumScaleFactor(0.75)
           .frame(height: 14)
       }
+    }
+  }
+}
+
+struct AccessoryRectangularTasksView: View {
+  let entry: QuickEntry
+  let snapshot: QuickSnapshot
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      if let running = snapshot.running {
+        Text(running.title)
+          .font(.headline)
+          .lineLimit(1)
+        Text(running.startedAt, style: .timer)
+          .font(.body.monospacedDigit())
+      } else if let planned = snapshot.currentPlanned(now: entry.date) {
+        let endTime = planned.endsAt != nil ? formatShortTime(planned.endsAt!) : ""
+        Text(L10n.t("widget.nowPlanned", planned.title, endTime))
+          .font(.headline)
+          .lineLimit(2)
+      } else if let next = snapshot.nextUpcoming(now: entry.date) {
+        Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
+          .font(.headline)
+          .lineLimit(2)
+      } else {
+        Text(L10n.t("widget.noTasks"))
+          .font(.caption)
+          .lineLimit(2)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+struct AccessoryInlineTasksView: View {
+  let entry: QuickEntry
+  let snapshot: QuickSnapshot
+
+  var body: some View {
+    if let running = snapshot.running {
+      Text("\(running.title) \(Text(running.startedAt, style: .timer))")
+    } else if let planned = snapshot.currentPlanned(now: entry.date) {
+      Text(L10n.t("widget.nowPlannedShort", planned.title))
+    } else if let next = snapshot.nextUpcoming(now: entry.date) {
+      Text(L10n.t("widget.next", next.title, formatShortTime(next.startsAt)))
+    } else {
+      Text(L10n.t("widget.noTasks"))
     }
   }
 }
@@ -567,6 +673,10 @@ public struct QuickTasksEntryView: View {
           SmallWidgetView(entry: entry, snapshot: snapshot)
         case .systemMedium:
           MediumWidgetView(entry: entry, snapshot: snapshot)
+        case .accessoryRectangular:
+          AccessoryRectangularTasksView(entry: entry, snapshot: snapshot)
+        case .accessoryInline:
+          AccessoryInlineTasksView(entry: entry, snapshot: snapshot)
         default:
           LargeWidgetView(entry: entry, snapshot: snapshot)
         }
@@ -587,6 +697,6 @@ public struct QuickTasksWidget: Widget {
     }
     .configurationDisplayName(Text(L10n.t("widget.tasks.name")))
     .description(Text(L10n.t("widget.tasks.description")))
-    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryInline])
   }
 }
