@@ -470,6 +470,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
     final hasRecurrent = filtered.any((a) => a['is_recurrent'] == true);
     final hasNonRecurrent = filtered.any((a) => a['is_recurrent'] != true);
     final showRepeatIcon = hasRecurrent && hasNonRecurrent;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.15;
 
     return [
       Row(
@@ -623,10 +624,20 @@ class _ActivitiesScreenState extends State<ActivitiesScreen> {
                                 style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary)),
+                            if (largeText &&
+                                filtered[i]['status'] == 'pending')
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: VButton(
+                                    type: VButtonType.outline,
+                                    onPressed: () =>
+                                        _approve(filtered[i]['id']),
+                                    child: Text(l.approve)),
+                              ),
                           ],
                         ),
                       ),
-                      if (filtered[i]['status'] == 'pending')
+                      if (!largeText && filtered[i]['status'] == 'pending')
                         Padding(
                           padding: const EdgeInsets.only(left: 8),
                           child: VButton(

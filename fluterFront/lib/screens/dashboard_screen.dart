@@ -688,10 +688,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        TextButton.icon(
-                          onPressed: _logTimeOff,
-                          icon: const Icon(Icons.add_rounded),
-                          label: Text(l.timeOffLong),
+                        Flexible(
+                          child: TextButton.icon(
+                            onPressed: _logTimeOff,
+                            icon: const Icon(Icons.add_rounded),
+                            label: Text(
+                              l.timeOffLong,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ),
                         IconButton(
                           tooltip: l.prevWeek,
@@ -1135,17 +1141,29 @@ class _DayHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final showToday = isToday && todayLabel != null;
+    final textScaler =
+        MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.3);
     return Column(
       children: [
-        Text(
-            showToday
-                ? todayLabel!
-                : DateFormat('EEE', l.localeName).format(day),
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: isToday ? AppColors.primary : AppColors.textSecondary)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+              showToday
+                  ? todayLabel!
+                  : DateFormat('EEE', l.localeName).format(day),
+              maxLines: 1,
+              softWrap: false,
+              textScaler: textScaler,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color:
+                      isToday ? AppColors.primary : AppColors.textSecondary)),
+        ),
         Text('${day.day}',
+            maxLines: 1,
+            softWrap: false,
+            textScaler: textScaler,
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -1250,8 +1268,8 @@ class _DayRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 44,
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 44),
               child: _DayHeader(
                   day: day,
                   isToday: isToday,

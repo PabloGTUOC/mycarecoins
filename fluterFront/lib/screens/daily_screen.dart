@@ -4142,17 +4142,23 @@ class DayActivityBlock extends StatelessWidget {
       container: true,
       label: semanticsLabel,
       hint: l.blockSemanticsHint,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final blockW = constraints.hasBoundedWidth
-              ? constraints.maxWidth
-              : double.infinity;
-          final blockH = constraints.hasBoundedHeight
-              ? constraints.maxHeight
-              : double.infinity;
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final blockW = constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : double.infinity;
+            final blockH = constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : double.infinity;
 
-          final showEmoji = blockW >= 120;
-          final titleMaxLines = blockH >= 72 ? 2 : 1;
+            final scale = MediaQuery.textScalerOf(context).scale(1);
+            final minMetaHeight = scale > 1.0 ? 60.0 : 44.0;
+            final minTallHeight = scale > 1.0 ? 88.0 : 72.0;
+
+            final showEmoji = blockW >= 120;
+            final titleMaxLines = blockH >= minTallHeight ? 2 : 1;
 
           final titleText = Text.rich(
             TextSpan(children: [
@@ -4275,11 +4281,11 @@ class DayActivityBlock extends StatelessWidget {
                   )
                 else
                   titleWidget,
-                if (blockH >= 44 && blockW >= 90) ...[
+                if (blockH >= minMetaHeight && blockW >= 90) ...[
                   const SizedBox(height: 3),
                   metaRow,
                 ],
-                if (blockH >= 72 && blockW >= 90 && hasAction) ...[
+                if (blockH >= minTallHeight && blockW >= 90 && hasAction) ...[
                   const SizedBox(height: 3),
                   _ActivityAction(
                     item: a,
@@ -4292,7 +4298,8 @@ class DayActivityBlock extends StatelessWidget {
               ],
             ),
           );
-        },
+          },
+        ),
       ),
     );
   }

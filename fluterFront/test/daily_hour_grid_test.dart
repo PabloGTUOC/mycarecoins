@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:carecoins_flutter/l10n/app_localizations.dart';
+import 'package:carecoins_flutter/screens/activities_screen.dart';
 import 'package:carecoins_flutter/screens/daily_screen.dart';
+import 'package:carecoins_flutter/screens/dashboard_screen.dart';
 import 'package:carecoins_flutter/services/api_client.dart';
 import 'package:carecoins_flutter/state/app_state.dart';
 import 'package:carecoins_flutter/theme/app_theme.dart';
@@ -44,6 +46,13 @@ class FakeGridApiClient extends ApiClient {
     if (path.startsWith('/api/marketplace/rewards/')) {
       return {'rewards': [], 'claimed': []};
     }
+    if (path.startsWith('/api/families/') && path.contains('/budget')) {
+      return {
+        'monthlyBudget': 100,
+        'usedThisMonth': 20,
+        'baseRatePerHour': 20,
+      };
+    }
     if (path == '/api/me') {
       return {
         'user': {'id': 1, 'display_name': 'Me'},
@@ -78,11 +87,12 @@ Widget _wrap(Widget child, AppState app) {
 }
 
 void main() {
-  setUp(() {
+    setUp(() {
     SharedPreferences.setMockInitialValues({
       'tour.seen.welcome': true,
       'tour.seen.daily': true,
       'tour.seen.dashboard': true,
+      'tour.seen.activities': true,
       'tour.seen.checklist-dismissed': true,
     });
   });
@@ -889,6 +899,164 @@ void main() {
       final hourText = tester.widget<Text>(hour06);
       expect(hourText.maxLines, 1);
       expect(hourText.softWrap, isFalse);
+    });
+
+    testWidgets(
+        'DS-1b: 390x844 at 1.6x textScaler has no overflow on Today short card, Tasks pending row, and Family Coming up card',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final now = DateTime.now();
+      final todayIso = DateTime(now.year, now.month, now.day, 12, 0)
+          .toUtc()
+          .toIso8601String();
+      final todayDateStr =
+          '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      final api = FakeGridApiClient(
+        members: [
+          {
+            'user_id': 1,
+            'name': 'Parent',
+            'status': 'active',
+            'coin_balance': 150,
+          },
+        ],
+        activities: [
+          {
+            'id': 301,
+            'title': 'Lunch prep',
+            'type': 'household',
+            'category': 'care',
+            'status': 'approved',
+            'starts_at': todayIso,
+            'duration_minutes': 30,
+            'assigned_to': 1,
+            'coin_value': 1,
+          },
+          {
+            'id': 302,
+            'title': 'Weekly laundry sorting',
+            'type': 'household',
+            'category': 'care',
+            'is_template': true,
+            'status': 'pending',
+            'duration_minutes': 45,
+            'coin_value': 45,
+          },
+        ],
+      );
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 1,
+            'alias': 'Parent',
+            'coin_balance': 150,
+            'role': 'caregiver',
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Parent'};
+
+      Widget buildWithScale(Widget home,
+          {double scale = 1.6, Locale locale = const Locale('en')}) {
+        return ChangeNotifierProvider<AppState>.value(
+          value: app,
+          child: MaterialApp(
+            locale: locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler:
+                    TextScaler.linear(scale).clamp(maxScaleFactor: 1.3),
+              ),
+              child: child!,
+            ),
+            home: home,
+          ),
+        );
+      }
+
+      // 1. Today short event card (30-min) at 1.6x: drops chips row, keeps 1-line title
+      await tester.pumpWidget(
+        buildWithScale(DailyScreen(date: todayDateStr, now: now)),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final shortBlock = find.byType(DayActivityBlock);
+      expect(shortBlock, findsOneWidget);
+      final lunchTitle = find.descendant(
+        of: shortBlock,
+        matching: find.textContaining('Lunch prep'),
+      );
+      expect(lunchTitle, findsOneWidget);
+      final lunchText = tester.widget<Text>(lunchTitle);
+      expect(lunchText.maxLines, 1);
+      expect(lunchText.overflow, TextOverflow.ellipsis);
+      expect(
+        find.descendant(of: shortBlock, matching: find.byType(AssigneeBadge)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: shortBlock, matching: find.text('1 cc')),
+        findsNothing,
+      );
+      expect(
+        tester.getRect(lunchTitle).bottom,
+        lessThanOrEqualTo(tester.getRect(shortBlock).bottom),
+      );
+
+      // 2. Tasks list with pending template at 1.6x: Approve button is under meta line
+      await tester.pumpWidget(
+        buildWithScale(const Scaffold(body: ActivitiesScreen())),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      final titleFinder =
+          find.textContaining('Weekly laundry sorting', findRichText: true);
+      final metaFinder = find.textContaining('45 cc');
+      final approveFinder = find.widgetWithText(VButton, 'Approve');
+      expect(titleFinder, findsOneWidget);
+      expect(metaFinder, findsOneWidget);
+      expect(approveFinder, findsOneWidget);
+      expect(tester.getSize(titleFinder).width, greaterThan(80.0));
+      expect(
+        tester.getRect(approveFinder).top,
+        greaterThanOrEqualTo(tester.getRect(metaFinder).bottom),
+      );
+      expect(
+        (tester.getRect(approveFinder).left - tester.getRect(metaFinder).left)
+            .abs(),
+        lessThan(2.0),
+      );
+
+      // 3. Family "Coming up" card at 1.6x across all 4 locales
+      for (final loc in const [
+        Locale('en'),
+        Locale('es'),
+        Locale('fr'),
+        Locale('de'),
+      ]) {
+        await tester.pumpWidget(
+          buildWithScale(
+            const Scaffold(body: DashboardScreen()),
+            locale: loc,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+
+        final l = lookupAppLocalizations(loc);
+        final todayLabelFinder = find.text(l.dayToday);
+        expect(todayLabelFinder, findsOneWidget);
+        final todayLabelText = tester.widget<Text>(todayLabelFinder);
+        expect(todayLabelText.maxLines, 1);
+        expect(todayLabelText.softWrap, isFalse);
+      }
     });
   });
 }
