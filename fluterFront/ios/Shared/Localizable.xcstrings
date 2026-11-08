@@ -523,31 +523,60 @@
         }
       }
     },
+    "widget.allTasks" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Aufgaben ansehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See all tasks"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ver todas las tareas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voir toutes les tâches"
+          }
+        }
+      }
+    },
     "widget.needsYou" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wartet auf dich: %lld"
+            "value" : "Wartet auf dich · %lld"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Needs you: %lld"
+            "value" : "Needs you · %lld"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te necesitan: %lld"
+            "value" : "Te necesitan · %lld"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "À traiter : %lld"
+            "value" : "À traiter · %lld"
           }
         }
       }
@@ -558,25 +587,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Als Nächstes: %1$@ um %2$@"
+            "value" : "Als Nächstes · %1$@ · %2$@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Next: %1$@ at %2$@"
+            "value" : "Next · %1$@ · %2$@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Siguiente: %1$@ a las %2$@"
+            "value" : "Siguiente · %1$@ · %2$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ensuite : %1$@ à %2$@"
+            "value" : "Ensuite · %1$@ · %2$@"
           }
         }
       }
@@ -697,6 +726,64 @@
         }
       }
     },
+    "widget.openApp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CareCoins öffnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open CareCoins"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir CareCoins"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir CareCoins"
+          }
+        }
+      }
+    },
+    "widget.row.meta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Min. · %2$lld cc"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min · %2$lld cc"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min · %2$lld cc"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min · %2$lld cc"
+          }
+        }
+      }
+    },
     "widget.running" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -722,6 +809,35 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "En cours · %@"
+          }
+        }
+      }
+    },
+    "widget.running.label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · läuft"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · running"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · en marcha"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · en cours"
           }
         }
       }

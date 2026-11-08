@@ -26,8 +26,27 @@ enum Palette {
   static let coinSoft = Color(hex: 0xFEE9CA)
   static let coinInk = Color(hex: 0x7C4226)
 
+  static let surfaceDark: Color = .init(hex: 0x1E293B)
+  static let coinRing: Color = .init(hex: 0xE08A0E)
+  static let coinHighlight: Color = .init(hex: 0xFBC97A)
+
+  static let primarySoftDark: Color = .init(hex: 0x12324D)
+  static let primaryInkDark: Color = .init(hex: 0x9CCBF0)
+  static let coinSoftDark: Color = .init(hex: 0x3A2A12)
+  static let coinInkDark: Color = .init(hex: 0xFBC97A)
+  static let successSoftDark: Color = .init(hex: 0x123524)
+  static let successInkDark: Color = .init(hex: 0x6EE7A0)
+  static let warningSoftDark: Color = .init(hex: 0x3A2510)
+  static let warningInkDark: Color = .init(hex: 0xFBBF6A)
+  static let dangerSoftDark: Color = .init(hex: 0x3B1414)
+  static let dangerInkDark: Color = .init(hex: 0xFCA5A5)
+
   static func widgetBackground(_ scheme: ColorScheme) -> Color {
-    scheme == .dark ? ink : surface
+    scheme == .dark ? ink : bg
+  }
+
+  static func widgetTile(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? surfaceDark : surface
   }
 
   static func widgetText(_ scheme: ColorScheme) -> Color {
@@ -37,6 +56,46 @@ enum Palette {
   static func widgetSecondaryText(_ scheme: ColorScheme) -> Color {
     scheme == .dark ? inkMuted : textSecondary
   }
+
+  static func primarySoft(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? primarySoftDark : primarySoft
+  }
+
+  static func primaryInk(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? primaryInkDark : primaryInk
+  }
+
+  static func coinSoft(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? coinSoftDark : coinSoft
+  }
+
+  static func coinInk(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? coinInkDark : coinInk
+  }
+
+  static func successSoft(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? successSoftDark : successSoft
+  }
+
+  static func successInk(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? successInkDark : successInk
+  }
+
+  static func warningSoft(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? warningSoftDark : warningSoft
+  }
+
+  static func warningInk(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? warningInkDark : warningInk
+  }
+
+  static func dangerSoft(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? dangerSoftDark : dangerSoft
+  }
+
+  static func dangerInk(_ scheme: ColorScheme) -> Color {
+    scheme == .dark ? dangerInkDark : dangerInk
+  }
 }
 
 extension Color {
@@ -45,5 +104,9 @@ extension Color {
     let green = Double((hex >> 8) & 0xFF) / 255.0
     let blue = Double(hex & 0xFF) / 255.0
     self.init(.sRGB, red: red, green: green, blue: blue, opacity: 1.0)
+  }
+
+  init(light: Color, dark: Color, scheme: ColorScheme) {
+    self = scheme == .dark ? dark : light
   }
 }
