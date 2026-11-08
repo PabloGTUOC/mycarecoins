@@ -275,8 +275,9 @@ void main() {
       // Grid starts at 06:00. 10:15 is (10.25 - 6) = 4.25 hours from top.
       // With kGridHeight = 1152, 1 hour = 64 dp. 4.25 * 64 = 272 dp.
       // Find the grid container position:
-      final gridCenter = tester.getCenter(find.text('10:00'));
-      await gesture.moveTo(Offset(gridCenter.dx + 100, gridCenter.dy + 16)); // 16dp down = +15 minutes
+      final gridCenter = tester.getCenter(find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10')));
+      await gesture.moveTo(Offset(gridCenter.dx + 100, gridCenter.dy + 28)); // +15 minutes from 10:00 line
       await tester.pump();
 
       // Check ghost block appears with 15-minute snapped time range
@@ -335,7 +336,8 @@ void main() {
       final gesture = await tester.startGesture(tester.getCenter(find.text('Bath')));
       await tester.pump(const Duration(milliseconds: 600));
 
-      final gridCenter = tester.getCenter(find.text('10:00'));
+      final gridCenter = tester.getCenter(find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10')));
       await gesture.moveTo(Offset(gridCenter.dx + 100, gridCenter.dy + 16));
       await tester.pump();
       await gesture.up();
@@ -406,7 +408,7 @@ void main() {
       var gesture = await tester.startGesture(tester.getCenter(find.text('Bath')));
       await tester.pump(const Duration(milliseconds: 600));
 
-      final center08 = tester.getCenter(find.text('08:00'));
+      final center08 = tester.getCenter(find.text('08'));
       await gesture.moveTo(Offset(center08.dx + 100, center08.dy));
       await tester.pump();
 
@@ -419,7 +421,7 @@ void main() {
       gesture = await tester.startGesture(tester.getCenter(find.text('Bath')));
       await tester.pump(const Duration(milliseconds: 600));
 
-      final center13 = tester.getCenter(find.text('13:00'));
+      final center13 = tester.getCenter(find.text('13'));
       await gesture.moveTo(Offset(center13.dx + 100, center13.dy + 32)); // ~13:30
       await tester.pump();
 
@@ -432,7 +434,7 @@ void main() {
       gesture = await tester.startGesture(tester.getCenter(find.text('Bath')));
       await tester.pump(const Duration(milliseconds: 600));
 
-      final center16 = tester.getCenter(find.text('16:00'));
+      final center16 = tester.getCenter(find.text('16'));
       await gesture.moveTo(Offset(center16.dx + 100, center16.dy + 16)); // ~16:15
       await tester.pump();
 

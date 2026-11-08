@@ -153,7 +153,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap on future slot 10:00
-      final hour10 = find.text('10:00');
+      final hour10 = find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10'));
       expect(hour10, findsOneWidget);
       final center10 = tester.getCenter(hour10);
       await tester.tapAt(Offset(center10.dx + 150, center10.dy));
@@ -223,7 +224,8 @@ void main() {
       await tester.pumpWidget(_wrap(DailyScreen(date: '2026-10-06', now: now), app));
       await tester.pumpAndSettle();
 
-      final hour10 = find.text('10:00');
+      final hour10 = find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10'));
       final center10 = tester.getCenter(hour10);
       await tester.tapAt(Offset(center10.dx + 150, center10.dy));
       await tester.pump(const Duration(milliseconds: 400));

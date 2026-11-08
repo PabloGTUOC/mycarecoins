@@ -408,7 +408,10 @@ void main() {
 
       // Selected day is now Tue, Oct 13 (same weekday, +7 days)
       expect(find.text('Tue, Oct 13'), findsOneWidget);
-      expect(find.text('13'), findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(WeekStrip), matching: find.text('13')),
+        findsOneWidget,
+      );
 
       // Fling strip right (move 1 week backward)
       await tester.fling(find.byType(WeekStrip), const Offset(400, 0), 1000);

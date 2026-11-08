@@ -1489,32 +1489,44 @@ class _DailyScreenState extends State<DailyScreen> {
         surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: !widget.isTab,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            if (wide) ...[
-              const SizedBox(width: 4),
-              Text(l.dailyTitle,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.w800)),
+        title: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: Row(
+            children: [
+              if (wide) ...[
+                const SizedBox(width: 4),
+                Text(l.dailyTitle,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w800)),
+              ],
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                        onPressed: () => _changeDay(-1),
+                        tooltip: l.prevDay,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.chevron_left_rounded)),
+                    Flexible(
+                      child: Text(
+                          DateFormat(wide ? 'EEEE, MMM d' : 'EEE, MMM d', loc)
+                              .format(_day),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w800)),
+                    ),
+                    IconButton(
+                        onPressed: () => _changeDay(1),
+                        tooltip: l.nextDay,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.chevron_right_rounded)),
+                  ],
+                ),
+              ),
             ],
-            const Spacer(),
-            IconButton(
-                onPressed: () => _changeDay(-1),
-                tooltip: l.prevDay,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_left_rounded)),
-            Text(
-                DateFormat(wide ? 'EEEE, MMM d' : 'EEE, MMM d', loc)
-                    .format(_day),
-                style:
-                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-            IconButton(
-                onPressed: () => _changeDay(1),
-                tooltip: l.nextDay,
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_right_rounded)),
-            const Spacer(),
-          ],
+          ),
         ),
         actions: [
           if (!wide) ...[
@@ -1525,10 +1537,15 @@ class _DailyScreenState extends State<DailyScreen> {
                   size: 22, color: AppColors.textSecondary),
             ),
             if (app.hasFamilies)
-              CoinBalancePill(
-                alias: alias,
-                balance: balance,
-                onTap: widget.onOpenWallet,
+              MediaQuery.withClampedTextScaling(
+                maxScaleFactor: 1.3,
+                child: CoinBalancePill(
+                  alias: alias,
+                  balance: balance,
+                  onTap: widget.onOpenWallet,
+                  showAvatar:
+                      MediaQuery.textScalerOf(context).scale(1) <= 1.0,
+                ),
               ),
             PopupMenuButton<String>(
               tooltip: l.timeOffLong,
@@ -3099,7 +3116,11 @@ class _DayHourGridSkeletonState extends State<_DayHourGridSkeleton>
                       child: Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Text(
-                          '${((kStartHour + h) % 24).toString().padLeft(2, '0')}:00',
+                          ((kStartHour + h) % 24).toString().padLeft(2, '0'),
+                          maxLines: 1,
+                          softWrap: false,
+                          textScaler: MediaQuery.textScalerOf(context)
+                              .clamp(maxScaleFactor: 1.3),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -3418,7 +3439,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
   DateTime? _startsAt(Map<String, dynamic> a) =>
       DateTime.tryParse(a['starts_at']?.toString() ?? '')?.toLocal();
 
-  String _hourLabel(int h24) => '${(h24 % 24).toString().padLeft(2, '0')}:00';
+  String _hourLabel(int h24) => (h24 % 24).toString().padLeft(2, '0');
 
   Widget _buildGhostBlock(
       double leftHourWidth, double availableWidth, AppLocalizations l) {
@@ -3613,6 +3634,11 @@ class _DayHourGridState extends State<_DayHourGrid> {
                                         left: widget.isNarrow ? 4 : 8),
                                     child: Text(
                                       hourStr,
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      textScaler:
+                                          MediaQuery.textScalerOf(context)
+                                              .clamp(maxScaleFactor: 1.3),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -3635,7 +3661,7 @@ class _DayHourGridState extends State<_DayHourGrid> {
                                     container: true,
                                     button: true,
                                     enabled: canAddThisHour,
-                                    label: l.quickAddTitle(hourStr),
+                                    label: l.quickAddTitle('$hourStr:00'),
                                     onTap: canAddThisHour
                                         ? () => widget.onHourTap?.call(hourInt)
                                         : null,

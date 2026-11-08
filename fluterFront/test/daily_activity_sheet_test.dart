@@ -197,7 +197,7 @@ void main() {
       expect(find.byType(ListView), findsNothing);
 
       // Past time: tap at 07:00 when now is 08:00 does nothing
-      final hour7 = find.text('07:00');
+      final hour7 = find.text('07');
       expect(hour7, findsOneWidget);
       final center7 = tester.getCenter(hour7);
       await tester.tapAt(Offset(center7.dx + 150, center7.dy + 10));
@@ -206,11 +206,12 @@ void main() {
       expect(find.textContaining('Add at'), findsNothing);
 
       // Future time: tap at 10:00 + 20dp (~10:18), snapped DOWN to 10:15
-      final hour10 = find.text('10:00');
+      final hour10 = find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10'));
       expect(hour10, findsOneWidget);
       final center10 = tester.getCenter(hour10);
 
-      await tester.tapAt(Offset(center10.dx + 150, center10.dy));
+      await tester.tapAt(Offset(center10.dx + 150, center10.dy + 20));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
 
@@ -557,7 +558,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       // Move to 12:00
-      final gridCenter = tester.getCenter(find.text('12:00'));
+      final gridCenter = tester.getCenter(find.text('12'));
       await gesture.moveTo(Offset(gridCenter.dx + 100, gridCenter.dy));
       await tester.pump();
       await gesture.up();
@@ -727,7 +728,8 @@ void main() {
           .pumpWidget(_wrap(DailyScreen(date: '2026-10-06', now: now), app));
       await tester.pumpAndSettle();
 
-      final center10 = tester.getCenter(find.text('10:00'));
+      final center10 = tester.getCenter(find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10')));
       await tester.tapAt(Offset(center10.dx + 150, center10.dy));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();

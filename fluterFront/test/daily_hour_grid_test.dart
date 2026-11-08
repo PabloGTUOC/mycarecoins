@@ -110,10 +110,10 @@ void main() {
       // Hour grid (SingleChildScrollView) is present
       expect(find.byType(SingleChildScrollView), findsWidgets);
 
-      // Hour lines/labels from 06:00 to 24:00 are present
-      expect(find.text('06:00'), findsOneWidget);
-      expect(find.text('12:00'), findsOneWidget);
-      expect(find.text('00:00'), findsOneWidget);
+      // Hour lines/labels from 06 to 24 (00) are present
+      expect(find.text('06'), findsOneWidget);
+      expect(find.text('12'), findsOneWidget);
+      expect(find.text('00'), findsOneWidget);
 
       // T1 week strip is preserved; phones add through the tray (no FAB).
       expect(find.byType(WeekStrip), findsOneWidget);
@@ -838,6 +838,57 @@ void main() {
         otherCircleDeco.border,
         equals(Border.all(color: AppColors.border, width: 1.0)),
       );
+    });
+
+    testWidgets(
+        'DS-1: phone layout at 390x844 with 1.6x textScaler has no overflow and shows both chevrons and non-wrapping hour labels',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final api = FakeGridApiClient();
+      final app = AppState(api: api)
+        ..families = [
+          {
+            'family_id': 1,
+            'alias': 'Parent',
+            'coin_balance': 150,
+            'role': 'caregiver',
+          }
+        ]
+        ..profile = {'id': 1, 'display_name': 'Parent'};
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppState>.value(
+          value: app,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.6)),
+              child: child!,
+            ),
+            home: const DailyScreen(date: '2026-11-09'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Previous day'), findsOneWidget);
+      expect(find.byTooltip('Next day'), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
+      expect(find.byType(CoinBalancePill), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
+
+      // Two-digit hour labels are present and single-line
+      final hour06 = find.text('06');
+      expect(hour06, findsOneWidget);
+      final hourText = tester.widget<Text>(hour06);
+      expect(hourText.maxLines, 1);
+      expect(hourText.softWrap, isFalse);
     });
   });
 }

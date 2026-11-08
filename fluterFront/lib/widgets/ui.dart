@@ -747,18 +747,22 @@ class CoinBalancePill extends StatelessWidget {
   final String alias;
   final String balance;
   final VoidCallback? onTap;
+  final bool showAvatar;
 
   const CoinBalancePill({
     super.key,
     required this.alias,
     required this.balance,
     this.onTap,
+    this.showAvatar = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final pill = Container(
-      padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+      padding: showAvatar
+          ? const EdgeInsets.fromLTRB(4, 4, 12, 4)
+          : const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.coinSoft,
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -766,13 +770,15 @@ class CoinBalancePill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AvatarCircle(
-            name: alias,
-            size: 24,
-            background: AppColors.coin,
-            foreground: AppColors.textPrimary,
-          ),
-          const SizedBox(width: 8),
+          if (showAvatar) ...[
+            AvatarCircle(
+              name: alias,
+              size: 24,
+              background: AppColors.coin,
+              foreground: AppColors.textPrimary,
+            ),
+            const SizedBox(width: 8),
+          ],
           Text(
             balance,
             style: const TextStyle(

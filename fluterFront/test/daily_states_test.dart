@@ -171,8 +171,12 @@ void main() {
       expect(find.byKey(const ValueKey('skeleton-block-2')), findsOneWidget);
 
       // Hour lines are rendered in skeleton
-      expect(find.text('06:00'), findsOneWidget);
-      expect(find.text('10:00'), findsOneWidget);
+      expect(find.text('06'), findsOneWidget);
+      expect(
+        find.descendant(
+            of: find.byType(SingleChildScrollView), matching: find.text('10')),
+        findsOneWidget,
+      );
 
       // Now resolve the load
       completer.complete({'activities': []});
@@ -369,7 +373,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap 10:00 hour line
-      await tester.tap(find.text('10:00'));
+      await tester.tap(find.descendant(
+          of: find.byType(SingleChildScrollView), matching: find.text('10')));
       await tester.pumpAndSettle();
 
       // Quick add sheet does not open
