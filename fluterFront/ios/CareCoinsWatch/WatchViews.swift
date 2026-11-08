@@ -69,12 +69,9 @@ private struct WatchContentView: View {
     TimelineView(.everyMinute) { timeline in
       List {
         // Feedback chip at the top
-        TimelineView(.periodic(from: .now, by: 1.0)) { feedbackTimeline in
-          if let action = store.lastAction,
-             feedbackTimeline.date.timeIntervalSince(action.at) <= SnapshotStore.undoWindow {
-            WatchFeedbackRow(action: action, canUndo: store.canUndo) {
-              Task { await store.undo() }
-            }
+        if let action = store.lastAction {
+          WatchFeedbackRow(action: action, canUndo: store.canUndo) {
+            Task { await store.undo() }
           }
         }
 

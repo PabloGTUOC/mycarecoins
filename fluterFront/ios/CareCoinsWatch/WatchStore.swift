@@ -49,6 +49,7 @@ public final class WatchStore {
   public var connected: Bool = false
   public var pending: [PendingAction] = []
   public var lastAction: LastAction?
+  @ObservationIgnored private var lastActionExpiryTask: Task<Void, Never>?
   public var isRefreshing: Bool = false
   public var remindersEnabled: Bool = WatchReminders.isEnabled {
     didSet {
@@ -74,6 +75,7 @@ public final class WatchStore {
     self.snapshot = SnapshotStore.load()
     self.connected = QuickAPI.fromStore() != nil
     self.lastAction = SnapshotStore.lastAction()
+    scheduleLastActionExpiry()
     self.pending = loadPendingQueue()
     self.remindersEnabled = WatchReminders.isEnabled
   }
@@ -270,6 +272,24 @@ public final class WatchStore {
   public func recordAction(_ action: LastAction) {
     SnapshotStore.recordAction(action)
     self.lastAction = action
+    scheduleLastActionExpiry()
+  }
+
+  private func scheduleLastActionExpiry() {
+    lastActionExpiryTask?.cancel()
+    lastActionExpiryTask = nil
+    guard let action = lastAction else { return }
+    let elapsed = Date().timeIntervalSince(action.at)
+    let remaining = SnapshotStore.undoWindow - elapsed
+    if remaining <= 0 {
+      lastAction = nil
+      return
+    }
+    lastActionExpiryTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(for: .seconds(remaining))
+      guard !Task.isCancelled, self?.lastAction == action else { return }
+      self?.lastAction = nil
+    }
   }
 
   private func enqueuePending(_ action: PendingAction) {
